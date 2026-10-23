@@ -17,7 +17,7 @@ import (
 // Router da web — isolado do boot do DBOS para poder fazer unit test
 func newRouter() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("Hello, world!"))
 	})
 	return mux
