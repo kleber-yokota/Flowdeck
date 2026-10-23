@@ -29,6 +29,13 @@ services:
       DBOS_SYSTEM_DATABASE_URL: ${DBOS_SYSTEM_DATABASE_URL}
     ports:
       - "${FLOWDECK_HTTP_PORT}:8080"
+    healthcheck:
+      # distroless não tem shell/curl — o binário faz o ping no /healthz
+      test: ["CMD", "/flowdeck", "-healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
 
 volumes:

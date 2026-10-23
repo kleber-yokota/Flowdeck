@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net"
@@ -17,6 +18,12 @@ import (
 )
 
 func main() {
+	healthcheck := flag.Bool("healthcheck", false,
+		"ping the running server's /healthz route and exit (used by the container healthcheck; distroless has no curl)")
+	flag.Parse()
+	if *healthcheck {
+		os.Exit(healthcheckExit(os.Getenv("FLOWDECK_HTTP_ADDR")))
+	}
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
@@ -102,7 +109,7 @@ func run() error {
 	// Web: an abstraction over the core — lists what the core registered
 	srv := &http.Server{
 		Addr:              cfg.httpAddr,
-		Handler:           web.New(core.List),
+		Handler:           web.New(core.List, core.Ping),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -125,4 +132,32 @@ func run() error {
 		}
 		return nil
 	}
+}
+
+// healthcheckExit pings the running server's /healthz route (which checks
+// the core) and returns 0/1 for the container healthcheck.
+func healthcheckExit(addr string) int {
+	if addr == "" {
+		addr = ":8080"
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck: invalid address %q: %v\n", addr, err)
+		return 1
+	}
+	if host == "" { // ":8080" — any interface
+		host = "127.0.0.1"
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Get("http://" + net.JoinHostPort(host, port) + "/healthz")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck: %v\n", err)
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintf(os.Stderr, "healthcheck: /healthz returned %d\n", resp.StatusCode)
+		return 1
+	}
+	return 0
 }

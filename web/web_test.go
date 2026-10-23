@@ -13,6 +13,8 @@ import (
 
 func emptyLister() []core.Workflow { return nil }
 
+func okPing() error { return nil }
+
 func get(t *testing.T, url string) (int, string) {
 	t.Helper()
 	resp, err := http.Get(url)
@@ -28,7 +30,7 @@ func get(t *testing.T, url string) (int, string) {
 }
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister))
+	srv := httptest.NewServer(New(emptyLister, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/")
@@ -56,7 +58,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 			{Name: "wf-beta"},
 		}
 	}
-	srv := httptest.NewServer(New(fakeLister))
+	srv := httptest.NewServer(New(fakeLister, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -79,7 +81,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 }
 
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister))
+	srv := httptest.NewServer(New(emptyLister, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -93,7 +95,7 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The fragment is dynamic: it must never be cached by the browser.
 func TestWorkflowsPartialNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister))
+	srv := httptest.NewServer(New(emptyLister, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/workflows")
@@ -110,7 +112,7 @@ func TestWorkflowsPartialNoStore(t *testing.T) {
 }
 
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister))
+	srv := httptest.NewServer(New(emptyLister, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/static/htmx.min.js")
@@ -120,6 +122,22 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 	// The vendored bundle declares its own version
 	if !strings.Contains(body, `version:"2.0.4"`) {
 		t.Error("vendored htmx does not declare version 2.0.4")
+	}
+}
+
+// The health endpoint mirrors the core: 200 when the core is up,
+// 503 when it is not.
+func TestHealthz(t *testing.T) {
+	up := httptest.NewServer(New(emptyLister, okPing))
+	defer up.Close()
+	if status, _ := get(t, up.URL+"/healthz"); status != http.StatusOK {
+		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	}
+
+	down := httptest.NewServer(New(emptyLister, func() error { return core.ErrNotLaunched }))
+	defer down.Close()
+	if status, _ := get(t, down.URL+"/healthz"); status != http.StatusServiceUnavailable {
+		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
 	}
 }
 
@@ -141,7 +159,7 @@ func TestRenderErrorIsClean500(t *testing.T) {
 }
 
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister))
+	srv := httptest.NewServer(New(emptyLister, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
@@ -155,7 +173,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister))
+	srv := httptest.NewServer(New(emptyLister, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)

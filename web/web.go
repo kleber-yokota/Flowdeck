@@ -21,7 +21,8 @@ var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 // New builds the HTMX web server — an abstraction over the core.
 // listWorkflows returns the workflows registered in the core (single
 // source of truth); the web knows nothing about specific workflows.
-func New(listWorkflows func() []core.Workflow) http.Handler {
+// ping reports whether the core is up (health endpoint).
+func New(listWorkflows func() []core.Workflow, ping func() error) http.Handler {
 	static, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		panic(fmt.Sprintf("static: %v", err))
@@ -40,6 +41,16 @@ func New(listWorkflows func() []core.Workflow) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		render(templates, w, "workflows.html", listWorkflows())
+	})
+
+	// Health: the web pings the core; the container healthcheck pings this
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		if err := ping(); err != nil {
+			http.Error(w, "core not ready", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	// Vendored static assets (htmx) — no CDN at runtime

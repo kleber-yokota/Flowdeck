@@ -11,6 +11,9 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
 
+// ErrNotLaunched is returned by Ping when the core is not booted and launched.
+var ErrNotLaunched = errors.New("core: not launched")
+
 // Workflow is a workflow registered in the core, exposed to the web.
 type Workflow struct {
 	Name string
@@ -137,4 +140,15 @@ func List() []Workflow {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// Ping reports whether the core is booted and launched — used by the web
+// health endpoint and the container healthcheck.
+func Ping() error {
+	mu.RLock()
+	defer mu.RUnlock()
+	if !booted || !launched {
+		return ErrNotLaunched
+	}
+	return nil
 }
