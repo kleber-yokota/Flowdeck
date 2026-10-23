@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowDeck</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <style>
+    :root {
+      --paper:  #0b0c0e;
+      --ink:    #e8e6e1;
+      --steel:  #b8bcc4;
+      --soft:   #8f96a3;
+      --accent: #ff9142;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Geist", system-ui, sans-serif;
+    }
+    .frame { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .eyebrow {
+      font-family: ui-monospace, "Geist Mono", monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--soft);
+      margin: 0 0 0.5rem;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 500;
+      margin: 0 0 1.5rem;
+      color: var(--ink);
+    }
+    .list { list-style: none; margin: 0; padding: 0; }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      background: #101114;
+      border: 1px solid rgba(184, 188, 196, 0.35);
+      border-radius: 6px;
+    }
+    .name { font-weight: 600; }
+    .empty { color: var(--soft); }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <p class="eyebrow">FlowDeck</p>
+    <h1>Workflows</h1>
+    <!-- Phase 1: HTMX GET → core lists the registry → partial rendered -->
+    <div id="workflows" hx-get="/workflows" hx-trigger="load" hx-target="#workflows"></div>
+  </main>
+</body>
+</html>

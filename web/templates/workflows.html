@@ -1,0 +1,9 @@
+<ul class="list">
+  {{- range . }}
+  <li class="item">
+    <span class="name">{{ .Name }}</span>
+  </li>
+  {{- else }}
+  <li class="item empty">No workflows registered</li>
+  {{- end }}
+</ul>
