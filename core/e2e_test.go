@@ -3,11 +3,9 @@
 package core
 
 import (
-	"context"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
@@ -23,15 +21,7 @@ func TestE2EHelloWorldRunsStep(t *testing.T) {
 		t.Skip("DBOS_E2E_DATABASE_URL not set — skipping e2e test")
 	}
 
-	Shutdown(5 * time.Second) // reset the singleton (nil-safe)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := Boot(ctx, "flowdeck_e2e", dbURL); err != nil {
-		t.Fatalf("boot: %v", err)
-	}
-	defer Shutdown(5 * time.Second)
+	bootCoreForTest(t, dbURL)
 
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)

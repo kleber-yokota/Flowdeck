@@ -1,30 +1,16 @@
 package core
 
 import (
-	"context"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-	_ "github.com/dbos-inc/dbos-transact-golang/dbos/driver/sqlite"
 )
 
 // Test for workflows.go: init() registers the workflow in the core and
 // the core runs the workflow with its step. Uses SQLite (temp dir) — no Postgres.
 func TestHelloWorldRegistersAndRuns(t *testing.T) {
-	Shutdown(5 * time.Second) // reset the singleton (nil-safe)
-
-	dbURL := "sqlite:" + filepath.Join(t.TempDir(), "test.db")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := Boot(ctx, "flowdeck_test", dbURL); err != nil {
-		t.Fatalf("boot: %v", err)
-	}
-	defer Shutdown(5 * time.Second)
+	bootSQLiteCoreForTest(t)
 
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)
