@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fase 1 — Listagem dinâmica de workflows</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #0b0c0e;   /* near-black */
+      --color-ink:     #e8e6e1;   /* silver-white */
+      --color-muted:   #b8bcc4;   /* steel */
+      --color-soft:    #8f96a3;
+      --color-accent:  #ff9142;   /* laranja */
+      --color-link:    #7cc0ff;   /* azul claro */
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:   'Instrument Serif', 'Noto Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1200px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 960px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+
+    footer {
+      margin-top: 1.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(232,230,225,0.14);
+      font-family: var(--font-mono);
+      font-size: 0.56rem;
+      letter-spacing: 0.08em;
+      color: var(--color-soft);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sequência · Fase 1</p>
+    <h1>Fase 1 — Listagem dinâmica de workflows</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequencia-fase-1-title sequencia-fase-1-desc">
+        <title id="sequencia-fase-1-title">Fase 1 — Listagem dinâmica de workflows</title>
+        <desc id="sequencia-fase-1-desc">O navegador pede a pagina ao webserver; o webserver consulta o core DBOS, que retorna os workflows registrados sem hardcode, e a UI renderiza a lista via HTMX.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff9142"/>
+          </marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#7cc0ff"/>
+          </marker>
+          <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e4e8"/>
+            <stop offset="0.45" stop-color="#8d939e"/>
+            <stop offset="1" stop-color="#b7bcc4"/>
+          </linearGradient>
+          <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- lifelines -->
+        <line x1="120" y1="124" x2="120" y2="470" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="470" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="470" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="470" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- activation bars -->
+        <rect x="116" y="148" width="8" height="120" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="148" width="8" height="120" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="188" width="8" height="40" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+
+        <!-- messages -->
+        <line x1="120" y1="148" x2="340" y2="148" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <line x1="340" y1="188" x2="560" y2="188" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="560" y1="228" x2="340" y2="228" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+        <line x1="340" y1="268" x2="120" y2="268" stroke="#ff9142" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-accent)"/>
+
+        <!-- message labels -->
+        <rect x="202" y="128" width="56" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="137" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">GET · HTMX</text>
+
+        <rect x="430" y="168" width="40" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="177" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">REGISTRY</text>
+
+        <rect x="426" y="208" width="48" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="217" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WORKFLOWS</text>
+
+        <rect x="212" y="248" width="36" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="257" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER</text>
+
+        <!-- annotation callout -->
+        <text x="450" y="330" fill="#8f96a3" font-size="14" font-family="'Instrument Serif', 'Noto Serif', serif" font-style="italic" text-anchor="middle">registry no core,</text>
+        <text x="450" y="352" fill="#8f96a3" font-size="14" font-family="'Instrument Serif', 'Noto Serif', serif" font-style="italic" text-anchor="middle">zero hardcode na web</text>
+
+        <!-- actors -->
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="url(#panel)" stroke="url(#steel)" stroke-width="1"/>
+        <rect x="48" y="66" width="20" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="58" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+        <text x="120" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Browser</text>
+        <text x="120" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">chrome · htmx</text>
+
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="url(#panel)" stroke="url(#steel)" stroke-width="1"/>
+        <rect x="268" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="282" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WEB</text>
+        <text x="340" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">FlowDeck Web</text>
+        <text x="340" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">go · webserver · :8080</text>
+
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
+        <rect x="488" y="66" width="32" height="12" rx="2" fill="transparent" stroke="rgba(255,145,66,0.50)" stroke-width="0.8"/>
+        <text x="504" y="75" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+        <text x="560" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">DBOS Core</text>
+        <text x="560" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">dbos · duravel</text>
+
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="url(#panel)" stroke="url(#steel)" stroke-width="1"/>
+        <rect x="728" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="742" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+        <text x="800" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Postgres 18</text>
+        <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">compose · :5432</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="496" x2="930" y2="496" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="519" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGENDA</text>
+
+        <line x1="130" y1="516" x2="174" y2="516" stroke="#7cc0ff" stroke-width="1.2"/>
+        <text x="182" y="519" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">REQUISICAO HTMX</text>
+
+        <line x1="300" y1="516" x2="344" y2="516" stroke="#b8bcc4" stroke-width="1.2"/>
+        <text x="352" y="519" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CHAMADA</text>
+
+        <line x1="430" y1="516" x2="474" y2="516" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="482" y="519" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETORNO</text>
+
+        <line x1="560" y1="516" x2="604" y2="516" stroke="#ff9142" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="612" y="519" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE</text>
+      </svg>
+    </div>
+
+    <footer>FlowDeck · diagram-design · 2026-10-23</footer>
+  </div>
+</body>
+</html>
