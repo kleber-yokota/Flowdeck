@@ -63,4 +63,4 @@ go test ./...
 docker compose up --build
 ```
 
-Estrutura do serviço: um compose (`docker-compose.yml`) com `postgres:18` (porta `5432`) e o serviço FlowDeck (`:8080`), e um único `main.go` que inicia o core DBOS e, em seguida, o webserver HTMX.
+Estrutura do serviço: um compose (`docker-compose.yml`) com `postgres:18` (porta `5432`) e o serviço FlowDeck (`:8080`). Um único `main.go` faz o boot (core DBOS → webserver HTMX); o código está em dois pacotes: `core/` (singleton do core DBOS: `Boot`/`Launch`/`Shutdown`/`List` em `core.go`, steps em `steps.go`, workflows em `workflows.go` — cada arquivo se registra no próprio `init()`, sem lista central) e `web/` (webserver HTMX + templates).
