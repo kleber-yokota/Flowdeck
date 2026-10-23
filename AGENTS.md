@@ -12,7 +12,7 @@ FlowDeck é um painel de orquestração de workflows duráveis. **Um único serv
 | --- | --- | --- |
 | Backend + Web | **Go** (serviço único) | webserver em `:8080`, serve templates com HTMX |
 | Frontend | **HTMX** (no navegador, nada de SPA/JS framework) | páginas são HTML server-side + `hx-*`; interações são GET/POST HTMX |
-| Orquestração | **DBOS Go** — `github.com/dbos-inc/dbos-transact-golang` | workflows, filas e estado durável no Postgres; API: `dbos.NewDBOSContext(ctx, dbos.Config{...})`, `RegisterQueue`, `Enqueue`/`WithQueue` |
+| Orquestração | **DBOS Go** — `github.com/dbos-inc/dbos-transact-golang` | workflows, filas e estado durável no Postgres; API: `dbos.NewContext(ctx, dbos.Config{...})`, `RegisterQueue`, `Enqueue`/`WithQueue` |
 | Banco | **Postgres 18** (`:5432`) | via `DBOS_SYSTEM_DATABASE_URL`; DBOS exige um sistema database dedicado |
 | Deploy | **docker-compose**, uma máquina | serviço FlowDeck + Postgres 18; não há nenhum outro container |
 
@@ -58,11 +58,9 @@ Tema visual: fundo escuro metálico `#0b0c0e`, bordas aço (`#b8bcc4`/`#8f96a3`)
 
 ## Comandos
 
-Ainda não há código no repositório (só o design). Ao criar o projeto, seguir:
-
 ```bash
-go mod init flowdeck
-go get github.com/dbos-inc/dbos-transact-golang/dbos
+go test ./...
+docker compose up --build
 ```
 
-Estrutura esperada: um compose (`docker-compose.yml`) com `postgres:18` (porta `5432`) e o serviço FlowDeck (`:8080`), e um único `main.go` (ou binário Go) que inicia o core DBOS e, em seguida, o webserver HTMX.
+Estrutura do serviço: um compose (`docker-compose.yml`) com `postgres:18` (porta `5432`) e o serviço FlowDeck (`:8080`), e um único `main.go` que inicia o core DBOS e, em seguida, o webserver HTMX.
