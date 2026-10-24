@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
@@ -45,5 +46,53 @@ func TestE2EHelloWorldRunsStep(t *testing.T) {
 	}
 	if !strings.HasPrefix(result, "hello, FlowDeck") {
 		t.Fatalf("step result: got %q", result)
+	}
+}
+
+// Enqueue puts the run on the DBOS queue; the executor started by Launch
+// picks it up and runs it to success (phase 2: INSERT INTO QUEUE → NOTIFY →
+// steps).
+func TestE2EEnqueueRunsWorkflow(t *testing.T) {
+	dbURL := os.Getenv("DBOS_E2E_DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("DBOS_E2E_DATABASE_URL not set — skipping e2e test")
+	}
+
+	bootCoreForTest(t, dbURL)
+
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	id, err := Enqueue("hello-world", "FlowDeck")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if id == "" {
+		t.Fatal("Enqueue returned an empty workflow ID")
+	}
+
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		statuses, err := dbos.ListWorkflows(dbosCtx,
+			dbos.WithFilterWorkflowIDs(id),
+			dbos.WithFilterLoadInput(false),
+			dbos.WithFilterLoadOutput(false),
+		)
+		if err != nil {
+			t.Fatalf("ListWorkflows: %v", err)
+		}
+		if len(statuses) == 1 {
+			switch statuses[0].Status {
+			case dbos.WorkflowStatusSuccess:
+				return
+			case dbos.WorkflowStatusError:
+				t.Fatalf("workflow failed: %v", statuses[0].Error)
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("workflow did not reach success in time: %v", statuses)
+		}
+		time.Sleep(500 * time.Millisecond)
 	}
 }

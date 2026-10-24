@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"path/filepath"
 	"testing"
@@ -97,6 +98,47 @@ func TestRegisterDuplicateNamePanics(t *testing.T) {
 		}
 	}()
 	register("hello-world", echoTestWorkflow) // init() already registered it
+}
+
+// Enqueue is the dispatch ACK path: it puts a run on the queue and returns
+// the new workflow ID (the web renders the "queued" badge with it).
+func TestEnqueueReturnsWorkflowID(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	id, err := Enqueue("hello-world", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if id == "" {
+		t.Fatal("Enqueue returned an empty workflow ID")
+	}
+}
+
+// Enqueue must reject a name that is not in the registry (the web maps it
+// to 404 instead of failing deep in DBOS).
+func TestEnqueueUnknownWorkflow(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	if _, err := Enqueue("nope", nil); !errors.Is(err, ErrUnknownWorkflow) {
+		t.Fatalf("Enqueue: got %v, want ErrUnknownWorkflow", err)
+	}
+}
+
+// Enqueue before Launch must fail cleanly (core not up yet).
+func TestEnqueueWithoutLaunchErrors(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	if _, err := Enqueue("hello-world", nil); !errors.Is(err, ErrNotLaunched) {
+		t.Fatalf("Enqueue before Launch: got %v, want ErrNotLaunched", err)
+	}
 }
 
 // Boot is a singleton: a second Boot in the same cycle must fail.

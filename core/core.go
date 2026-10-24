@@ -14,21 +14,35 @@ import (
 // ErrNotLaunched is returned by Ping when the core is not booted and launched.
 var ErrNotLaunched = errors.New("core: not launched")
 
+// ErrUnknownWorkflow is returned by Enqueue when the name is not in the registry.
+var ErrUnknownWorkflow = errors.New("core: workflow not registered")
+
+// QueueName is the single DBOS queue every dispatch (Enqueue) goes through.
+const QueueName = "flowdeck"
+
 // Workflow is a workflow registered in the core, exposed to the web.
 type Workflow struct {
 	Name string
 }
 
+// registration is a durable workflow registration: apply records it into
+// the DBOS context at Launch, enqueue puts a run of it on the queue.
+type registration struct {
+	name    string
+	apply   func(ctx dbos.Context)
+	enqueue func(ctx dbos.Context, payload any) (string, error)
+}
+
 // The DBOS core as a process-wide singleton. Architecturally, the web and
 // the core are two separate things (same process/docker): the web queries
-// the core (List) and never touches DBOS/Postgres directly.
+// the core (List, Enqueue) and never touches DBOS/Postgres directly.
 
 var (
 	mu              sync.RWMutex
 	dbosCtx         dbos.Context
 	booted          bool
 	launched        bool
-	registrations   []func(dbos.Context)
+	registrations   []registration
 	registeredNames = map[string]struct{}{}
 )
 
@@ -46,11 +60,26 @@ func register[P any, R any](name string, wf dbos.Workflow[P, R]) {
 		panic("core: workflow already registered: " + name)
 	}
 	registeredNames[name] = struct{}{}
-	registrations = append(registrations, func(ctx dbos.Context) {
-		dbos.RegisterWorkflow(ctx, wf,
-			dbos.WithWorkflowName(name),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
+	var zero P // fallback payload: a dispatch without input runs the zero value
+	registrations = append(registrations, registration{
+		name: name,
+		apply: func(ctx dbos.Context) {
+			dbos.RegisterWorkflow(ctx, wf,
+				dbos.WithWorkflowName(name),
+				dbos.WithMaxRecoveryAttempts(3),
+			)
+		},
+		enqueue: func(ctx dbos.Context, payload any) (string, error) {
+			p, ok := payload.(P)
+			if !ok { // nil payload (or a mismatched type) → zero payload
+				p = zero
+			}
+			handle, err := ctx.Enqueue(ctx, QueueName, name, p)
+			if err != nil {
+				return "", fmt.Errorf("core: enqueue %s: %w", name, err)
+			}
+			return handle.GetWorkflowID(), nil
+		},
 	})
 }
 
@@ -88,8 +117,14 @@ func Launch() error {
 	if launched {
 		return errors.New("core: Launch already called (singleton — one executor)")
 	}
+	// The single queue every dispatch goes through. Registering it (before
+	// Launch) is what makes this process listen to it: the DBOS executor
+	// started below polls the queue and runs the claimed jobs.
+	if _, err := dbos.RegisterQueue(dbosCtx, QueueName); err != nil {
+		return fmt.Errorf("core: register queue: %w", err)
+	}
 	for _, r := range registrations {
-		r(dbosCtx)
+		r.apply(dbosCtx)
 	}
 	if err := dbos.Launch(dbosCtx); err != nil {
 		return fmt.Errorf("dbos launch: %w", err)
@@ -140,6 +175,32 @@ func List() []Workflow {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// Enqueue puts a run of the named workflow onto the DBOS queue and returns
+// the new workflow ID — the dispatch ACK: the web renders the "queued"
+// badge with it, and nothing is executed by the webserver.
+// A nil payload runs the workflow with its zero payload.
+func Enqueue(name string, payload any) (string, error) {
+	mu.RLock()
+	var reg *registration
+	for i := range registrations {
+		if registrations[i].name == name {
+			reg = &registrations[i]
+			break
+		}
+	}
+	c := dbosCtx
+	up := booted && launched
+	mu.RUnlock()
+
+	if !up || c == nil {
+		return "", ErrNotLaunched
+	}
+	if reg == nil {
+		return "", fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
+	}
+	return reg.enqueue(c, payload)
 }
 
 // Ping reports whether the core is booted and launched — used by the web
