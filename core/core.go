@@ -30,7 +30,7 @@ type Workflow struct {
 type registration struct {
 	name    string
 	apply   func(ctx dbos.Context)
-	enqueue func(ctx dbos.Context, payload any) (string, error)
+	enqueue func(ctx dbos.Context, payload any) (Execution, error)
 }
 
 // The DBOS core as a process-wide singleton. Architecturally, the web and
@@ -69,16 +69,34 @@ func register[P any, R any](name string, wf dbos.Workflow[P, R]) {
 				dbos.WithMaxRecoveryAttempts(3),
 			)
 		},
-		enqueue: func(ctx dbos.Context, payload any) (string, error) {
+		enqueue: func(ctx dbos.Context, payload any) (Execution, error) {
 			p, ok := payload.(P)
 			if !ok { // nil payload (or a mismatched type) → zero payload
 				p = zero
 			}
 			handle, err := ctx.Enqueue(ctx, QueueName, name, p)
 			if err != nil {
-				return "", fmt.Errorf("core: enqueue %s: %w", name, err)
+				return Execution{}, fmt.Errorf("core: enqueue %s: %w", name, err)
 			}
-			return handle.GetWorkflowID(), nil
+			id := handle.GetWorkflowID()
+			// The ACK row shows badge + date + id: read the new execution's
+			// created_at (the dispatch itself already wrote it to the queue).
+			statuses, err := dbos.ListWorkflows(ctx,
+				dbos.WithFilterWorkflowIDs(id),
+				dbos.WithFilterLoadInput(false),
+				dbos.WithFilterLoadOutput(false),
+			)
+			if err != nil {
+				return Execution{}, fmt.Errorf("core: enqueue status %s: %w", id, err)
+			}
+			if len(statuses) != 1 {
+				return Execution{}, fmt.Errorf("core: enqueue status %s: %d rows, want 1", id, len(statuses))
+			}
+			st, err := mapState(statuses[0].Status)
+			if err != nil {
+				return Execution{}, err
+			}
+			return Execution{ID: id, State: st, CreatedAt: statuses[0].CreatedAt}, nil
 		},
 	})
 }
@@ -178,10 +196,11 @@ func List() []Workflow {
 }
 
 // Enqueue puts a run of the named workflow onto the DBOS queue and returns
-// the new workflow ID — the dispatch ACK: the web renders the "queued"
-// badge with it, and nothing is executed by the webserver.
+// the new execution (id + state + created_at) — the dispatch ACK: the web
+// renders the "queued" row with it, and nothing is executed by the
+// webserver.
 // A nil payload runs the workflow with its zero payload.
-func Enqueue(name string, payload any) (string, error) {
+func Enqueue(name string, payload any) (Execution, error) {
 	mu.RLock()
 	var reg *registration
 	for i := range registrations {
@@ -195,10 +214,10 @@ func Enqueue(name string, payload any) (string, error) {
 	mu.RUnlock()
 
 	if !up || c == nil {
-		return "", ErrNotLaunched
+		return Execution{}, ErrNotLaunched
 	}
 	if reg == nil {
-		return "", fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
+		return Execution{}, fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
 	}
 	return reg.enqueue(c, payload)
 }

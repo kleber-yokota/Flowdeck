@@ -91,7 +91,20 @@
       border-radius: 50%;
       background: currentColor;
     }
-    .wf-id { font-size: 0.7rem; color: var(--steel); }
+    .wf-id {
+      font-family: ui-monospace, "Geist Mono", monospace;
+      font-size: 0.7rem;
+      color: var(--steel);
+      text-decoration: none;
+    }
+    .wf-id:hover { color: var(--ink); text-decoration: underline; }
+    .exec-date {
+      font-family: ui-monospace, "Geist Mono", monospace;
+      font-size: 0.7rem;
+      color: var(--soft);
+      margin-left: auto;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -105,10 +118,15 @@
             hx-swap="afterbegin">
       Run
     </button>
-    <!-- Each dispatch enqueues a run in the core (DBOS queue) and prepends
-         a row with the workflow ID returned in the ACK; the badge polls
-         GET /status every 2s until the run reaches a terminal state -->
-    <ul id="executions" class="executions"></ul>
+    <!-- The runs of this workflow, newest first (phase 3, LIST): each row
+         links to the execution detail; the badge polls GET /status every
+         2s until the run reaches a terminal state. Each dispatch enqueues a
+         run in the core (DBOS queue) and prepends a row (the ACK). -->
+    <ul id="executions" class="executions">
+{{range .Executions}}
+{{template "execution.html" .}}
+{{end}}
+    </ul>
   </main>
 </body>
 </html>
