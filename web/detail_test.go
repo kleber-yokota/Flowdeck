@@ -25,7 +25,7 @@ func TestExecutionDetailRendersFailure(t *testing.T) {
 			FailedStep: "boom-step",
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, okStatuser, detailer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, detailer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-failed")
@@ -65,7 +65,7 @@ func TestExecutionDetailBadgePollsWhenRunning(t *testing.T) {
 		return core.ExecutionDetail{ID: id, Name: "wf-alpha", State: core.StateRunning, Attempts: 1,
 			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local)}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, okStatuser, detailer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, detailer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-live")
@@ -99,7 +99,7 @@ func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
 			Attempts:  1,
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, okStatuser, detailer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, detailer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-ok")
@@ -127,7 +127,7 @@ func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
 
 // A run the core does not know is a clean 404.
 func TestExecutionDetailUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/executions/ghost"); status != http.StatusNotFound {
@@ -140,7 +140,7 @@ func TestExecutionDetailCoreDownIs503(t *testing.T) {
 	downDetail := func(id string) (core.ExecutionDetail, error) {
 		return core.ExecutionDetail{}, core.ErrNotLaunched
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, okStatuser, downDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, downDetail, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/executions/abc"); status != http.StatusServiceUnavailable {

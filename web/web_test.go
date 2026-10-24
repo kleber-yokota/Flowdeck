@@ -14,6 +14,10 @@ import (
 
 func emptyLister() []core.Workflow { return nil }
 
+// okPaths returns no paths (phase 4, STEP 2): the paths section is absent
+// from the workflow page.
+func okPaths(name string) [][]string { return nil }
+
 func okExecutions(name string) ([]core.Execution, error) { return nil, nil }
 
 func okPing() error { return nil }

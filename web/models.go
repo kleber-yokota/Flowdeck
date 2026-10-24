@@ -1,6 +1,7 @@
 package web
 
 import (
+	"html/template"
 	"time"
 
 	"flowdeck/core"
@@ -13,10 +14,12 @@ type indexPage struct {
 }
 
 // workflowPage is the data for the per-workflow full page: the dispatch
-// button and the runs of the workflow (phase 3, LIST), newest first.
+// button, the generated paths graph (phase 4, STEP 2, overview — the boot
+// map) and the runs of the workflow (phase 3, LIST), newest first.
 type workflowPage struct {
 	Title      string
 	Name       string
+	Graph      template.HTML
 	Executions []badge
 }
 

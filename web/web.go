@@ -22,6 +22,8 @@ var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 // New builds the HTMX web server — an abstraction over the core.
 // listWorkflows returns the workflows registered in the core (single
 // source of truth); the web knows nothing about specific workflows.
+// paths reports the possible paths of a workflow (phase 4, STEP 2 — the
+// boot map: map lookup, no re-parse, no DB).
 // executions lists the runs of a workflow (phase 3, LIST).
 // enqueue dispatches a registered workflow (core → DBOS queue) and returns
 // the new execution (id + state + created_at). status reports the state of
@@ -30,6 +32,7 @@ var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 // the core is up (health endpoint).
 func New(
 	listWorkflows func() []core.Workflow,
+	paths func(name string) [][]string,
 	executions func(name string) ([]core.Execution, error),
 	enqueue func(name string, payload any) (core.Execution, error),
 	status func(workflowID string) (core.State, error),
@@ -53,8 +56,9 @@ func New(
 		partial(w, "workflows.html", listWorkflows())
 	})
 
-	// Full page: one registered workflow — the dispatch button and the runs
-	// of it (phase 3, LIST): every execution the core knows, newest first —
+	// Full page: one registered workflow — the dispatch button, the
+	// possible paths (phase 4, STEP 2, overview) and the runs of it
+	// (phase 3, LIST): every execution the core knows, newest first —
 	// workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
@@ -71,7 +75,14 @@ func New(
 		for _, e := range exs {
 			rows = append(rows, row(e))
 		}
-		page(w, "workflow.html", workflowPage{Title: name + " · FlowDeck", Name: name, Executions: rows})
+		// Phase 4, STEP 2: the paths come from the boot map (PATHS: map
+		// lookup, no re-parse, no DB) — never hardcoded in the web.
+		page(w, "workflow.html", workflowPage{
+			Title:      name + " · FlowDeck",
+			Name:       name,
+			Graph:      pathsToSVG(paths(name)),
+			Executions: rows,
+		})
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
