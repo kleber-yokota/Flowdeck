@@ -21,6 +21,15 @@ func okEnqueuer(name string, payload any) (string, error) {
 	return "00000000-0000-0000-0000-000000000001", nil
 }
 
+func okStatuser(workflowID string) (core.State, error) {
+	return core.StateQueued, nil
+}
+
+// stateStatuser builds a statuser stub that always returns the given state.
+func stateStatuser(state core.State) func(string) (core.State, error) {
+	return func(workflowID string) (core.State, error) { return state, nil }
+}
+
 func get(t *testing.T, url string) (int, string) {
 	t.Helper()
 	resp, err := http.Get(url)
@@ -36,7 +45,7 @@ func get(t *testing.T, url string) (int, string) {
 }
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/")
@@ -64,7 +73,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 			{Name: "wf-beta"},
 		}
 	}
-	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -87,7 +96,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 }
 
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -101,7 +110,7 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The fragment is dynamic: it must never be cached by the browser.
 func TestWorkflowsPartialNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/workflows")
@@ -118,7 +127,7 @@ func TestWorkflowsPartialNoStore(t *testing.T) {
 }
 
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/static/htmx.min.js")
@@ -134,13 +143,13 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 // The health endpoint mirrors the core: 200 when the core is up,
 // 503 when it is not.
 func TestHealthz(t *testing.T) {
-	up := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	up := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer up.Close()
 	if status, _ := get(t, up.URL+"/healthz"); status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
 
-	down := httptest.NewServer(New(emptyLister, okEnqueuer, func() error { return core.ErrNotLaunched }))
+	down := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, func() error { return core.ErrNotLaunched }))
 	defer down.Close()
 	if status, _ := get(t, down.URL+"/healthz"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
@@ -151,7 +160,7 @@ func TestHealthz(t *testing.T) {
 // the execution row fragment: "queued" badge + the visible workflow ID
 // (the ACK) — the browser prepends it to the executions list.
 func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
@@ -171,6 +180,12 @@ func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
 		`data-workflow-id="00000000-0000-0000-0000-000000000001"`,
 		"Queued",
 		`<code class="wf-id">00000000-0000-0000-0000-000000000001</code>`,
+		// The badge starts the 2s poll right after the dispatch; the whole
+		// badge is replaced (outerHTML) on each poll, so the old state never
+		// wraps the new one.
+		`hx-get="/status/00000000-0000-0000-0000-000000000001"`,
+		`hx-trigger="every 2s"`,
+		`hx-swap="outerHTML"`,
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Errorf("fragment does not contain %q: %q", want, body)
@@ -186,7 +201,7 @@ func TestRunUnknownWorkflowIs404(t *testing.T) {
 	enqueue := func(name string, payload any) (string, error) {
 		return "", fmt.Errorf("%w: %s", core.ErrUnknownWorkflow, name)
 	}
-	srv := httptest.NewServer(New(emptyLister, enqueue, okPing))
+	srv := httptest.NewServer(New(emptyLister, enqueue, okStatuser, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/ghost", "application/octet-stream", nil)
@@ -204,7 +219,7 @@ func TestRunEnqueueFailureIs500(t *testing.T) {
 	enqueue := func(name string, payload any) (string, error) {
 		return "", errors.New("boom")
 	}
-	srv := httptest.NewServer(New(emptyLister, enqueue, okPing))
+	srv := httptest.NewServer(New(emptyLister, enqueue, okStatuser, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
@@ -223,7 +238,7 @@ func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
 	fakeLister := func() []core.Workflow {
 		return []core.Workflow{{Name: "wf-alpha"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -245,7 +260,7 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 	fakeLister := func() []core.Workflow {
 		return []core.Workflow{{Name: "wf-alpha"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -265,7 +280,7 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 
 // A page for a workflow that is not in the core registry is a clean 404.
 func TestWorkflowPageUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
@@ -290,8 +305,122 @@ func TestRenderErrorIsClean500(t *testing.T) {
 	}
 }
 
+// GET /status is the poll half of the dispatch (phase 2): it returns the
+// badge fragment for each of the four states, and only the non-terminal
+// badges carry the hx attributes that keep the poll running.
+func TestStatusBadgeRendersState(t *testing.T) {
+	for state, want := range map[core.State]string{
+		core.StateQueued:  `class="badge queued"`,
+		core.StateRunning: `class="badge running"`,
+		core.StateSuccess: `class="badge success terminal"`,
+		core.StateError:   `class="badge error terminal"`,
+	} {
+		t.Run(string(state), func(t *testing.T) {
+			srv := httptest.NewServer(New(emptyLister, okEnqueuer, stateStatuser(state), okPing))
+			defer srv.Close()
+
+			status, body := get(t, srv.URL+"/status/abc")
+			if status != http.StatusOK {
+				t.Fatalf("status: got %d want %d", status, http.StatusOK)
+			}
+			if !strings.Contains(body, want) {
+				t.Errorf("fragment does not contain %q: %q", want, body)
+			}
+			// Live badges poll and are swapped whole (outerHTML) — the old
+			// badge element never wraps the new one. Terminal badges drop
+			// both attributes and stop the poll.
+			polling := state == core.StateQueued || state == core.StateRunning
+			for attr, wantAttr := range map[string]bool{
+				`hx-trigger="every 2s"`: polling,
+				`hx-swap="outerHTML"`:   polling,
+			} {
+				if has := strings.Contains(body, attr); has != wantAttr {
+					t.Errorf("%s present: got %v want %v: %q", attr, has, wantAttr, body)
+				}
+			}
+		})
+	}
+}
+
+// The poll response must be exactly one complete badge element, not a bare
+// text fragment: htmx swaps it in with outerHTML, which replaces the old
+// badge element entirely. If the fragment were not a full element (or the
+// swap fell back to innerHTML), the new badge would be nested inside the
+// old one and the old state's outline would stay visible — the "silhouette"
+// bug.
+func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
+	for state := range map[core.State]bool{
+		core.StateQueued:  true,
+		core.StateRunning: true,
+		core.StateSuccess: true,
+		core.StateError:   true,
+	} {
+		t.Run(string(state), func(t *testing.T) {
+			srv := httptest.NewServer(New(emptyLister, okEnqueuer, stateStatuser(state), okPing))
+			defer srv.Close()
+
+			status, body := get(t, srv.URL+"/status/abc")
+			if status != http.StatusOK {
+				t.Fatalf("status: got %d want %d", status, http.StatusOK)
+			}
+			fragment := strings.TrimSpace(body)
+			if !strings.HasPrefix(fragment, `<span class="badge`) || !strings.HasSuffix(fragment, `</span>`) {
+				t.Fatalf("fragment is not a single span root: %q", body)
+			}
+			// Exactly one span root: no nested badge, no leftover wrapper.
+			if spans := len(strings.Split(fragment, "<span")) - 1; spans != 1 {
+				t.Errorf("fragment contains %d <span> elements, want 1: %q", spans, body)
+			}
+		})
+	}
+}
+
+// An ID that is not known by the core is a clean 404.
+func TestStatusUnknownExecutionIs404(t *testing.T) {
+	statuser := func(workflowID string) (core.State, error) {
+		return "", core.ErrUnknownExecution
+	}
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, statuser, okPing))
+	defer srv.Close()
+
+	if status, _ := get(t, srv.URL+"/status/ghost"); status != http.StatusNotFound {
+		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
+	}
+}
+
+// A core that is down maps to a clean 503 (the poll keeps waiting).
+func TestStatusCoreDownIs503(t *testing.T) {
+	statuser := func(workflowID string) (core.State, error) {
+		return "", core.ErrNotLaunched
+	}
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, statuser, okPing))
+	defer srv.Close()
+
+	if status, _ := get(t, srv.URL+"/status/abc"); status != http.StatusServiceUnavailable {
+		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
+	}
+}
+
+// The poll fragment is dynamic: it must never be cached by the browser.
+func TestStatusBadgeNoStore(t *testing.T) {
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, stateStatuser(core.StateQueued), okPing))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/status/abc")
+	if err != nil {
+		t.Fatalf("GET: %v", err)
+	}
+	defer resp.Body.Close()
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
+	}
+}
+
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
@@ -305,7 +434,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okStatuser, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)

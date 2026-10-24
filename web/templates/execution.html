@@ -1,4 +1,9 @@
 <li class="execution">
-  <span class="badge" data-workflow-id="{{ .WorkflowID }}">Queued</span>
+  <span class="badge queued"
+        data-workflow-id="{{ .WorkflowID }}"
+        hx-get="/status/{{ .WorkflowID }}"
+        hx-trigger="every 2s"
+        hx-swap="outerHTML"
+        hx-target="this">Queued</span>
   <code class="wf-id">{{ .WorkflowID }}</code>
 </li>

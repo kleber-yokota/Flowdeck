@@ -110,7 +110,7 @@ func run() error {
 	// and dispatches through it (enqueue → DBOS queue)
 	srv := &http.Server{
 		Addr:              cfg.httpAddr,
-		Handler:           web.New(core.List, core.Enqueue, core.Ping),
+		Handler:           web.New(core.List, core.Enqueue, core.Status, core.Ping),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      10 * time.Second,

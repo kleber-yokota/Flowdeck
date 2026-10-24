@@ -12,8 +12,11 @@
       --ink:    #e8e6e1;
       --steel:  #b8bcc4;
       --soft:   #8f96a3;
-      --accent: #ff9142;
-      --queued: #7cc0ff;
+      --accent:  #ff9142;
+      --queued:  #7cc0ff;
+      --running: #ff9142;
+      --success: #46d19a;
+      --error:   #ff5450;
     }
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -63,6 +66,9 @@
       border-radius: 6px;
     }
     .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
       font-family: ui-monospace, "Geist Mono", monospace;
       font-size: 0.7rem;
       letter-spacing: 0.06em;
@@ -72,6 +78,18 @@
       border-radius: 999px;
       padding: 0.25rem 0.6rem;
       white-space: nowrap;
+    }
+    /* The four states of the badge — same colors as the diagrams */
+    .badge.running { color: var(--running); background: rgba(255, 145, 66, 0.08); border-color: var(--running); }
+    .badge.success { color: var(--success); background: rgba(70, 209, 154, 0.08); border-color: var(--success); }
+    .badge.error { color: var(--error); background: rgba(255, 84, 80, 0.08); border-color: var(--error); }
+    /* Terminal states (success/failed) show a dot */
+    .badge.terminal::before {
+      content: "";
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 50%;
+      background: currentColor;
     }
     .wf-id { font-size: 0.7rem; color: var(--steel); }
   </style>
@@ -88,7 +106,8 @@
       Run
     </button>
     <!-- Each dispatch enqueues a run in the core (DBOS queue) and prepends
-         a row with the workflow ID returned in the ACK -->
+         a row with the workflow ID returned in the ACK; the badge polls
+         GET /status every 2s until the run reaches a terminal state -->
     <ul id="executions" class="executions"></ul>
   </main>
 </body>
