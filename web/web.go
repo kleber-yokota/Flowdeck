@@ -46,7 +46,7 @@ func New(
 	// Full page (serves the HTMX shell)
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "index.html", nil)
+		render(templates, w, "index.html", indexPage{Title: "FlowDeck"})
 	})
 
 	// HTMX partial: fragment with the workflows registered in the core
@@ -89,7 +89,7 @@ func New(
 			rows = append(rows, b)
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "workflow.html", workflowPage{Name: name, Executions: rows})
+		render(templates, w, "workflow.html", workflowPage{Title: name + " · FlowDeck", Name: name, Executions: rows})
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -164,6 +164,7 @@ func New(
 		b := badgeFor(d.ID, d.State)
 		render(templates, w, "execution-detail.html", executionDetail{
 			ExecutionDetail: d,
+			Title:           d.ID + " · FlowDeck",
 			Badge:           b,
 			Retries:         retriesFor(d.Attempts),
 		})
@@ -185,9 +186,16 @@ func New(
 	return withRecovery(withRequestLog(mux))
 }
 
+// indexPage is the data for the index full page (the HTMX shell that loads
+// the workflow list from the core registry).
+type indexPage struct {
+	Title string
+}
+
 // workflowPage is the data for the per-workflow full page: the dispatch
 // button and the runs of the workflow (phase 3, LIST), newest first.
 type workflowPage struct {
+	Title      string
 	Name       string
 	Executions []badge
 }
@@ -197,6 +205,7 @@ type workflowPage struct {
 // Name, Attempts, Error and FailedStep directly.
 type executionDetail struct {
 	core.ExecutionDetail
+	Title   string
 	Badge   badge
 	Retries []retry
 }
