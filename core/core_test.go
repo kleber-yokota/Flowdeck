@@ -102,19 +102,28 @@ func TestRegisterDuplicateNamePanics(t *testing.T) {
 
 // Enqueue is the dispatch ACK path: it puts a run on the queue and returns
 // the new workflow ID (the web renders the "queued" badge with it).
-func TestEnqueueReturnsWorkflowID(t *testing.T) {
+// Enqueue is the dispatch ACK path: it puts a run on the queue and returns
+// the new execution (id + state + created_at) — the web renders the
+// "queued" row with it.
+func TestEnqueueReturnsExecution(t *testing.T) {
 	bootSQLiteCoreForTest(t)
 
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)
 	}
 
-	id, err := Enqueue("hello-world", nil)
+	ex, err := Enqueue("hello-world", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if id == "" {
+	if ex.ID == "" {
 		t.Fatal("Enqueue returned an empty workflow ID")
+	}
+	if ex.CreatedAt.IsZero() {
+		t.Fatal("Enqueue returned a zero CreatedAt")
+	}
+	if ex.State != StateQueued && ex.State != StateRunning {
+		t.Fatalf("Enqueue: got state %s, want queued or running", ex.State)
 	}
 }
 

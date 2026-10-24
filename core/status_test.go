@@ -65,10 +65,11 @@ func TestStatusReachesSuccess(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	id, err := Enqueue("hello-world", "FlowDeck")
+	ex, err := Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
+	id := ex.ID
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {

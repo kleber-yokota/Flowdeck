@@ -22,11 +22,20 @@ var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 // New builds the HTMX web server — an abstraction over the core.
 // listWorkflows returns the workflows registered in the core (single
 // source of truth); the web knows nothing about specific workflows.
+// executions lists the runs of a workflow (phase 3, LIST).
 // enqueue dispatches a registered workflow (core → DBOS queue) and returns
-// the new workflow ID. status reports the state of a run (the read half of
-// the dispatch, polled every 2s by the badge). ping reports whether the
-// core is up (health endpoint).
-func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload any) (string, error), status func(workflowID string) (core.State, error), ping func() error) http.Handler {
+// the new execution (id + state + created_at). status reports the state of
+// a run (the read half of the dispatch, polled every 2s by the badge).
+// detail reads one run for its page (phase 3, DETAIL). ping reports whether
+// the core is up (health endpoint).
+func New(
+	listWorkflows func() []core.Workflow,
+	executions func(name string) ([]core.Execution, error),
+	enqueue func(name string, payload any) (core.Execution, error),
+	status func(workflowID string) (core.State, error),
+	detail func(workflowID string) (core.ExecutionDetail, error),
+	ping func() error,
+) http.Handler {
 	static, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		panic(fmt.Sprintf("static: %v", err))
@@ -47,8 +56,9 @@ func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload
 		render(templates, w, "workflows.html", listWorkflows())
 	})
 
-	// Full page: one registered workflow — the dispatch button and the list
-	// of executions (workflow IDs) triggered from it.
+	// Full page: one registered workflow — the dispatch button and the runs
+	// of it (phase 3, LIST): every execution the core knows, newest
+	// first — workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
 		registered := false
@@ -62,8 +72,24 @@ func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload
 			http.Error(w, "unknown workflow", http.StatusNotFound)
 			return
 		}
+		exs, err := executions(name)
+		if err != nil {
+			if errors.Is(err, core.ErrNotLaunched) {
+				http.Error(w, "core not ready", http.StatusServiceUnavailable)
+				return
+			}
+			slog.Error("executions", "workflow", name, "err", err)
+			http.Error(w, "executions unavailable", http.StatusInternalServerError)
+			return
+		}
+		rows := make([]badge, 0, len(exs))
+		for _, e := range exs {
+			b := badgeFor(e.ID, e.State)
+			b.CreatedAt = e.CreatedAt
+			rows = append(rows, b)
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "workflow.html", workflowPage{Name: name})
+		render(templates, w, "workflow.html", workflowPage{Name: name, Executions: rows})
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -72,7 +98,7 @@ func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload
 	// list on the workflow page.
 	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
-		id, err := enqueue(name, nil)
+		ex, err := enqueue(name, nil)
 		if err != nil {
 			if errors.Is(err, core.ErrUnknownWorkflow) {
 				http.Error(w, "unknown workflow", http.StatusNotFound)
@@ -84,7 +110,9 @@ func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "execution.html", runBadge{WorkflowID: id})
+		b := badgeFor(ex.ID, ex.State)
+		b.CreatedAt = ex.CreatedAt
+		render(templates, w, "execution.html", b)
 	})
 
 	// HTMX partial: the execution badge for the 2s poll (phase 2). Returns
@@ -112,6 +140,35 @@ func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload
 		render(templates, w, "badge.html", badgeFor(id, state))
 	})
 
+	// Full page: the detail of one execution (phase 3, DETAIL — click on the
+	// workflow ID in the list): badge state, the attempts (retries 1..N-1
+	// are the failures recovered by a retry, retry N the final status) and,
+	// on failure, the error and the step that failed.
+	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		d, err := detail(id)
+		if err != nil {
+			if errors.Is(err, core.ErrUnknownExecution) {
+				http.Error(w, "unknown execution", http.StatusNotFound)
+				return
+			}
+			if errors.Is(err, core.ErrNotLaunched) {
+				http.Error(w, "core not ready", http.StatusServiceUnavailable)
+				return
+			}
+			slog.Error("detail", "workflow_id", id, "err", err)
+			http.Error(w, "detail unavailable", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		b := badgeFor(d.ID, d.State)
+		render(templates, w, "execution-detail.html", executionDetail{
+			ExecutionDetail: d,
+			Badge:           b,
+			Retries:         retriesFor(d.Attempts),
+		})
+	})
+
 	// Health: the web pings the core; the container healthcheck pings this
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		if err := ping(); err != nil {
@@ -128,23 +185,42 @@ func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload
 	return withRecovery(withRequestLog(mux))
 }
 
-// workflowPage is the data for the per-workflow full page.
+// workflowPage is the data for the per-workflow full page: the dispatch
+// button and the runs of the workflow (phase 3, LIST), newest first.
 type workflowPage struct {
-	Name string
+	Name       string
+	Executions []badge
 }
 
-// runBadge is the data for the execution row fragment rendered after a
-// dispatch.
-type runBadge struct {
-	WorkflowID string
+// executionDetail is the data for the per-execution detail page (phase 3,
+// DETAIL). core.ExecutionDetail is embedded so the template reads ID,
+// Name, Attempts, Error and FailedStep directly.
+type executionDetail struct {
+	core.ExecutionDetail
+	Badge   badge
+	Retries []retry
 }
 
-// badge is the data for the status badge fragment (the 2s poll partial).
+// retry is one row of the retries list: every retry is a failure recovered
+// by the retry policy — the run itself is not a "retry", so a run
+// without errors has zero. The current/final attempt is shown by the badge
+// and, on failure, by the error section.
+type retry struct {
+	Number int
+	Label  string
+	Class  string
+}
+
+// badge is the data for the badge fragment (the 2s poll partial) and for
+// the execution row fragments (the listing and the dispatch ACK).
 type badge struct {
 	WorkflowID string
 	Class      string
 	Label      string
 	Terminal   bool
+	// CreatedAt is the row's first execution date (listing + ACK rows);
+	// the badge fragment itself never renders it.
+	CreatedAt time.Time
 }
 
 // badgeStates maps the core states onto the badge presentation (the four
@@ -157,6 +233,22 @@ var badgeStates = map[core.State]struct {
 	core.StateRunning: {label: "Running"},
 	core.StateSuccess: {label: "Success", terminal: true},
 	core.StateError:   {label: "Failed", terminal: true},
+}
+
+// retriesFor renders the retries list from the DBOS attempt count:
+// "retries" counts the retries (attempts − 1) — a run without errors has
+// zero, so the number never implies a failure. Each retry is a "failed
+// (recovered)"; the final (or current) status is the badge itself.
+func retriesFor(attempts int) []retry {
+	retries := 0
+	if attempts > 1 {
+		retries = attempts - 1
+	}
+	rs := make([]retry, 0, retries)
+	for i := 1; i <= retries; i++ {
+		rs = append(rs, retry{Number: i, Label: "failed (recovered)", Class: string(core.StateError)})
+	}
+	return rs
 }
 
 func badgeFor(id string, state core.State) badge {

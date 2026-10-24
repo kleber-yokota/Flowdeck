@@ -49,6 +49,79 @@ func TestE2EHelloWorldRunsStep(t *testing.T) {
 	}
 }
 
+// A dispatched run that fails ends in the error state, with the error and
+// the failed step readable by Detail (phase 3, DETAIL) and the run listed
+// by Executions (phase 3, LIST).
+func TestE2EDetailOfFailedRun(t *testing.T) {
+	dbURL := os.Getenv("DBOS_E2E_DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("DBOS_E2E_DATABASE_URL not set — skipping e2e test")
+	}
+
+	bootCoreForTest(t, dbURL)
+	register("failing-test", failingTestWorkflow)
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	ex, err := Enqueue("failing-test", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if ex.CreatedAt.IsZero() {
+		t.Fatal("Enqueue returned a zero CreatedAt")
+	}
+	id := ex.ID
+
+	// The executor runs the run to its terminal state.
+	deadline := time.Now().Add(30 * time.Second)
+	var state State
+	for {
+		state, err = Status(id)
+		if err != nil {
+			t.Fatalf("Status: %v", err)
+		}
+		if state == StateSuccess {
+			t.Fatalf("run succeeded, want failure")
+		}
+		if state == StateError {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("run did not reach the error state in time (last: %s)", state)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	d, err := Detail(id)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if d.State != StateError {
+		t.Fatalf("detail state: got %s, want %s", d.State, StateError)
+	}
+	if d.CreatedAt.IsZero() {
+		t.Fatal("detail created_at: got zero, want the run's created_at")
+	}
+	if d.Attempts < 1 {
+		t.Fatalf("detail attempts: got %d, want >= 1", d.Attempts)
+	}
+	if !strings.Contains(d.Error, "boom: step failed") {
+		t.Fatalf("detail error: got %q, want the step error", d.Error)
+	}
+	if d.FailedStep != "boom-step" {
+		t.Fatalf("detail failed step: got %q, want %q", d.FailedStep, "boom-step")
+	}
+
+	exs, err := Executions("failing-test")
+	if err != nil {
+		t.Fatalf("Executions: %v", err)
+	}
+	if len(exs) != 1 || exs[0].ID != id || exs[0].State != StateError {
+		t.Fatalf("Executions: got %v, want the single failed run", exs)
+	}
+}
+
 // Enqueue puts the run on the DBOS queue; the executor started by Launch
 // picks it up and runs it to success (phase 2: INSERT INTO QUEUE → NOTIFY →
 // steps).
@@ -64,13 +137,17 @@ func TestE2EEnqueueRunsWorkflow(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	id, err := Enqueue("hello-world", "FlowDeck")
+	ex, err := Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if id == "" {
+	if ex.ID == "" {
 		t.Fatal("Enqueue returned an empty workflow ID")
 	}
+	if ex.CreatedAt.IsZero() {
+		t.Fatal("Enqueue returned a zero CreatedAt")
+	}
+	id := ex.ID
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
