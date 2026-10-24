@@ -44,6 +44,7 @@ var (
 	launched        bool
 	registrations   []registration
 	registeredNames = map[string]struct{}{}
+	pathsMap        map[string][][]string
 )
 
 // register records a durable workflow registration — called from each
@@ -114,7 +115,13 @@ func Boot(ctx context.Context, appName, databaseURL string) error {
 	if booted {
 		return errors.New("core: Boot already called (singleton — one DBOS context per process)")
 	}
-	var err error
+	// Phase 4, STEP 1: parse this package's own source (go/parser + go/ast)
+	// and build the map name → possible paths. Once at Boot, never per
+	// request — Paths is a plain map lookup.
+	paths, err := buildPaths()
+	if err != nil {
+		return fmt.Errorf("core: build paths: %w", err)
+	}
 	dbosCtx, err = dbos.NewContext(ctx, dbos.Config{
 		AppName:     appName,
 		DatabaseURL: databaseURL,
@@ -122,6 +129,7 @@ func Boot(ctx context.Context, appName, databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("dbos boot: %w", err)
 	}
+	pathsMap = paths
 	booted = true
 	return nil
 }
@@ -167,6 +175,7 @@ func Shutdown(timeout time.Duration) {
 	dbosCtx = nil
 	booted = false
 	launched = false
+	pathsMap = nil
 	mu.Unlock()
 	if c == nil {
 		return
