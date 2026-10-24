@@ -238,7 +238,9 @@ func TestDetailDeletedExecution(t *testing.T) {
 	id := handle.GetWorkflowID()
 
 	// Delete the run from the database: children first, then the status row.
-	db, err := sql.Open("sqlite", dbPath)
+	// The live queue runner may hold a short write lock — busy_timeout makes
+	// the delete wait for it instead of failing with SQLITE_BUSY.
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=busy_timeout(5000)")
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
