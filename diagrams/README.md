@@ -28,6 +28,20 @@ Estilo: pele escura metálica (fundo `#0b0c0e`, bordas aço, destaque laranja) c
 - click num `workflow_id` → detalhe da execução: **status**, **quantos retries teve** e
   **o status de cada retry**; em caso de falha: **o erro** e **o step que deu o erro**.
 
+## Fase 4 — Steps: caminhos possíveis + caminho executado
+
+Duas views, hierarquia `workflow → caminhos → steps`:
+
+- **Geral** — `GET /workflows/{nome}`: mostra **todos os caminhos possíveis** do workflow
+  (as branches do `if`/`else`). Os caminhos **derivam do código**: no boot o core faz parse do
+  próprio fonte (stdlib `go/parser` + `go/ast`, embutido via `go:embed`) e extrai cada `RunAsStep`
+  e o `if` que a envolve → mapa `nome → caminhos` em memória (sem Postgres);
+- **Execução** — `GET /executions/{id}`: mostra **o caminho que rodou** naquela execução —
+  o core lê as rows de step daquele run no Postgres (`step_id asc`) e devolve os steps na
+  **ordem de execução** (a branch do `if` tomada);
+- **genérico**: as duas views funcionam para qualquer workflow; tudo é **lido do core,
+  nunca hardcoded na web** (o mesmo mecanismo para todo workflow).
+
 ## Estados
 
 - `na fila → em execução (retry) → sucesso / falha` — terminais com dots; mesmas cores dos badges da UI.
@@ -38,6 +52,7 @@ Estilo: pele escura metálica (fundo `#0b0c0e`, bordas aço, destaque laranja) c
 - `sequencia-fase-1.html`
 - `sequencia-fase-2.html`
 - `sequencia-fase-3.html`
+- `sequencia-fase-4.html`
 - `estados-workflow.html`
 
 `.diagram-design` (na raiz do repo) é o perfil `profile: flowdeck` da ferramenta
