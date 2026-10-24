@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -21,8 +22,9 @@ var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 // New builds the HTMX web server — an abstraction over the core.
 // listWorkflows returns the workflows registered in the core (single
 // source of truth); the web knows nothing about specific workflows.
-// ping reports whether the core is up (health endpoint).
-func New(listWorkflows func() []core.Workflow, ping func() error) http.Handler {
+// enqueue dispatches a registered workflow (core → DBOS queue) and returns
+// the new workflow ID. ping reports whether the core is up (health endpoint).
+func New(listWorkflows func() []core.Workflow, enqueue func(name string, payload any) (string, error), ping func() error) http.Handler {
 	static, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		panic(fmt.Sprintf("static: %v", err))
@@ -43,6 +45,46 @@ func New(listWorkflows func() []core.Workflow, ping func() error) http.Handler {
 		render(templates, w, "workflows.html", listWorkflows())
 	})
 
+	// Full page: one registered workflow — the dispatch button and the list
+	// of executions (workflow IDs) triggered from it.
+	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("name")
+		registered := false
+		for _, wf := range listWorkflows() {
+			if wf.Name == name {
+				registered = true
+				break
+			}
+		}
+		if !registered {
+			http.Error(w, "unknown workflow", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		render(templates, w, "workflow.html", workflowPage{Name: name})
+	})
+
+	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
+	// on the DBOS queue; the response is the execution row fragment ("queued"
+	// badge + visible workflow ID — the ACK), prepended to the executions
+	// list on the workflow page.
+	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("name")
+		id, err := enqueue(name, nil)
+		if err != nil {
+			if errors.Is(err, core.ErrUnknownWorkflow) {
+				http.Error(w, "unknown workflow", http.StatusNotFound)
+				return
+			}
+			slog.Error("enqueue", "workflow", name, "err", err)
+			http.Error(w, "enqueue failed", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		render(templates, w, "execution.html", runBadge{WorkflowID: id})
+	})
+
 	// Health: the web pings the core; the container healthcheck pings this
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		if err := ping(); err != nil {
@@ -57,6 +99,17 @@ func New(listWorkflows func() []core.Workflow, ping func() error) http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 
 	return withRecovery(withRequestLog(mux))
+}
+
+// workflowPage is the data for the per-workflow full page.
+type workflowPage struct {
+	Name string
+}
+
+// runBadge is the data for the execution row fragment rendered after a
+// dispatch.
+type runBadge struct {
+	WorkflowID string
 }
 
 // render executes the template into a buffer first, so a render error can

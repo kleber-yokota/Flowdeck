@@ -1,6 +1,8 @@
 package web
 
 import (
+	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -14,6 +16,10 @@ import (
 func emptyLister() []core.Workflow { return nil }
 
 func okPing() error { return nil }
+
+func okEnqueuer(name string, payload any) (string, error) {
+	return "00000000-0000-0000-0000-000000000001", nil
+}
 
 func get(t *testing.T, url string) (int, string) {
 	t.Helper()
@@ -30,7 +36,7 @@ func get(t *testing.T, url string) (int, string) {
 }
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/")
@@ -58,7 +64,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 			{Name: "wf-beta"},
 		}
 	}
-	srv := httptest.NewServer(New(fakeLister, okPing))
+	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -81,7 +87,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 }
 
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -95,7 +101,7 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The fragment is dynamic: it must never be cached by the browser.
 func TestWorkflowsPartialNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/workflows")
@@ -112,7 +118,7 @@ func TestWorkflowsPartialNoStore(t *testing.T) {
 }
 
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/static/htmx.min.js")
@@ -128,16 +134,142 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 // The health endpoint mirrors the core: 200 when the core is up,
 // 503 when it is not.
 func TestHealthz(t *testing.T) {
-	up := httptest.NewServer(New(emptyLister, okPing))
+	up := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer up.Close()
 	if status, _ := get(t, up.URL+"/healthz"); status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
 
-	down := httptest.NewServer(New(emptyLister, func() error { return core.ErrNotLaunched }))
+	down := httptest.NewServer(New(emptyLister, okEnqueuer, func() error { return core.ErrNotLaunched }))
 	defer down.Close()
 	if status, _ := get(t, down.URL+"/healthz"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
+	}
+}
+
+// POST /run is the dispatch (phase 2): it enqueues in the core and returns
+// the execution row fragment: "queued" badge + the visible workflow ID
+// (the ACK) — the browser prepends it to the executions list.
+func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	defer srv.Close()
+
+	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusOK)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	for _, want := range []string{
+		`<li class="execution">`,
+		`data-workflow-id="00000000-0000-0000-0000-000000000001"`,
+		"Queued",
+		`<code class="wf-id">00000000-0000-0000-0000-000000000001</code>`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("fragment does not contain %q: %q", want, body)
+		}
+	}
+	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
+	}
+}
+
+// A workflow that is not in the core registry is a clean 404.
+func TestRunUnknownWorkflowIs404(t *testing.T) {
+	enqueue := func(name string, payload any) (string, error) {
+		return "", fmt.Errorf("%w: %s", core.ErrUnknownWorkflow, name)
+	}
+	srv := httptest.NewServer(New(emptyLister, enqueue, okPing))
+	defer srv.Close()
+
+	resp, err := http.Post(srv.URL+"/run/ghost", "application/octet-stream", nil)
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+// A core failure that is not "unknown workflow" is a clean 500.
+func TestRunEnqueueFailureIs500(t *testing.T) {
+	enqueue := func(name string, payload any) (string, error) {
+		return "", errors.New("boom")
+	}
+	srv := httptest.NewServer(New(emptyLister, enqueue, okPing))
+	defer srv.Close()
+
+	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusInternalServerError)
+	}
+}
+
+// The partial links each registered workflow to its page (zero hardcoding
+// in the base page): the dispatch button lives on that page.
+func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
+	fakeLister := func() []core.Workflow {
+		return []core.Workflow{{Name: "wf-alpha"}}
+	}
+	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okPing))
+	defer srv.Close()
+
+	status, body := get(t, srv.URL+"/workflows")
+	if status != http.StatusOK {
+		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	}
+	if !strings.Contains(body, `href="/workflows/wf-alpha"`) {
+		t.Errorf("partial does not link to the workflow page: %q", body)
+	}
+	_, page := get(t, srv.URL+"/")
+	if strings.Contains(page, `href="/workflows/`) {
+		t.Error("page hardcodes workflow links")
+	}
+}
+
+// The workflow page (full page, opened from the list) has the dispatch
+// button and the executions list that receives the ACK rows.
+func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
+	fakeLister := func() []core.Workflow {
+		return []core.Workflow{{Name: "wf-alpha"}}
+	}
+	srv := httptest.NewServer(New(fakeLister, okEnqueuer, okPing))
+	defer srv.Close()
+
+	status, body := get(t, srv.URL+"/workflows/wf-alpha")
+	if status != http.StatusOK {
+		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	}
+	for _, want := range []string{
+		`hx-post="/run/wf-alpha"`,
+		`id="executions"`,
+		"Run",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page does not contain %q", want)
+		}
+	}
+}
+
+// A page for a workflow that is not in the core registry is a clean 404.
+func TestWorkflowPageUnknownIs404(t *testing.T) {
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
+	defer srv.Close()
+
+	if status, _ := get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
+		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
 	}
 }
 
@@ -159,7 +291,7 @@ func TestRenderErrorIsClean500(t *testing.T) {
 }
 
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
@@ -173,7 +305,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPing))
+	srv := httptest.NewServer(New(emptyLister, okEnqueuer, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)

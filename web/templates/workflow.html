@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ .Name }} · FlowDeck</title>
+  <!-- HTMX 2.0.4 is vendored (web/static) — no CDN at runtime -->
+  <script src="/static/htmx.min.js" defer></script>
+  <style>
+    :root {
+      --paper:  #0b0c0e;
+      --ink:    #e8e6e1;
+      --steel:  #b8bcc4;
+      --soft:   #8f96a3;
+      --accent: #ff9142;
+      --queued: #7cc0ff;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Geist", system-ui, sans-serif;
+    }
+    .frame { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .eyebrow {
+      font-family: ui-monospace, "Geist Mono", monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--soft);
+      margin: 0 0 0.5rem;
+    }
+    .back { color: var(--soft); text-decoration: none; }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 500;
+      margin: 0 0 1.5rem;
+      color: var(--ink);
+    }
+    .run {
+      font-family: ui-monospace, "Geist Mono", monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(255, 145, 66, 0.08);
+      border: 1px solid rgba(255, 145, 66, 0.55);
+      border-radius: 4px;
+      padding: 0.35rem 0.7rem;
+      cursor: pointer;
+    }
+    .run:hover { background: rgba(255, 145, 66, 0.18); }
+    .executions { list-style: none; margin: 1.5rem 0 0; padding: 0; }
+    .execution {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+      background: #101114;
+      border: 1px solid rgba(184, 188, 196, 0.35);
+      border-radius: 6px;
+    }
+    .badge {
+      font-family: ui-monospace, "Geist Mono", monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      color: var(--queued);
+      background: rgba(124, 192, 255, 0.08);
+      border: 1px solid var(--queued);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      white-space: nowrap;
+    }
+    .wf-id { font-size: 0.7rem; color: var(--steel); }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <p class="eyebrow"><a class="back" href="/">Workflows</a></p>
+    <h1>{{ .Name }}</h1>
+    <button type="button"
+            class="run"
+            hx-post="/run/{{ .Name | urlquery }}"
+            hx-target="#executions"
+            hx-swap="afterbegin">
+      Run
+    </button>
+    <!-- Each dispatch enqueues a run in the core (DBOS queue) and prepends
+         a row with the workflow ID returned in the ACK -->
+    <ul id="executions" class="executions"></ul>
+  </main>
+</body>
+</html>

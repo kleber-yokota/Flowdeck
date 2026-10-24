@@ -1,7 +1,7 @@
 <ul class="list">
   {{- range . }}
   <li class="item">
-    <span class="name">{{ .Name }}</span>
+    <a class="name" href="/workflows/{{ .Name | urlquery }}">{{ .Name }}</a>
   </li>
   {{- else }}
   <li class="item empty">No workflows registered</li>
