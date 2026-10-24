@@ -30,4 +30,6 @@ DBOS_E2E_DATABASE_URL=postgres://flowdeck:flowdeck@localhost:5432/flowdeck \
   go test -tags e2e -run TestE2E ./...
 ```
 
-(ou aponte `DBOS_E2E_DATABASE_URL` para qualquer Postgres 18 com um banco dedicado).
+(ou aponte `DBOS_E2E_DATABASE_URL` para qualquer Postgres 18 com um banco dedicado;
+o e2e da web deriva um banco dedicado `<db>_web` do URL — auto-criado pelo DBOS —
+para não conflitar com o e2e do core, que é stateful).

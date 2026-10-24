@@ -3,6 +3,7 @@ package web
 import (
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,4 +58,35 @@ func get(t *testing.T, url string) (int, string) {
 		t.Fatalf("read body: %v", err)
 	}
 	return resp.StatusCode, string(body)
+}
+
+// post issues a POST and returns the open response (the caller reads and
+// closes it).
+func post(t *testing.T, url string) (*http.Response, error) {
+	t.Helper()
+	return http.Post(url, "application/octet-stream", nil)
+}
+
+// readAll reads the whole response body.
+func readAll(t *testing.T, resp *http.Response) string {
+	t.Helper()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return string(body)
+}
+
+// executionID extracts the workflow ID from an execution row (the dispatch
+// ACK).
+func executionID(t *testing.T, row string) string {
+	t.Helper()
+	const prefix = `href="/executions/`
+	idx := strings.Index(row, prefix)
+	if idx < 0 {
+		t.Fatalf("row without an execution link: %q", row)
+	}
+	start := idx + len(prefix)
+	end := start + strings.Index(row[start:], `"`)
+	return row[start:end]
 }
