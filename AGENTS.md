@@ -1,67 +1,71 @@
 # AGENTS.md — FlowDeck
 
-Orientações para agentes de código trabalhando neste repositório.
+Guidelines for code agents working in this repository.
 
-## O projeto
+## The project
 
-FlowDeck é um painel de orquestração de workflows duráveis. **Um único serviço em Go**: a camada web (HTMX, `:8080`) faz o boot do core DBOS e expõe workflows duráveis no Postgres 18 (`:5432`). Todo o design (arquitetura, estados, sequências) está documentado em `diagrams/` — leia o `diagrams/README.md` e os `.html` antes de implementar.
+FlowDeck is a durable workflow orchestration dashboard. **A single Go service**: the web layer (HTMX, `:8080`) boots the DBOS core and exposes durable workflows on Postgres 18 (`:5432`). All design (architecture, states, sequences) is documented in `diagrams/` — read `diagrams/README.md` and the `.html` files before implementing.
 
 ## Stack
 
-| Camada | Tecnologia | Observações |
+| Layer | Technology | Notes |
 | --- | --- | --- |
-| Backend + Web | **Go** (serviço único) | webserver em `:8080`, serve templates com HTMX |
-| Frontend | **HTMX** (no navegador, nada de SPA/JS framework) | páginas são HTML server-side + `hx-*`; interações são GET/POST HTMX |
-| Orquestração | **DBOS Go** — `github.com/dbos-inc/dbos-transact-golang` | workflows, filas e estado durável no Postgres; API: `dbos.NewContext(ctx, dbos.Config{...})`, `RegisterQueue`, `Enqueue`/`WithQueue` |
-| Banco | **Postgres 18** (`:5432`) | via `DBOS_SYSTEM_DATABASE_URL`; DBOS exige um sistema database dedicado |
-| Deploy | **docker-compose**, uma máquina | serviço FlowDeck + Postgres 18; não há nenhum outro container |
+| Backend + Web | **Go** (single service) | webserver on `:8080`, serves HTMX templates |
+| Frontend | **HTMX** (in the browser, no SPA/JS framework) | pages are server-side HTML + `hx-*`; interactions are HTMX GET/POST |
+| Orchestration | **DBOS Go** — `github.com/dbos-inc/dbos-transact-golang` | workflows, queues and durable state on Postgres; API: `dbos.NewContext(ctx, dbos.Config{...})`, `RegisterQueue`, `Enqueue`/`WithQueue` |
+| Database | **Postgres 18** (`:5432`) | via `DBOS_SYSTEM_DATABASE_URL`; DBOS requires a dedicated system database |
+| Deploy | **docker-compose**, one machine | FlowDeck service + Postgres 18; no other containers |
 
-## Invariantes de arquitetura (não violar)
+## Architecture invariants (do not violate)
 
-1. **Um processo, dois mundos**: a web é uma *abstração sobre o boot do core DBOS* — o core é iniciado dentro do serviço Go e a web faz chamadas nele. O DBOS **não sobe webserver nenhum**; se você vir o DBOS expondo portas/rotas, está errado.
-2. **Zero hardcode de workflow na web**: a lista de workflows vem do **registry do core**. A web lista o que o core registrou; adicionar um novo workflow = registrá-lo no core, nunca adicionar item fixo no template/HTML.
-3. **Fila no DBOS**: disparo = enqueue (`POST` HTMX → web → core → `Enqueue` no Postgres). O executor do DBOS seleciona o job da fila, executa e atualiza o status — o webserver nunca executa o workflow diretamente.
-4. **Status por polling**: o front consulta o status a cada **2s** (polling HTMX, `hx-trigger="every 2s"` ou similar); não usar websocket/SSE para o status.
+1. **One process, two worlds**: the web is an *abstraction over the DBOS core boot* — the core starts inside the Go service and the web calls into it. DBOS **does not run any webserver**; if you see DBOS exposing ports/routes, it is wrong.
+2. **Zero workflow hardcoding in the web**: the workflow list comes from the **core registry**. The web lists what the core registered; adding a new workflow = registering it in the core, never adding a fixed item to the template/HTML.
+3. **Queue in DBOS**: dispatch = enqueue (`POST` HTMX → web → core → `Enqueue` on Postgres). The DBOS executor picks the job off the queue, runs it and updates the status — the webserver never executes a workflow directly.
+4. **Status by polling**: the front polls the status every **2s** (HTMX polling, `hx-trigger="every 2s"` or similar); no websockets/SSE for status.
 
-## Máquina de estados do workflow
+## Workflow state machine
 
 ```
-na fila → em execução (retry ≤ 3) → sucesso | falha
+queued → running (retry ≤ 3) → success | failed
 ```
 
-- Estados DBOS mapeados: `enqueued` → na fila, `running` → em execução, `success` → sucesso, `error` → falha (retry esgotado).
-- Estados **terminais** (sucesso/falha) exibem dot na UI.
+- Mapped DBOS states: `enqueued` → queued, `running` → running, `success` → success, `error` → failed (retries exhausted).
+- **Terminal** states (success/failed) show a dot in the UI.
 
-## Cores de status (mesmas das badges da UI — não inventar outras)
+## Status colors (same as the UI badges — do not invent others)
 
-| Status | Cor | Hex |
+| Status | Color | Hex |
 | --- | --- | --- |
-| na fila | azul claro | `#7cc0ff` |
-| em execução | laranja | `#ff9142` |
-| sucesso | verde | `#46d19a` |
-| falha | vermelho | `#ff5450` |
+| queued | light blue | `#7cc0ff` |
+| running | orange | `#ff9142` |
+| success | green | `#46d19a` |
+| failed | red | `#ff5450` |
 
-Tema visual: fundo escuro metálico `#0b0c0e`, bordas aço (`#b8bcc4`/`#8f96a3`), texto `#e8e6e1`, destaque laranja `#ff9142` (paleta dos diagramas).
+Visual theme: dark metallic background `#0b0c0e`, steel borders (`#b8bcc4`/`#8f96a3`), text `#e8e6e1`, orange accent `#ff9142` (the diagrams palette).
 
-## Fluxos (referência: `diagrams/`)
+## Flows (reference: `diagrams/`)
 
-- **Fase 1 — listagem dinâmica**: `GET` HTMX → core lista workflows do registry → UI renderiza a lista.
-- **Fase 2 — disparar e acompanhar**: `POST` HTMX → enqueue no Postgres (ACK) → DBOS executa o job e atualiza o status → polling de 2s atualiza o badge nas quatro cores.
-- **Fase 3 — execuções de um workflow**: `GET /workflows/{nome}` lista todas as execuções (workflow_id + badge); click no workflow_id → detalhe: status, retries, status de cada retry — em falha: erro + step com falha.
+- **Phase 1 — dynamic listing**: HTMX `GET` → core lists the registry workflows → UI renders the list.
+- **Phase 2 — dispatch and track**: HTMX `POST` → enqueue on Postgres (ACK) → DBOS runs the job and updates the status → the 2s polling updates the badge through the four colors.
+- **Phase 3 — runs of a workflow**: `GET /workflows/{name}` lists all executions (workflow_id + badge); clicking the workflow_id → detail: status, retries, status of each retry — on failure: error + the failed step.
 
-## Convenções
+## Implementation rule (always apply)
 
-- Idioma do código e dos commits: **inglês**; comentários/docstrings podem ser pt-BR.
-- Rotas HTMX devolvem **fragmentos de HTML** (partials), não JSON.
-- Não introduzir framework de frontend, bundler, npm ou banco diferente do Postgres sem decisão explícita.
-- Postgres sempre **18** no compose (compatibilidade com o DBOS).
-- Diagramas em `diagrams/` são a fonte de verdade do design: se o código divergir do diagrama, o diagrama vence — atualize o diagrama junto com o código.
+Implement what `diagrams/` says, **simply and directly**: the diagram is the spec and the source of truth — build exactly what it shows, with the smallest reasonable set of pieces. No abstractions, layers, options or dependencies beyond what the diagram shows. If a solution is harder to read than the diagram, it is wrong — simplify it.
 
-## Comandos
+## Conventions
+
+- Code and commit language: **English**; comments/docstrings may be pt-BR.
+- HTMX routes return **HTML fragments** (partials), not JSON.
+- Do not introduce a frontend framework, bundler, npm, or a database other than Postgres without an explicit decision.
+- Postgres is always **18** in the compose (DBOS compatibility).
+- The diagrams in `diagrams/` are the source of truth for design: if the code diverges from a diagram, the diagram wins — update the diagram together with the code.
+
+## Commands
 
 ```bash
 go test ./...
 docker compose up --build
 ```
 
-Estrutura do serviço: um compose (`docker-compose.yml`) com `postgres:18` (porta `5432`) e o serviço FlowDeck (`:8080`). Um único `main.go` faz o boot (core DBOS → webserver HTMX); o código está em dois pacotes: `core/` (singleton do core DBOS: `Boot`/`Launch`/`Shutdown`/`List` em `core.go`, steps em `steps.go`, workflows em `workflows.go` — cada arquivo se registra no próprio `init()`, sem lista central) e `web/` (webserver HTMX + templates).
+Service structure: one compose file (`docker-compose.yml`) with `postgres:18` (port `5432`) and the FlowDeck service (`:8080`). A single `main.go` does the boot (DBOS core → HTMX webserver); the code lives in two packages: `core/` (the DBOS core singleton: `Boot`/`Launch`/`Shutdown`/`List` in `core.go`, steps in `steps.go`, workflows in `workflows.go` — each file registers itself in its own `init()`, no central list) and `web/` (HTMX webserver + templates).
