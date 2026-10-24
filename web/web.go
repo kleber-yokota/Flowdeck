@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"flowdeck/core"
@@ -45,51 +46,33 @@ func New(
 
 	// Full page (serves the HTMX shell)
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "index.html", indexPage{Title: "FlowDeck"})
+		page(w, "index.html", indexPage{Title: "FlowDeck"})
 	})
 
 	// HTMX partial: fragment with the workflows registered in the core
 	mux.HandleFunc("GET /workflows", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "workflows.html", listWorkflows())
+		partial(w, "workflows.html", listWorkflows())
 	})
 
 	// Full page: one registered workflow — the dispatch button and the runs
-	// of it (phase 3, LIST): every execution the core knows, newest
-	// first — workflow ID + badge.
+	// of it (phase 3, LIST): every execution the core knows, newest first —
+	// workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
-		registered := false
-		for _, wf := range listWorkflows() {
-			if wf.Name == name {
-				registered = true
-				break
-			}
-		}
-		if !registered {
+		if !registered(listWorkflows(), name) {
 			http.Error(w, "unknown workflow", http.StatusNotFound)
 			return
 		}
 		exs, err := executions(name)
 		if err != nil {
-			if errors.Is(err, core.ErrNotLaunched) {
-				http.Error(w, "core not ready", http.StatusServiceUnavailable)
-				return
-			}
-			slog.Error("executions", "workflow", name, "err", err)
-			http.Error(w, "executions unavailable", http.StatusInternalServerError)
+			fail(w, "executions", err)
 			return
 		}
 		rows := make([]badge, 0, len(exs))
 		for _, e := range exs {
-			b := badgeFor(e.ID, e.State)
-			b.CreatedAt = e.CreatedAt
-			rows = append(rows, b)
+			rows = append(rows, row(e))
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "workflow.html", workflowPage{Title: name + " · FlowDeck", Name: name, Executions: rows})
+		page(w, "workflow.html", workflowPage{Title: name + " · FlowDeck", Name: name, Executions: rows})
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -97,22 +80,12 @@ func New(
 	// badge + visible workflow ID — the ACK), prepended to the executions
 	// list on the workflow page.
 	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		ex, err := enqueue(name, nil)
+		ex, err := enqueue(r.PathValue("name"), nil)
 		if err != nil {
-			if errors.Is(err, core.ErrUnknownWorkflow) {
-				http.Error(w, "unknown workflow", http.StatusNotFound)
-				return
-			}
-			slog.Error("enqueue", "workflow", name, "err", err)
-			http.Error(w, "enqueue failed", http.StatusInternalServerError)
+			fail(w, "enqueue", err)
 			return
 		}
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		b := badgeFor(ex.ID, ex.State)
-		b.CreatedAt = ex.CreatedAt
-		render(templates, w, "execution.html", b)
+		partial(w, "execution.html", row(ex))
 	})
 
 	// HTMX partial: the execution badge for the 2s poll (phase 2). Returns
@@ -123,21 +96,10 @@ func New(
 		id := r.PathValue("id")
 		state, err := status(id)
 		if err != nil {
-			if errors.Is(err, core.ErrUnknownExecution) {
-				http.Error(w, "unknown execution", http.StatusNotFound)
-				return
-			}
-			if errors.Is(err, core.ErrNotLaunched) {
-				http.Error(w, "core not ready", http.StatusServiceUnavailable)
-				return
-			}
-			slog.Error("status", "workflow_id", id, "err", err)
-			http.Error(w, "status unavailable", http.StatusInternalServerError)
+			fail(w, "status", err)
 			return
 		}
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "badge.html", badgeFor(id, state))
+		partial(w, "badge.html", badgeFor(id, state))
 	})
 
 	// Full page: the detail of one execution (phase 3, DETAIL — click on the
@@ -148,24 +110,13 @@ func New(
 		id := r.PathValue("id")
 		d, err := detail(id)
 		if err != nil {
-			if errors.Is(err, core.ErrUnknownExecution) {
-				http.Error(w, "unknown execution", http.StatusNotFound)
-				return
-			}
-			if errors.Is(err, core.ErrNotLaunched) {
-				http.Error(w, "core not ready", http.StatusServiceUnavailable)
-				return
-			}
-			slog.Error("detail", "workflow_id", id, "err", err)
-			http.Error(w, "detail unavailable", http.StatusInternalServerError)
+			fail(w, "detail", err)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		b := badgeFor(d.ID, d.State)
-		render(templates, w, "execution-detail.html", executionDetail{
+		page(w, "execution-detail.html", executionDetail{
 			ExecutionDetail: d,
 			Title:           d.ID + " · FlowDeck",
-			Badge:           b,
+			Badge:           badgeFor(d.ID, d.State),
 			Retries:         retriesFor(d.Attempts),
 		})
 	})
@@ -184,6 +135,52 @@ func New(
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 
 	return withRecovery(withRequestLog(mux))
+}
+
+// registered reports whether name is in the core's workflow registry (the
+// single source of truth — the web never hardcodes a workflow).
+func registered(workflows []core.Workflow, name string) bool {
+	return slices.ContainsFunc(workflows, func(wf core.Workflow) bool { return wf.Name == name })
+}
+
+// row maps one execution onto its listing row: the badge plus the first
+// execution date (the dispatch ACK and the listing rows both carry it).
+func row(e core.Execution) badge {
+	b := badgeFor(e.ID, e.State)
+	b.CreatedAt = e.CreatedAt
+	return b
+}
+
+// fail maps a core error onto the HTTP error response: 404 for a workflow
+// or execution the core does not know, 503 while the core is not launched,
+// and a logged 500 for anything unexpected.
+func fail(w http.ResponseWriter, op string, err error) {
+	switch {
+	case errors.Is(err, core.ErrUnknownWorkflow):
+		http.Error(w, "unknown workflow", http.StatusNotFound)
+	case errors.Is(err, core.ErrUnknownExecution):
+		http.Error(w, "unknown execution", http.StatusNotFound)
+	case errors.Is(err, core.ErrNotLaunched):
+		http.Error(w, "core not ready", http.StatusServiceUnavailable)
+	default:
+		slog.Error(op, "err", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+	}
+}
+
+// page renders a full HTML page (a normal navigation, so the browser may
+// cache the document as usual).
+func page(w http.ResponseWriter, name string, data any) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	render(templates, w, name, data)
+}
+
+// partial renders an HTMX fragment: the content is dynamic, so it must
+// never be cached by the browser.
+func partial(w http.ResponseWriter, name string, data any) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	render(templates, w, name, data)
 }
 
 // indexPage is the data for the index full page (the HTMX shell that loads
