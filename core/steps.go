@@ -17,3 +17,11 @@ func GreetStep(msg string) dbos.Step[string] {
 		return fmt.Sprintf("hello, %s (%d)", msg, time.Now().Unix()), nil
 	}
 }
+
+// EchoStep returns a step that echoes the given label — the plain durable
+// step behind the linear (pipeline) and branched (decide) workflows.
+func EchoStep(label string) dbos.Step[string] {
+	return func(ctx context.Context) (string, error) {
+		return label, nil
+	}
+}

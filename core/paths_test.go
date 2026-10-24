@@ -21,6 +21,28 @@ func TestBootBuildsPathsMap(t *testing.T) {
 	}
 }
 
+// Phase 4, STEP 1: the boot map of the branched workflow (decide) forks on
+// the if: base → left and base → right.
+func TestBootBuildsPathsMapDecide(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	got := Paths("decide")
+	if !equalPaths(got, [][]string{{"base", "left"}, {"base", "right"}}) {
+		t.Fatalf("Paths(decide): got %v", got)
+	}
+}
+
+// Phase 4, STEP 1: the boot map of the linear workflow (pipeline) is a
+// single path with all the steps in source order.
+func TestBootBuildsPathsMapPipeline(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	got := Paths("pipeline")
+	if !equalPaths(got, [][]string{{"fetch", "parse", "transform", "store"}}) {
+		t.Fatalf("Paths(pipeline): got %v", got)
+	}
+}
+
 // Paths before Boot must return nil (core not booted), like List().
 func TestPathsBeforeBootReturnsNil(t *testing.T) {
 	Shutdown(5 * time.Second)
