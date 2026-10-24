@@ -1,0 +1,213 @@
+/*
+ * FlowDeck — single stylesheet for all full pages.
+ *
+ * The design tokens follow the diagrams palette (AGENTS.md); the four badge
+ * states (queued/running/success/failed) must stay in sync with diagrams/.
+ * Partials (badge, workflows, execution rows) need no styles of their own:
+ * they are always swapped into a full page that loads this file.
+ */
+
+:root {
+  --paper:  #0b0c0e;
+  --ink:    #e8e6e1;
+  --steel:  #b8bcc4;
+  --soft:   #8f96a3;
+  --accent: #ff9142;
+  --queued:  #7cc0ff;
+  --running: #ff9142;
+  --success: #46d19a;
+  --error:   #ff5450;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Geist", system-ui, sans-serif;
+}
+
+.frame { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+
+.eyebrow {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--soft);
+  margin: 0 0 0.5rem;
+}
+
+.back { color: var(--soft); text-decoration: none; }
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 500;
+  margin: 0 0 1.5rem;
+  color: var(--ink);
+}
+
+/* Badge — the four states of the workflow (same colors as the diagrams);
+   terminal states (success/failed) show a dot */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--queued);
+  background: rgba(124, 192, 255, 0.08);
+  border: 1px solid var(--queued);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  white-space: nowrap;
+}
+
+/* The four states of the badge — same colors as the diagrams */
+.badge.running { color: var(--running); background: rgba(255, 145, 66, 0.08); border-color: var(--running); }
+.badge.success { color: var(--success); background: rgba(70, 209, 154, 0.08); border-color: var(--success); }
+.badge.error { color: var(--error); background: rgba(255, 84, 80, 0.08); border-color: var(--error); }
+
+/* Terminal states (success/failed) show a dot */
+.badge.terminal::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Index page — the workflows registered in the core (phase 1) */
+.list { list-style: none; margin: 0; padding: 0; }
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  background: #101114;
+  border: 1px solid rgba(184, 188, 196, 0.35);
+  border-radius: 6px;
+}
+
+.name { font-weight: 600; }
+
+a.name { color: inherit; text-decoration: none; }
+
+.empty { color: var(--soft); }
+
+/* Workflow page — the dispatch button and the runs of the workflow
+   (phase 3, LIST) */
+.run {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(255, 145, 66, 0.08);
+  border: 1px solid rgba(255, 145, 66, 0.55);
+  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.run:hover { background: rgba(255, 145, 66, 0.18); }
+
+.executions { list-style: none; margin: 1.5rem 0 0; padding: 0; }
+
+.execution {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #101114;
+  border: 1px solid rgba(184, 188, 196, 0.35);
+  border-radius: 6px;
+}
+
+.wf-id {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--steel);
+  text-decoration: none;
+}
+
+.wf-id:hover { color: var(--ink); text-decoration: underline; }
+
+.exec-date {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--soft);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Execution detail page (phase 3, DETAIL) */
+.execution-id {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 1.05rem;
+  word-break: break-all;
+}
+
+.first-run, .attempts-count {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.75rem;
+  color: var(--soft);
+  margin: 0 0 0.5rem;
+}
+
+.first-run { margin-top: 1.5rem; }
+
+.attempts { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+
+.attempt {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  background: #101114;
+  border: 1px solid rgba(184, 188, 196, 0.35);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.attempt.queued { color: var(--queued); }
+.attempt.running { color: var(--running); }
+.attempt.success { color: var(--success); }
+.attempt.error { color: var(--error); }
+
+/* Failure: error + the step that failed (diagram sequencia-fase-3) */
+.failure {
+  background: rgba(255, 84, 80, 0.08);
+  border: 1px solid rgba(255, 84, 80, 0.55);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+
+.failure-title {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--error);
+  margin: 0 0 0.5rem;
+}
+
+.error {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0 0 0.5rem;
+}
+
+.failed-step { margin: 0; }
+
+.failed-step code {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.75rem;
+  color: var(--error);
+}

@@ -1,15 +1,15 @@
+// Package web is the HTMX web server — the presentation layer over the
+// core: full pages plus HTMX fragments, core errors mapped onto HTTP,
+// and the dispatch POST that enqueues a run on the core.
 package web
 
 import (
-	"bytes"
 	"embed"
-	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log/slog"
 	"net/http"
-	"time"
+	"slices"
 
 	"flowdeck/core"
 )
@@ -45,51 +45,33 @@ func New(
 
 	// Full page (serves the HTMX shell)
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "index.html", nil)
+		page(w, "index.html", indexPage{Title: "FlowDeck"})
 	})
 
 	// HTMX partial: fragment with the workflows registered in the core
 	mux.HandleFunc("GET /workflows", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "workflows.html", listWorkflows())
+		partial(w, "workflows.html", listWorkflows())
 	})
 
 	// Full page: one registered workflow — the dispatch button and the runs
-	// of it (phase 3, LIST): every execution the core knows, newest
-	// first — workflow ID + badge.
+	// of it (phase 3, LIST): every execution the core knows, newest first —
+	// workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
-		registered := false
-		for _, wf := range listWorkflows() {
-			if wf.Name == name {
-				registered = true
-				break
-			}
-		}
-		if !registered {
+		if !registered(listWorkflows(), name) {
 			http.Error(w, "unknown workflow", http.StatusNotFound)
 			return
 		}
 		exs, err := executions(name)
 		if err != nil {
-			if errors.Is(err, core.ErrNotLaunched) {
-				http.Error(w, "core not ready", http.StatusServiceUnavailable)
-				return
-			}
-			slog.Error("executions", "workflow", name, "err", err)
-			http.Error(w, "executions unavailable", http.StatusInternalServerError)
+			fail(w, "executions", err)
 			return
 		}
 		rows := make([]badge, 0, len(exs))
 		for _, e := range exs {
-			b := badgeFor(e.ID, e.State)
-			b.CreatedAt = e.CreatedAt
-			rows = append(rows, b)
+			rows = append(rows, row(e))
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "workflow.html", workflowPage{Name: name, Executions: rows})
+		page(w, "workflow.html", workflowPage{Title: name + " · FlowDeck", Name: name, Executions: rows})
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -97,22 +79,12 @@ func New(
 	// badge + visible workflow ID — the ACK), prepended to the executions
 	// list on the workflow page.
 	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		ex, err := enqueue(name, nil)
+		ex, err := enqueue(r.PathValue("name"), nil)
 		if err != nil {
-			if errors.Is(err, core.ErrUnknownWorkflow) {
-				http.Error(w, "unknown workflow", http.StatusNotFound)
-				return
-			}
-			slog.Error("enqueue", "workflow", name, "err", err)
-			http.Error(w, "enqueue failed", http.StatusInternalServerError)
+			fail(w, "enqueue", err)
 			return
 		}
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		b := badgeFor(ex.ID, ex.State)
-		b.CreatedAt = ex.CreatedAt
-		render(templates, w, "execution.html", b)
+		partial(w, "execution.html", row(ex))
 	})
 
 	// HTMX partial: the execution badge for the 2s poll (phase 2). Returns
@@ -123,21 +95,10 @@ func New(
 		id := r.PathValue("id")
 		state, err := status(id)
 		if err != nil {
-			if errors.Is(err, core.ErrUnknownExecution) {
-				http.Error(w, "unknown execution", http.StatusNotFound)
-				return
-			}
-			if errors.Is(err, core.ErrNotLaunched) {
-				http.Error(w, "core not ready", http.StatusServiceUnavailable)
-				return
-			}
-			slog.Error("status", "workflow_id", id, "err", err)
-			http.Error(w, "status unavailable", http.StatusInternalServerError)
+			fail(w, "status", err)
 			return
 		}
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(templates, w, "badge.html", badgeFor(id, state))
+		partial(w, "badge.html", badgeFor(id, state))
 	})
 
 	// Full page: the detail of one execution (phase 3, DETAIL — click on the
@@ -148,23 +109,13 @@ func New(
 		id := r.PathValue("id")
 		d, err := detail(id)
 		if err != nil {
-			if errors.Is(err, core.ErrUnknownExecution) {
-				http.Error(w, "unknown execution", http.StatusNotFound)
-				return
-			}
-			if errors.Is(err, core.ErrNotLaunched) {
-				http.Error(w, "core not ready", http.StatusServiceUnavailable)
-				return
-			}
-			slog.Error("detail", "workflow_id", id, "err", err)
-			http.Error(w, "detail unavailable", http.StatusInternalServerError)
+			fail(w, "detail", err)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		b := badgeFor(d.ID, d.State)
-		render(templates, w, "execution-detail.html", executionDetail{
+		page(w, "execution-detail.html", executionDetail{
 			ExecutionDetail: d,
-			Badge:           b,
+			Title:           d.ID + " · FlowDeck",
+			Badge:           badgeFor(d.ID, d.State),
 			Retries:         retriesFor(d.Attempts),
 		})
 	})
@@ -185,130 +136,8 @@ func New(
 	return withRecovery(withRequestLog(mux))
 }
 
-// workflowPage is the data for the per-workflow full page: the dispatch
-// button and the runs of the workflow (phase 3, LIST), newest first.
-type workflowPage struct {
-	Name       string
-	Executions []badge
-}
-
-// executionDetail is the data for the per-execution detail page (phase 3,
-// DETAIL). core.ExecutionDetail is embedded so the template reads ID,
-// Name, Attempts, Error and FailedStep directly.
-type executionDetail struct {
-	core.ExecutionDetail
-	Badge   badge
-	Retries []retry
-}
-
-// retry is one row of the retries list: every retry is a failure recovered
-// by the retry policy — the run itself is not a "retry", so a run
-// without errors has zero. The current/final attempt is shown by the badge
-// and, on failure, by the error section.
-type retry struct {
-	Number int
-	Label  string
-	Class  string
-}
-
-// badge is the data for the badge fragment (the 2s poll partial) and for
-// the execution row fragments (the listing and the dispatch ACK).
-type badge struct {
-	WorkflowID string
-	Class      string
-	Label      string
-	Terminal   bool
-	// CreatedAt is the row's first execution date (listing + ACK rows);
-	// the badge fragment itself never renders it.
-	CreatedAt time.Time
-}
-
-// badgeStates maps the core states onto the badge presentation (the four
-// colors of the dashboard; terminal states show a dot).
-var badgeStates = map[core.State]struct {
-	label    string
-	terminal bool
-}{
-	core.StateQueued:  {label: "Queued"},
-	core.StateRunning: {label: "Running"},
-	core.StateSuccess: {label: "Success", terminal: true},
-	core.StateError:   {label: "Failed", terminal: true},
-}
-
-// retriesFor renders the retries list from the DBOS attempt count:
-// "retries" counts the retries (attempts − 1) — a run without errors has
-// zero, so the number never implies a failure. Each retry is a "failed
-// (recovered)"; the final (or current) status is the badge itself.
-func retriesFor(attempts int) []retry {
-	retries := 0
-	if attempts > 1 {
-		retries = attempts - 1
-	}
-	rs := make([]retry, 0, retries)
-	for i := 1; i <= retries; i++ {
-		rs = append(rs, retry{Number: i, Label: "failed (recovered)", Class: string(core.StateError)})
-	}
-	return rs
-}
-
-func badgeFor(id string, state core.State) badge {
-	b := badge{WorkflowID: id, Class: string(state)}
-	if meta, ok := badgeStates[state]; ok {
-		b.Label, b.Terminal = meta.label, meta.terminal
-	} else {
-		b.Label = string(state)
-	}
-	return b
-}
-
-// render executes the template into a buffer first, so a render error can
-// never leave a partial 200 body in flight, and is always logged.
-func render(t *template.Template, w http.ResponseWriter, name string, data any) {
-	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, name, data); err != nil {
-		slog.Error("render template", "template", name, "err", err)
-		http.Error(w, "error rendering", http.StatusInternalServerError)
-		return
-	}
-	_, _ = w.Write(buf.Bytes())
-}
-
-// withRecovery turns a handler panic into a logged 500 instead of a bare
-// "http: panic serving" line with no useful context.
-func withRecovery(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				slog.Error("panic in handler", "path", r.URL.Path, "panic", rec)
-				http.Error(w, "internal error", http.StatusInternalServerError)
-			}
-		}()
-		next.ServeHTTP(w, r)
-	})
-}
-
-// withRequestLog logs each request: method, path, status, duration.
-func withRequestLog(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		rec := &statusRecorder{ResponseWriter: w}
-		next.ServeHTTP(rec, r)
-		status := rec.status
-		if status == 0 {
-			status = http.StatusOK
-		}
-		slog.Info("http",
-			"method", r.Method, "path", r.URL.Path,
-			"status", status, "duration", time.Since(start).String())
-	})
-}
-
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
-
-func (r *statusRecorder) WriteHeader(code int) {
-	r.status = code
-	r.ResponseWriter.WriteHeader(code)
+// registered reports whether name is in the core's workflow registry (the
+// single source of truth — the web never hardcodes a workflow).
+func registered(workflows []core.Workflow, name string) bool {
+	return slices.ContainsFunc(workflows, func(wf core.Workflow) bool { return wf.Name == name })
 }
