@@ -47,6 +47,7 @@ Tema visual: fundo escuro metálico `#0b0c0e`, bordas aço (`#b8bcc4`/`#8f96a3`)
 
 - **Fase 1 — listagem dinâmica**: `GET` HTMX → core lista workflows do registry → UI renderiza a lista.
 - **Fase 2 — disparar e acompanhar**: `POST` HTMX → enqueue no Postgres (ACK) → DBOS executa o job e atualiza o status → polling de 2s atualiza o badge nas quatro cores.
+- **Fase 3 — execuções de um workflow**: `GET /workflows/{nome}` lista todas as execuções (workflow_id + badge); click no workflow_id → detalhe: status, retries, status de cada retry — em falha: erro + step com falha.
 
 ## Convenções
 
