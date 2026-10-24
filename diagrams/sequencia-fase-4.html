@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowDeck · Sequence · Phase 4</title>
+<meta name="description" content="FlowDeck · Sequence · Phase 4 — Step 1: boot (AST parser builds the map of possible paths); Step 2: overview GET /workflows/{name} (all possible paths from the map); Step 3: execution GET /executions/{id} (the executed path, steps ordered by step_id, polled every 2s).">
+<meta name="keywords" content="FlowDeck, sequence diagram, Phase 4, workflow, execution, steps, step_id, possible paths, executed path, AST, go/parser, DBOS, HTMX, Postgres 18">
+<style>
+  html, body { background: #0b0c0e; margin: 0; }
+  body {
+    color: #e8e6e1;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  :root { color-scheme: dark; }
+  .diagram-container {
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    overflow-x: auto;
+    padding: 40px 24px;
+    box-sizing: border-box;
+  }
+  svg {
+    width: 100%;
+    min-width: 1040px;
+    display: block;
+  }
+</style>
+</head>
+<body>
+  <main class="diagram-container">
+    <svg viewBox="0 0 1160 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fase4Title fase4Desc">
+      <title id="fase4Title">FlowDeck · Sequence · Phase 4 — Step 1 boot (AST), Step 2 overview (all possible paths), Step 3 execution (executed path)</title>
+      <desc id="fase4Desc">Phase 4 shows three steps separated by lines. Step 1 (boot): the core parses its own Go source with go/parser and go/ast, extracts each workflow's RunAsStep steps and surrounding if branches, and builds an in-memory map of workflow name to possible paths. This runs once at boot. Step 2 (overview): the browser does a GET /workflows/{name}, the web calls PATHS(name) on the core, which returns the map of all possible paths without touching Postgres, and the browser renders the paths. Step 3 (execution): the browser does a GET /executions/{id}, the web calls STEPS(id) on the core, which queries Postgres for the executed step rows ordered by step_id, and the browser renders the executed path. The execution view is polled every 2s until terminal. The executed path comes from Postgres, separate from the AST map.</desc>
+
+      <defs>
+        <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#151619"/>
+          <stop offset="1" stop-color="#101215"/>
+        </linearGradient>
+        <marker id="mBlue" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#7cc0ff"/>
+        </marker>
+        <marker id="mSteel" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#b8bcc4"/>
+        </marker>
+        <marker id="mOrange" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#ff9142"/>
+        </marker>
+        <style>
+          text { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+          .step { font-size: 10px; fill: #ff9142; font-weight: 700; letter-spacing: 0.14em; }
+          .sub { font-size: 8px; fill: #b8bcc4; }
+          .label { font-size: 8px; fill: #e8e6e1; font-family: 'Geist Mono', ui-monospace, monospace; }
+          .note { font-size: 8px; fill: #e8e6e1; font-family: 'Geist Mono', ui-monospace, monospace; }
+          .actor { font-size: 11px; fill: #e8e6e1; font-weight: 600; }
+          .actor-sub { font-size: 8px; fill: #8f96a3; font-family: 'Geist Mono', ui-monospace, monospace; }
+          .actor-tab { font-size: 8px; fill: #8f96a3; font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: 0.12em; }
+          .legend { font-size: 8px; fill: #8f96a3; font-family: 'Geist Mono', ui-monospace, monospace; }
+          .sep { stroke: #b8bcc4; stroke-width: 0.9; }
+          .lifeline { stroke: #8f96a3; stroke-width: 0.9; stroke-dasharray: 4 4; }
+          .msg { stroke: #b8bcc4; stroke-width: 1.2; }
+          .msg-blue { stroke: #7cc0ff; stroke-width: 1.2; }
+          .ret { stroke: #ff9142; stroke-width: 1.1; stroke-dasharray: 5 3; }
+          .mask { fill: #101215; }
+        </style>
+      </defs>
+
+      <rect x="0" y="0" width="1160" height="840" fill="#0b0c0e"/>
+
+      <!-- ===== LIFELINES ===== -->
+      <line x1="120" y1="124" x2="120" y2="660" class="lifeline"/>
+      <line x1="340" y1="124" x2="340" y2="660" class="lifeline"/>
+      <line x1="560" y1="124" x2="560" y2="660" class="lifeline"/>
+      <line x1="800" y1="124" x2="800" y2="660" class="lifeline"/>
+
+      <!-- ===== STEP 1 · BOOT (internal to core) ===== -->
+      <text x="84" y="146" class="step">STEP 1</text>
+      <text x="150" y="146" class="sub">boot · parse core source (AST) → paths map</text>
+      <line x1="72" y1="154" x2="900" y2="154" class="sep"/>
+      <rect x="556" y="194" width="8" height="52" fill="#b8bcc4"/>
+      <rect x="572" y="194" width="212" height="52" rx="3" fill="#151619" stroke="#ff9142" stroke-width="0.9"/>
+      <text x="582" y="212" class="note">parse core source (go/parser + go/ast)</text>
+      <text x="582" y="230" class="note">build map: name → possible paths</text>
+
+      <!-- ===== STEP 2 · OVERVIEW (all possible paths) ===== -->
+      <text x="84" y="286" class="step">STEP 2</text>
+      <text x="150" y="286" class="sub">overview · GET /workflows/{name} → all possible paths</text>
+      <line x1="72" y1="294" x2="900" y2="294" class="sep"/>
+
+      <rect x="116" y="346" width="8" height="74" fill="#b8bcc4"/>
+      <rect x="336" y="346" width="8" height="74" fill="#b8bcc4"/>
+      <rect x="556" y="374" width="8" height="28" fill="#b8bcc4"/>
+
+      <line x1="120" y1="346" x2="340" y2="346" class="msg-blue" marker-end="url(#mBlue)"/>
+      <rect x="175" y="326" width="110" height="12" class="mask"/>
+      <text x="230" y="335" text-anchor="middle" class="label">GET /workflows/{name}</text>
+
+      <line x1="340" y1="374" x2="560" y2="374" class="msg" marker-end="url(#mSteel)"/>
+      <rect x="415" y="354" width="70" height="12" class="mask"/>
+      <text x="450" y="363" text-anchor="middle" class="label">PATHS(name)</text>
+
+      <line x1="560" y1="402" x2="340" y2="402" class="ret" marker-end="url(#mOrange)"/>
+      <rect x="392" y="382" width="116" height="12" class="mask"/>
+      <text x="450" y="391" text-anchor="middle" class="label">paths map (all paths)</text>
+
+      <line x1="340" y1="420" x2="120" y2="420" class="ret" marker-end="url(#mOrange)"/>
+      <rect x="190" y="400" width="80" height="12" class="mask"/>
+      <text x="230" y="409" text-anchor="middle" class="label">RENDER · paths</text>
+
+      <!-- ===== STEP 3 · EXECUTION (executed path) ===== -->
+      <text x="84" y="444" class="step">STEP 3</text>
+      <text x="150" y="444" class="sub">execution · GET /executions/{id} → the path that ran</text>
+      <line x1="72" y1="452" x2="900" y2="452" class="sep"/>
+
+      <rect x="116" y="510" width="8" height="134" fill="#b8bcc4"/>
+      <rect x="336" y="510" width="8" height="134" fill="#b8bcc4"/>
+      <rect x="556" y="538" width="8" height="84" fill="#b8bcc4"/>
+      <rect x="796" y="566" width="8" height="28" fill="#b8bcc4"/>
+
+      <line x1="120" y1="510" x2="340" y2="510" class="msg-blue" marker-end="url(#mBlue)"/>
+      <rect x="178" y="490" width="104" height="12" class="mask"/>
+      <text x="230" y="499" text-anchor="middle" class="label">GET /executions/{id}</text>
+
+      <line x1="340" y1="538" x2="560" y2="538" class="msg" marker-end="url(#mSteel)"/>
+      <rect x="420" y="518" width="60" height="12" class="mask"/>
+      <text x="450" y="527" text-anchor="middle" class="label">STEPS(id)</text>
+
+      <line x1="560" y1="566" x2="800" y2="566" class="msg" marker-end="url(#mSteel)"/>
+      <rect x="631" y="546" width="98" height="12" class="mask"/>
+      <text x="680" y="555" text-anchor="middle" class="label">SELECT steps · id</text>
+
+      <line x1="800" y1="594" x2="560" y2="594" class="ret" marker-end="url(#mOrange)"/>
+      <rect x="631" y="574" width="98" height="12" class="mask"/>
+      <text x="680" y="583" text-anchor="middle" class="label">rows · step_id asc</text>
+
+      <line x1="560" y1="622" x2="340" y2="622" class="ret" marker-end="url(#mOrange)"/>
+      <rect x="392" y="602" width="116" height="12" class="mask"/>
+      <text x="450" y="611" text-anchor="middle" class="label">steps (executed path)</text>
+
+      <line x1="340" y1="644" x2="120" y2="644" class="ret" marker-end="url(#mOrange)"/>
+      <rect x="171" y="624" width="118" height="12" class="mask"/>
+      <text x="230" y="633" text-anchor="middle" class="label">RENDER · executed path</text>
+
+      <!-- polling annotation (execution only) -->
+      <text x="120" y="656" class="note" fill="#ff9142">poll: browser (htmx) → web → core → pg · every 2s · until terminal (success/failed)</text>
+
+      <!-- ===== SIDE NOTES ===== -->
+      <rect x="920" y="154" width="224" height="112" rx="3" fill="url(#panel)" stroke="#ff9142" stroke-width="0.9"/>
+      <text x="932" y="170" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">STEP 1 · AST PARSER</text>
+      <text x="932" y="188" class="note">goal: map of ALL possible paths</text>
+      <text x="932" y="204" class="note">runs once at Boot (core, pre-web)</text>
+      <text x="932" y="220" class="note">stdlib go/parser + go/ast · go:embed</text>
+      <text x="932" y="236" class="note">extracts RunAsStep + surrounding if</text>
+      <text x="932" y="252" class="note">built once · never per request</text>
+
+      <rect x="920" y="294" width="224" height="84" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+      <text x="932" y="310" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">STEP 2 · OVERVIEW</text>
+      <text x="932" y="328" class="note">shows: ALL possible paths</text>
+      <text x="932" y="344" class="note">only calls the boot map (PATHS)</text>
+      <text x="932" y="360" class="note">map lookup · no re-parse · no DB</text>
+
+      <rect x="920" y="452" width="224" height="84" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+      <text x="932" y="468" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">STEP 3 · EXECUTION</text>
+      <text x="932" y="486" class="note">shows: the path that ran</text>
+      <text x="932" y="502" class="note">reads Postgres per run (step_id asc)</text>
+      <text x="932" y="518" class="note">separate from the AST map</text>
+
+      <!-- ===== FRONTEND RULES ===== -->
+      <rect x="84" y="672" width="1044" height="102" rx="3" fill="url(#panel)" stroke="#ff9142" stroke-width="0.9"/>
+      <rect x="84" y="672" width="76" height="16" rx="2" fill="#ff9142"/>
+      <text x="122" y="684" text-anchor="middle" fill="#0b0c0e" font-size="9" font-weight="700" letter-spacing="0.14em">FRONTEND</text>
+      <text x="84" y="708" class="sub">two views: overview (paths) + execution (path)</text>
+      <text x="84" y="722" class="sub">hierarchy: workflow → paths → steps</text>
+      <text x="84" y="736" class="sub">overview: from AST map (code) · execution: Postgres</text>
+      <text x="84" y="750" class="sub">never hardcoded in the web · any workflow</text>
+      <text x="84" y="764" class="sub">unknown workflow → 404 · core down → 503</text>
+
+      <!-- ===== ACTORS ===== -->
+      <g>
+        <rect x="40" y="60" width="160" height="64" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+        <text x="52" y="75" class="actor-tab">UI</text>
+        <text x="120" y="102" text-anchor="middle" class="actor">Browser</text>
+        <text x="120" y="118" text-anchor="middle" class="actor-sub">htmx · get/post</text>
+      </g>
+      <g>
+        <rect x="260" y="60" width="160" height="64" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+        <text x="272" y="75" class="actor-tab">WEB</text>
+        <text x="340" y="102" text-anchor="middle" class="actor">FlowDeck Web</text>
+        <text x="340" y="118" text-anchor="middle" class="actor-sub">go · webserver · :8080</text>
+      </g>
+      <g>
+        <rect x="480" y="60" width="160" height="64" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+        <text x="492" y="75" class="actor-tab">CORE</text>
+        <text x="560" y="102" text-anchor="middle" class="actor">DBOS Core</text>
+        <text x="560" y="118" text-anchor="middle" class="actor-sub">Boot · PATHS · STEPS</text>
+      </g>
+      <g>
+        <rect x="720" y="60" width="160" height="64" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+        <text x="732" y="75" class="actor-tab">SQL</text>
+        <text x="800" y="102" text-anchor="middle" class="actor">Postgres 18</text>
+        <text x="800" y="118" text-anchor="middle" class="actor-sub">compose · :5432</text>
+      </g>
+
+      <!-- ===== LEGEND ===== -->
+      <line x1="30" y1="796" x2="1130" y2="796" stroke="#8f96a3" stroke-width="0.5"/>
+      <text x="30" y="816" class="legend">LEGEND</text>
+      <line x1="130" y1="812" x2="174" y2="812" class="msg-blue"/>
+      <text x="182" y="816" class="legend">HTMX REQUEST</text>
+      <line x1="300" y1="812" x2="344" y2="812" class="msg"/>
+      <text x="352" y="816" class="legend">CALL</text>
+      <line x1="430" y1="812" x2="474" y2="812" class="ret"/>
+      <text x="482" y="816" class="legend">RETURN</text>
+      <line x1="560" y1="812" x2="604" y2="812" class="ret"/>
+      <text x="612" y="816" class="legend">RENDER RESPONSE</text>
+      <rect x="800" y="806" width="12" height="12" rx="1.5" fill="#151619" stroke="#ff9142" stroke-width="0.9"/>
+      <text x="820" y="816" class="legend">BOOT · INTERNAL (CORE)</text>
+    </svg>
+  </main>
+</body>
+</html>
