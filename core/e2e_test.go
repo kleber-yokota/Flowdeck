@@ -59,7 +59,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	}
 
 	bootCoreForTest(t, dbURL)
-	register("failing-test", failingTestWorkflow)
+	registerTestWorkflow("failing-test", failingTestWorkflow)
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)
 	}

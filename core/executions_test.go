@@ -171,7 +171,7 @@ func TestDetailSuccess(t *testing.T) {
 // error message and the step that failed.
 func TestDetailFailureReportsErrorAndFailedStep(t *testing.T) {
 	bootSQLiteCoreForTest(t)
-	register("failing-test", failingTestWorkflow)
+	registerTestWorkflow("failing-test", failingTestWorkflow)
 
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)
