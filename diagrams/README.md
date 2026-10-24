@@ -31,3 +31,7 @@ Estilo: pele escura metálica (fundo `#0b0c0e`, bordas aço, destaque laranja) c
 - `sequencia-fase-1.html`
 - `sequencia-fase-2.html`
 - `estados-workflow.html`
+
+`.diagram-design` (na raiz do repo) é o perfil `profile: flowdeck` da ferramenta
+**diagram-design** — é o que gera estes `.html` com o estilo acima; mantê-lo permite
+regenerar os diagramas com a mesma paleta.

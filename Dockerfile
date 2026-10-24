@@ -1,8 +1,8 @@
-# Go 1.27.3 — mesma versão usada nos testes (DBOS v1.7.0 exige go >= 1.25)
+# Go 1.27.3 — mesma versão do go.mod (DBOS v1.7.0 exige go >= 1.25)
 FROM golang:1.27.3 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o flowdeck .
 

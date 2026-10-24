@@ -1,4 +1,12 @@
 .git
 .env
-diagrams
+.env.example
+.diagram-design
+.diagram-design/
+diagrams/
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.md
+*_test.go
 flowdeck

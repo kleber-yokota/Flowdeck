@@ -4,11 +4,11 @@ services:
   db:
     image: postgres:18
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required (see .env.example)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required (see .env.example)}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     # Postgres 18+: volume na raiz (layout pg_ctlcluster, dirs por major version)
     volumes:
       - dbdata:/var/lib/postgresql
@@ -25,10 +25,23 @@ services:
       db:
         condition: service_healthy
     environment:
-      DBOS_APP_NAME: ${DBOS_APP_NAME}
-      DBOS_SYSTEM_DATABASE_URL: ${DBOS_SYSTEM_DATABASE_URL}
+      DBOS_APP_NAME: ${DBOS_APP_NAME:?DBOS_APP_NAME is required (see .env.example)}
+      # Montada a partir das variáveis POSTGRES_* — sem credenciais duplicadas
+      DBOS_SYSTEM_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      # Timeouts de shutdown: a soma (10s) fica dentro do stop_grace_period (30s)
+      FLOWDECK_HTTP_TIMEOUT: 5s
+      FLOWDECK_CORE_TIMEOUT: 5s
     ports:
-      - "${FLOWDECK_HTTP_PORT}:8080"
+      - "${FLOWDECK_HTTP_PORT:-8080}:8080"
+    healthcheck:
+      # distroless não tem shell/curl — o binário faz o ping no /healthz
+      test: ["CMD", "/flowdeck", "-healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    # O shutdown ordenado (HTTP 5s + core 5s) precisa caber aqui
+    stop_grace_period: 30s
     restart: unless-stopped
 
 volumes:
