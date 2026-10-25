@@ -10,6 +10,8 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 	_ "modernc.org/sqlite"
+
+	"flowdeck/core/status"
 )
 
 // failingTestWorkflow is a workflow that fails in a named step — it
@@ -37,7 +39,7 @@ func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "one")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "one")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -55,8 +57,8 @@ func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 	if exs[0].ID != handle.GetWorkflowID() {
 		t.Fatalf("Executions: got %s, want %s", exs[0].ID, handle.GetWorkflowID())
 	}
-	if exs[0].State != StateSuccess {
-		t.Fatalf("Executions: got state %s, want %s", exs[0].State, StateSuccess)
+	if exs[0].State != status.Success {
+		t.Fatalf("Executions: got state %s, want %s", exs[0].State, status.Success)
 	}
 }
 
@@ -97,14 +99,14 @@ func TestExecutionsNewestFirstWithCreatedAt(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	first, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "one")
+	first, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "one")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
 	if _, err := first.GetResult(); err != nil {
 		t.Fatalf("GetResult: %v", err)
 	}
-	second, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "two")
+	second, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "two")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -141,7 +143,7 @@ func TestDetailSuccess(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "one")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "one")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -153,8 +155,8 @@ func TestDetailSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	if d.State != StateSuccess {
-		t.Fatalf("Detail: got state %s, want %s", d.State, StateSuccess)
+	if d.State != status.Success {
+		t.Fatalf("Detail: got state %s, want %s", d.State, status.Success)
 	}
 	if d.CreatedAt.IsZero() {
 		t.Fatal("Detail: CreatedAt is zero, want the run's created_at")
@@ -177,7 +179,7 @@ func TestDetailFailureReportsErrorAndFailedStep(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, failingTestWorkflow, "x")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, failingTestWorkflow, "x")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -189,8 +191,8 @@ func TestDetailFailureReportsErrorAndFailedStep(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	if d.State != StateError {
-		t.Fatalf("Detail: got state %s, want %s", d.State, StateError)
+	if d.State != status.Error {
+		t.Fatalf("Detail: got state %s, want %s", d.State, status.Error)
 	}
 	if !strings.Contains(d.Error, "boom: step failed") {
 		t.Fatalf("Detail: got error %q, want the step error", d.Error)
@@ -221,7 +223,7 @@ func TestStepsReturnsTakenBranch(t *testing.T) {
 		{"left", []string{"base", "left"}},
 	}
 	for _, tt := range tests {
-		handle, err := dbos.RunWorkflow(dbosCtx, Decide, tt.payload)
+		handle, err := dbos.RunWorkflow(theCore.dbosCtx, Decide, tt.payload)
 		if err != nil {
 			t.Fatalf("RunWorkflow: %v", err)
 		}
@@ -239,8 +241,8 @@ func TestStepsReturnsTakenBranch(t *testing.T) {
 			if s.Name != tt.want[i] {
 				t.Fatalf("payload %q: Steps[%d] got %q, want %q", tt.payload, i, s.Name, tt.want[i])
 			}
-			if s.State != StateSuccess {
-				t.Fatalf("Steps[%d]: got state %s, want %s", i, s.State, StateSuccess)
+			if s.State != status.Success {
+				t.Fatalf("Steps[%d]: got state %s, want %s", i, s.State, status.Success)
 			}
 		}
 	}
@@ -256,7 +258,7 @@ func TestStepsOfFailedRun(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, failingTestWorkflow, "x")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, failingTestWorkflow, "x")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -274,8 +276,8 @@ func TestStepsOfFailedRun(t *testing.T) {
 	if steps[0].Name != "boom-step" {
 		t.Fatalf("Steps[0]: got %q, want %q", steps[0].Name, "boom-step")
 	}
-	if steps[0].State != StateError {
-		t.Fatalf("Steps[0]: got state %s, want %s", steps[0].State, StateError)
+	if steps[0].State != status.Error {
+		t.Fatalf("Steps[0]: got state %s, want %s", steps[0].State, status.Error)
 	}
 }
 
@@ -327,7 +329,7 @@ func TestDetailDeletedExecution(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "one")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "one")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}

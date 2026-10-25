@@ -8,25 +8,28 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/status"
 )
 
 // GET /status is the poll half of the dispatch (phase 2): it returns the
 // badge fragment for each of the four states, and only the non-terminal
 // badges carry the hx attributes that keep the poll running.
 func TestStatusBadgeRendersState(t *testing.T) {
-	for state, want := range map[core.State]string{
-		core.StateQueued:  `class="badge queued"`,
-		core.StateRunning: `class="badge running"`,
-		core.StateSuccess: `class="badge success terminal"`,
-		core.StateError:   `class="badge error terminal"`,
+	for state, want := range map[status.State]string{
+		status.Queued:  `class="badge queued"`,
+		status.Running: `class="badge running"`,
+		status.Success: `class="badge success terminal"`,
+		status.Error:   `class="badge error terminal"`,
 	} {
 		t.Run(string(state), func(t *testing.T) {
-			srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(state), okSteps, okDetail, okPing))
+			d := testPort()
+			d.Status = stateStatuser(state)
+			srv := httptest.NewServer(New(d, okReady))
 			defer srv.Close()
 
-			status, body := get(t, srv.URL+"/status/abc")
-			if status != http.StatusOK {
-				t.Fatalf("status: got %d want %d", status, http.StatusOK)
+			code, body := get(t, srv.URL+"/status/abc")
+			if code != http.StatusOK {
+				t.Fatalf("status: got %d want %d", code, http.StatusOK)
 			}
 			if !strings.Contains(body, want) {
 				t.Errorf("fragment does not contain %q: %q", want, body)
@@ -34,7 +37,7 @@ func TestStatusBadgeRendersState(t *testing.T) {
 			// Live badges poll and are swapped whole (outerHTML) — the old
 			// badge element never wraps the new one. Terminal badges drop
 			// both attributes and stop the poll.
-			polling := state == core.StateQueued || state == core.StateRunning
+			polling := state == status.Queued || state == status.Running
 			for attr, wantAttr := range map[string]bool{
 				`hx-trigger="every 2s"`: polling,
 				`hx-swap="outerHTML"`:   polling,
@@ -54,19 +57,21 @@ func TestStatusBadgeRendersState(t *testing.T) {
 // old one and the old state's outline would stay visible — the "silhouette"
 // bug.
 func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
-	for state := range map[core.State]bool{
-		core.StateQueued:  true,
-		core.StateRunning: true,
-		core.StateSuccess: true,
-		core.StateError:   true,
+	for state := range map[status.State]bool{
+		status.Queued:  true,
+		status.Running: true,
+		status.Success: true,
+		status.Error:   true,
 	} {
 		t.Run(string(state), func(t *testing.T) {
-			srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(state), okSteps, okDetail, okPing))
+			d := testPort()
+			d.Status = stateStatuser(state)
+			srv := httptest.NewServer(New(d, okReady))
 			defer srv.Close()
 
-			status, body := get(t, srv.URL+"/status/abc")
-			if status != http.StatusOK {
-				t.Fatalf("status: got %d want %d", status, http.StatusOK)
+			code, body := get(t, srv.URL+"/status/abc")
+			if code != http.StatusOK {
+				t.Fatalf("status: got %d want %d", code, http.StatusOK)
 			}
 			fragment := strings.TrimSpace(body)
 			if !strings.HasPrefix(fragment, `<span class="badge`) || !strings.HasSuffix(fragment, `</span>`) {
@@ -82,7 +87,9 @@ func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
 
 // The poll fragment is dynamic: it must never be cached by the browser.
 func TestStatusBadgeNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateQueued), okSteps, okDetail, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Queued)
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/status/abc")
@@ -100,26 +107,30 @@ func TestStatusBadgeNoStore(t *testing.T) {
 
 // An ID that is not known by the core is a clean 404.
 func TestStatusUnknownExecutionIs404(t *testing.T) {
-	statuser := func(workflowID string) (core.State, error) {
+	statuser := func(workflowID string) (status.State, error) {
 		return "", core.ErrUnknownExecution
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, statuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.Status = statuser
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/status/ghost"); status != http.StatusNotFound {
-		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
+	if code, _ := get(t, srv.URL+"/status/ghost"); code != http.StatusNotFound {
+		t.Fatalf("status: got %d want %d", code, http.StatusNotFound)
 	}
 }
 
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStatusCoreDownIs503(t *testing.T) {
-	statuser := func(workflowID string) (core.State, error) {
+	statuser := func(workflowID string) (status.State, error) {
 		return "", core.ErrNotLaunched
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, statuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.Status = statuser
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/status/abc"); status != http.StatusServiceUnavailable {
-		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
+	if code, _ := get(t, srv.URL+"/status/abc"); code != http.StatusServiceUnavailable {
+		t.Fatalf("status: got %d want %d", code, http.StatusServiceUnavailable)
 	}
 }

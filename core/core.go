@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"sort"
@@ -9,9 +10,12 @@ import (
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/graph"
 )
 
-// ErrNotLaunched is returned by Ping when the core is not booted and launched.
+// ErrNotLaunched is returned by Ready when the core is not booted and
+// launched.
 var ErrNotLaunched = errors.New("core: not launched")
 
 // ErrUnknownWorkflow is returned by Enqueue when the name is not in the registry.
@@ -33,19 +37,29 @@ type registration struct {
 	enqueue func(ctx dbos.Context, payload any) (Execution, error)
 }
 
-// The DBOS core as a process-wide singleton. Architecturally, the web and
-// the core are two separate things (same process/docker): the web queries
-// the core (List, Enqueue) and never touches DBOS/Postgres directly.
-
-var (
+// coreState is the DBOS component of this package — the process-wide
+// singleton: the DBOS context, the boot/launch flags, the durable
+// registrations and the path graph (built at Boot from this package's
+// source). Architecturally, the web and the core are two separate things
+// (same process/docker): the web queries the core (List, Enqueue) and
+// never touches DBOS/Postgres directly.
+type coreState struct {
 	mu              sync.RWMutex
 	dbosCtx         dbos.Context
 	booted          bool
 	launched        bool
 	registrations   []registration
-	registeredNames = map[string]struct{}{}
-	pathsMap        map[string][][]string
-)
+	registeredNames map[string]struct{}
+	paths           *graph.PathGraph
+}
+
+var theCore = &coreState{registeredNames: map[string]struct{}{}}
+
+// The source of this package, embedded so the graph parser can read it at
+// Boot — inside the container the source is not on disk.
+//
+//go:embed *.go
+var coreSource embed.FS
 
 // register records a durable workflow registration — called from each
 // workflow file's init(). apply is the per-file dbos.RegisterWorkflow call,
@@ -56,14 +70,14 @@ var (
 // programming error, and failing here (at the source) beats failing deep in
 // dbos.RegisterWorkflow at Launch.
 func register[P any, R any](name string, apply func(ctx dbos.Context), wf dbos.Workflow[P, R]) {
-	mu.Lock()
-	defer mu.Unlock()
-	if _, dup := registeredNames[name]; dup {
+	theCore.mu.Lock()
+	defer theCore.mu.Unlock()
+	if _, dup := theCore.registeredNames[name]; dup {
 		panic("core: workflow already registered: " + name)
 	}
-	registeredNames[name] = struct{}{}
+	theCore.registeredNames[name] = struct{}{}
 	var zero P // fallback payload: a dispatch without input runs the zero value
-	registrations = append(registrations, registration{
+	theCore.registrations = append(theCore.registrations, registration{
 		name:  name,
 		apply: apply,
 		enqueue: func(ctx dbos.Context, payload any) (Execution, error) {
@@ -106,27 +120,27 @@ func dispatch(ctx dbos.Context, name string, payload any) (Execution, error) {
 // One context per boot cycle: a second Boot without a Shutdown in between
 // returns an error.
 func Boot(ctx context.Context, appName, databaseURL string) error {
-	mu.Lock()
-	defer mu.Unlock()
-	if booted {
+	theCore.mu.Lock()
+	defer theCore.mu.Unlock()
+	if theCore.booted {
 		return errors.New("core: Boot already called (singleton — one DBOS context per process)")
 	}
 	// Phase 4, STEP 1: parse this package's own source (go/parser + go/ast)
-	// and build the map name → possible paths. Once at Boot, never per
-	// request — Paths is a plain map lookup.
-	paths, err := buildPaths()
+	// and build the possible-paths graph. Once at Boot, never per request —
+	// the graph is served by plain map lookup.
+	g, err := graph.New(coreSource)
 	if err != nil {
 		return fmt.Errorf("core: build paths: %w", err)
 	}
-	dbosCtx, err = dbos.NewContext(ctx, dbos.Config{
+	theCore.dbosCtx, err = dbos.NewContext(ctx, dbos.Config{
 		AppName:     appName,
 		DatabaseURL: databaseURL,
 	})
 	if err != nil {
 		return fmt.Errorf("dbos boot: %w", err)
 	}
-	pathsMap = paths
-	booted = true
+	theCore.paths = g
+	theCore.booted = true
 	return nil
 }
 
@@ -134,27 +148,27 @@ func Boot(ctx context.Context, appName, databaseURL string) error {
 // to the singleton context and starts the DBOS executor. One executor per
 // boot cycle: a second Launch without a Shutdown in between returns an error.
 func Launch() error {
-	mu.Lock()
-	defer mu.Unlock()
-	if !booted {
+	theCore.mu.Lock()
+	defer theCore.mu.Unlock()
+	if !theCore.booted {
 		return errors.New("core: Boot must be called before Launch")
 	}
-	if launched {
+	if theCore.launched {
 		return errors.New("core: Launch already called (singleton — one executor)")
 	}
 	// The single queue every dispatch goes through. Registering it (before
 	// Launch) is what makes this process listen to it: the DBOS executor
 	// started below polls the queue and runs the claimed jobs.
-	if _, err := dbos.RegisterQueue(dbosCtx, QueueName); err != nil {
+	if _, err := dbos.RegisterQueue(theCore.dbosCtx, QueueName); err != nil {
 		return fmt.Errorf("core: register queue: %w", err)
 	}
-	for _, r := range registrations {
-		r.apply(dbosCtx)
+	for _, r := range theCore.registrations {
+		r.apply(theCore.dbosCtx)
 	}
-	if err := dbos.Launch(dbosCtx); err != nil {
+	if err := dbos.Launch(theCore.dbosCtx); err != nil {
 		return fmt.Errorf("dbos launch: %w", err)
 	}
-	launched = true
+	theCore.launched = true
 	return nil
 }
 
@@ -166,13 +180,13 @@ func Launch() error {
 // so List() during shutdown returns nil instead of blocking on the lock
 // or touching a shutting-down context.
 func Shutdown(timeout time.Duration) {
-	mu.Lock()
-	c := dbosCtx
-	dbosCtx = nil
-	booted = false
-	launched = false
-	pathsMap = nil
-	mu.Unlock()
+	theCore.mu.Lock()
+	c := theCore.dbosCtx
+	theCore.dbosCtx = nil
+	theCore.booted = false
+	theCore.launched = false
+	theCore.paths = nil
+	theCore.mu.Unlock()
 	if c == nil {
 		return
 	}
@@ -184,9 +198,9 @@ func Shutdown(timeout time.Duration) {
 // It returns nil if the core is not booted (or is shutting down): the web
 // then renders its "No workflows registered" empty state.
 func List() []Workflow {
-	mu.RLock()
-	c := dbosCtx
-	mu.RUnlock()
+	theCore.mu.RLock()
+	c := theCore.dbosCtx
+	theCore.mu.RUnlock()
 	if c == nil {
 		return nil
 	}
@@ -209,15 +223,15 @@ func List() []Workflow {
 // webserver.
 // A nil payload runs the workflow with its zero payload.
 func Enqueue(name string, payload any) (Execution, error) {
-	mu.RLock()
+	theCore.mu.RLock()
 	var reg *registration
-	for i := range registrations {
-		if registrations[i].name == name {
-			reg = &registrations[i]
+	for i := range theCore.registrations {
+		if theCore.registrations[i].name == name {
+			reg = &theCore.registrations[i]
 			break
 		}
 	}
-	mu.RUnlock()
+	theCore.mu.RUnlock()
 
 	c, err := ctxOrErr()
 	if err != nil {
@@ -229,12 +243,14 @@ func Enqueue(name string, payload any) (Execution, error) {
 	return reg.enqueue(c, payload)
 }
 
-// Ping reports whether the core is booted and launched — used by the web
-// health endpoint and the container healthcheck.
-func Ping() error {
-	mu.RLock()
-	defer mu.RUnlock()
-	if !booted || !launched {
+// Ready reports whether the core is booted and launched — the health
+// contact (a different contact than Port: it is lifecycle state, not a
+// domain conversation). Used by the web's /healthz and the container
+// healthcheck.
+func Ready() error {
+	theCore.mu.RLock()
+	defer theCore.mu.RUnlock()
+	if !theCore.booted || !theCore.launched {
 		return ErrNotLaunched
 	}
 	return nil

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/graph"
+	"flowdeck/core/status"
 )
 
 // Shared stubs: every test file builds its httptest server from these,
@@ -15,40 +17,57 @@ import (
 
 func emptyLister() []core.Workflow { return nil }
 
-// okPaths returns no paths (phase 4, STEP 2): the paths section is absent
-// from the workflow page.
-func okPaths(name string) [][]string { return nil }
-
 func okExecutions(name string) ([]core.Execution, error) { return nil, nil }
 
-func okPing() error { return nil }
+// okReady is the ready stub: the core is up.
+func okReady() error { return nil }
 
 // The ACK execution of okEnqueuer: id + queued state + created_at.
 func okEnqueuer(name string, payload any) (core.Execution, error) {
 	return core.Execution{
 		ID:        "00000000-0000-0000-0000-000000000001",
-		State:     core.StateQueued,
+		State:     status.Queued,
 		CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 	}, nil
 }
 
-func okStatuser(workflowID string) (core.State, error) {
-	return core.StateQueued, nil
+func okStatuser(workflowID string) (status.State, error) {
+	return status.Queued, nil
 }
 
 // okSteps returns the executed path of a clean run: a single successful
 // step (phase 4, STEP 3 stub).
 func okSteps(workflowID string) ([]core.Step, error) {
-	return []core.Step{{Name: "greet", State: core.StateSuccess}}, nil
+	return []core.Step{{Name: "greet", State: status.Success}}, nil
 }
 
 func okDetail(id string) (core.ExecutionDetail, error) {
 	return core.ExecutionDetail{}, core.ErrUnknownExecution
 }
 
+// testPort builds the base stub port — the shared stubs above (and the
+// empty graph); each test overrides only the core operation under test.
+func testPort() core.Port {
+	return core.Port{
+		List:       emptyLister,
+		Graph:      &graph.PathGraph{},
+		Executions: okExecutions,
+		Enqueue:    okEnqueuer,
+		Status:     okStatuser,
+		Steps:      okSteps,
+		Detail:     okDetail,
+	}
+}
+
+// fakeGraph builds a possible-paths graph holding the given paths under
+// name (the stub for the graph component in the unit tests).
+func fakeGraph(name string, paths [][]string) *graph.PathGraph {
+	return &graph.PathGraph{ByName: map[string][][]string{name: paths}}
+}
+
 // stateStatuser builds a statuser stub that always returns the given state.
-func stateStatuser(state core.State) func(string) (core.State, error) {
-	return func(workflowID string) (core.State, error) { return state, nil }
+func stateStatuser(state status.State) func(string) (status.State, error) {
+	return func(workflowID string) (status.State, error) { return state, nil }
 }
 
 // get issues a GET and returns the status code and the body as a string.

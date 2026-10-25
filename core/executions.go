@@ -5,6 +5,8 @@ import (
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/status"
 )
 
 // Execution is one run of a workflow as listed on the per-workflow page
@@ -12,7 +14,7 @@ import (
 // execution date (created_at). The list is newest first.
 type Execution struct {
 	ID        string
-	State     State
+	State     status.State
 	CreatedAt time.Time
 }
 
@@ -22,7 +24,7 @@ type Execution struct {
 type ExecutionDetail struct {
 	ID         string
 	Name       string
-	State      State
+	State      status.State
 	CreatedAt  time.Time
 	Attempts   int
 	Error      string
@@ -62,7 +64,7 @@ func Executions(name string) ([]Execution, error) {
 // terminal, the rows exist only once the step completed).
 type Step struct {
 	Name  string
-	State State
+	State status.State
 }
 
 // Steps returns the executed path of a run: the steps that ran, in
@@ -88,9 +90,9 @@ func Steps(workflowID string) ([]Step, error) {
 	}
 	steps := make([]Step, 0, len(rows))
 	for _, row := range rows { // Postgres returns the rows step_id asc
-		st := StateSuccess
+		st := status.Success
 		if row.Error != nil {
-			st = StateError
+			st = status.Error
 		}
 		steps = append(steps, Step{Name: row.StepName, State: st})
 	}

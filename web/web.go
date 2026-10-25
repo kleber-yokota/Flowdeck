@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"flowdeck/core"
+	"flowdeck/web/graph"
 )
 
 //go:embed templates/*.html static/*
@@ -19,29 +20,10 @@ var staticFS embed.FS
 
 var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 
-// New builds the HTMX web server — an abstraction over the core.
-// listWorkflows returns the workflows registered in the core (single
-// source of truth); the web knows nothing about specific workflows.
-// paths reports the possible paths of a workflow (phase 4, STEP 2 — the
-// boot map: map lookup, no re-parse, no DB).
-// executions lists the runs of a workflow (phase 3, LIST).
-// enqueue dispatches a registered workflow (core → DBOS queue) and returns
-// the new execution (id + state + created_at). status reports the state of
-// a run (the read half of the dispatch, polled every 2s by the badge).
-// steps returns the executed path of a run (phase 4, STEP 3: the steps that
-// ran, in execution order — polled every 2s until the run is terminal).
-// detail reads one run for its page (phase 3, DETAIL). ping reports whether
-// the core is up (health endpoint).
-func New(
-	listWorkflows func() []core.Workflow,
-	paths func(name string) [][]string,
-	executions func(name string) ([]core.Execution, error),
-	enqueue func(name string, payload any) (core.Execution, error),
-	status func(workflowID string) (core.State, error),
-	steps func(workflowID string) ([]core.Step, error),
-	detail func(workflowID string) (core.ExecutionDetail, error),
-	ping func() error,
-) http.Handler {
+// New builds the HTMX web server over two contacts: the domain port
+// (how the web talks to the core — the web never touches DBOS/Postgres
+// directly) and the health probe (is the core ready?).
+func New(p core.Port, ready func() error) http.Handler {
 	static, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		panic(fmt.Sprintf("static: %v", err))
@@ -56,7 +38,7 @@ func New(
 
 	// HTMX partial: fragment with the workflows registered in the core
 	mux.HandleFunc("GET /workflows", func(w http.ResponseWriter, _ *http.Request) {
-		partial(w, "workflows.html", listWorkflows())
+		partial(w, "workflows.html", p.List())
 	})
 
 	// Full page: one registered workflow — the dispatch button, the
@@ -64,7 +46,7 @@ func New(
 	// (phase 3, LIST): every execution the core knows, newest first —
 	// workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
-		handleWorkflowPage(w, r, listWorkflows, paths, executions)
+		handleWorkflowPage(w, r, p)
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -72,7 +54,7 @@ func New(
 	// badge + visible workflow ID — the ACK), prepended to the executions
 	// list on the workflow page.
 	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		ex, err := enqueue(r.PathValue("name"), nil)
+		ex, err := p.Enqueue(r.PathValue("name"), nil)
 		if err != nil {
 			fail(w, "enqueue", err)
 			return
@@ -86,7 +68,7 @@ func New(
 	// stops.
 	mux.HandleFunc("GET /status/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		state, err := status(id)
+		state, err := p.Status(id)
 		if err != nil {
 			fail(w, "status", err)
 			return
@@ -96,17 +78,18 @@ func New(
 
 	// Full page: the detail of one execution (phase 3, DETAIL).
 	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleExecutionDetail(w, r, detail, steps)
+		handleExecutionDetail(w, r, p)
 	})
 
 	// HTMX partial: the executed path of a run (phase 4, STEP 3, polling).
 	mux.HandleFunc("GET /executions/{id}/steps", func(w http.ResponseWriter, r *http.Request) {
-		handleExecutionSteps(w, r, status, steps)
+		handleExecutionSteps(w, r, p)
 	})
 
-	// Health: the web pings the core; the container healthcheck pings this
+	// Health: the web asks the core if it is ready (core.Ready); the
+	// container healthcheck pings this
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		if err := ping(); err != nil {
+		if err := ready(); err != nil {
 			http.Error(w, "core not ready", http.StatusServiceUnavailable)
 			return
 		}
@@ -124,16 +107,13 @@ func New(
 // the dispatch button, the possible paths (phase 4, STEP 2, overview) and
 // the runs of it (phase 3, LIST): every execution the core knows, newest
 // first — workflow ID + badge.
-func handleWorkflowPage(w http.ResponseWriter, r *http.Request,
-	listWorkflows func() []core.Workflow,
-	paths func(name string) [][]string,
-	executions func(name string) ([]core.Execution, error)) {
+func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	name := r.PathValue("name")
-	if !registered(listWorkflows(), name) {
+	if !registered(p.List(), name) {
 		http.Error(w, "unknown workflow", http.StatusNotFound)
 		return
 	}
-	exs, err := executions(name)
+	exs, err := p.Executions(name)
 	if err != nil {
 		fail(w, "executions", err)
 		return
@@ -142,12 +122,12 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request,
 	for _, e := range exs {
 		rows = append(rows, row(e))
 	}
-	// Phase 4, STEP 2: the paths come from the boot map (PATHS: map
-	// lookup, no re-parse, no DB) — never hardcoded in the web.
+	// Phase 4, STEP 2: the paths come from the graph component (the boot
+	// map: map lookup, no re-parse, no DB) — never hardcoded in the web.
 	page(w, "workflow.html", workflowPage{
 		Title:      name + " · FlowDeck",
 		Name:       name,
-		Graph:      pathsToSVG(paths(name)),
+		Graph:      graph.PathsToSVG(p.Graph.Of(name)),
 		Executions: rows,
 	})
 }
@@ -158,16 +138,14 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request,
 // the final status), on failure the error and the step that failed, and
 // the executed path (phase 4, STEP 3: the steps that ran, in execution
 // order).
-func handleExecutionDetail(w http.ResponseWriter, r *http.Request,
-	detail func(workflowID string) (core.ExecutionDetail, error),
-	steps func(workflowID string) ([]core.Step, error)) {
+func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
-	d, err := detail(id)
+	d, err := p.Detail(id)
 	if err != nil {
 		fail(w, "detail", err)
 		return
 	}
-	exSteps, err := steps(id)
+	exSteps, err := p.Steps(id)
 	if err != nil {
 		fail(w, "steps", err)
 		return
@@ -187,16 +165,14 @@ func handleExecutionDetail(w http.ResponseWriter, r *http.Request,
 // separate from the boot map of possible paths. Polled every 2s while the
 // run is live; the fragment drops the hx attributes when the run is
 // terminal and the poll stops.
-func handleExecutionSteps(w http.ResponseWriter, r *http.Request,
-	status func(workflowID string) (core.State, error),
-	steps func(workflowID string) ([]core.Step, error)) {
+func handleExecutionSteps(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
-	state, err := status(id)
+	state, err := p.Status(id)
 	if err != nil {
 		fail(w, "status", err)
 		return
 	}
-	exSteps, err := steps(id)
+	exSteps, err := p.Steps(id)
 	if err != nil {
 		fail(w, "steps", err)
 		return

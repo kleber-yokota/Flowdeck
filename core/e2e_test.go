@@ -10,6 +10,8 @@ import (
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/status"
 )
 
 // Integration test: runs the example workflow (with step) against a real
@@ -37,7 +39,7 @@ func TestE2EHelloWorldRunsStep(t *testing.T) {
 		t.Fatalf("registry missing hello-world: %v", names)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "FlowDeck")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "FlowDeck")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -76,16 +78,16 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 
 	// The executor runs the run to its terminal state.
 	deadline := time.Now().Add(30 * time.Second)
-	var state State
+	var state status.State
 	for {
 		state, err = Status(id)
 		if err != nil {
 			t.Fatalf("Status: %v", err)
 		}
-		if state == StateSuccess {
+		if state == status.Success {
 			t.Fatalf("run succeeded, want failure")
 		}
-		if state == StateError {
+		if state == status.Error {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -98,8 +100,8 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	if d.State != StateError {
-		t.Fatalf("detail state: got %s, want %s", d.State, StateError)
+	if d.State != status.Error {
+		t.Fatalf("detail state: got %s, want %s", d.State, status.Error)
 	}
 	if d.CreatedAt.IsZero() {
 		t.Fatal("detail created_at: got zero, want the run's created_at")
@@ -118,7 +120,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Executions: %v", err)
 	}
-	if len(exs) != 1 || exs[0].ID != id || exs[0].State != StateError {
+	if len(exs) != 1 || exs[0].ID != id || exs[0].State != status.Error {
 		t.Fatalf("Executions: got %v, want the single failed run", exs)
 	}
 }
@@ -149,8 +151,8 @@ func TestE2EStepsOfExecutedPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
-	if state != StateSuccess {
-		t.Fatalf("run state: got %s, want %s", state, StateSuccess)
+	if state != status.Success {
+		t.Fatalf("run state: got %s, want %s", state, status.Success)
 	}
 
 	steps, err := Steps(id)
@@ -165,8 +167,8 @@ func TestE2EStepsOfExecutedPath(t *testing.T) {
 		if s.Name != want[i] {
 			t.Fatalf("Steps[%d]: got %q, want %q", i, s.Name, want[i])
 		}
-		if s.State != StateSuccess {
-			t.Fatalf("Steps[%d]: got state %s, want %s", i, s.State, StateSuccess)
+		if s.State != status.Success {
+			t.Fatalf("Steps[%d]: got state %s, want %s", i, s.State, status.Success)
 		}
 	}
 }
@@ -198,28 +200,28 @@ func TestE2EStepsOfFailedRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
-	if state != StateError {
-		t.Fatalf("run state: got %s, want %s", state, StateError)
+	if state != status.Error {
+		t.Fatalf("run state: got %s, want %s", state, status.Error)
 	}
 
 	steps, err := Steps(id)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}
-	if len(steps) != 1 || steps[0].Name != "boom-step" || steps[0].State != StateError {
+	if len(steps) != 1 || steps[0].Name != "boom-step" || steps[0].State != status.Error {
 		t.Fatalf("Steps: got %v, want the single failed step", steps)
 	}
 }
 
 // waitForTerminal polls Status until the run reaches success or error.
-func waitForTerminal(t *testing.T, id string, deadline time.Time) (State, error) {
+func waitForTerminal(t *testing.T, id string, deadline time.Time) (status.State, error) {
 	t.Helper()
 	for {
 		state, err := Status(id)
 		if err != nil {
 			return "", err
 		}
-		if state == StateSuccess || state == StateError {
+		if state == status.Success || state == status.Error {
 			return state, nil
 		}
 		if time.Now().After(deadline) {
@@ -258,7 +260,7 @@ func TestE2EEnqueueRunsWorkflow(t *testing.T) {
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		statuses, err := dbos.ListWorkflows(dbosCtx,
+		statuses, err := dbos.ListWorkflows(theCore.dbosCtx,
 			dbos.WithFilterWorkflowIDs(id),
 			dbos.WithFilterLoadInput(false),
 			dbos.WithFilterLoadOutput(false),

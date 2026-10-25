@@ -10,6 +10,8 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 	_ "github.com/dbos-inc/dbos-transact-golang/dbos/driver/sqlite"
+
+	"flowdeck/core/status"
 )
 
 // Test-only workflow, registered via register() to exercise the mechanism.
@@ -39,13 +41,13 @@ func registerTestWorkflow(name string, wf dbos.Workflow[string, string]) {
 func bootCoreForTest(t *testing.T, dbURL string) {
 	t.Helper()
 
-	mu.Lock()
-	savedRegs, savedNames := registrations, maps.Clone(registeredNames)
-	mu.Unlock()
+	theCore.mu.Lock()
+	savedRegs, savedNames := theCore.registrations, maps.Clone(theCore.registeredNames)
+	theCore.mu.Unlock()
 	t.Cleanup(func() {
-		mu.Lock()
-		registrations, registeredNames = savedRegs, savedNames
-		mu.Unlock()
+		theCore.mu.Lock()
+		theCore.registrations, theCore.registeredNames = savedRegs, savedNames
+		theCore.mu.Unlock()
 	})
 
 	Shutdown(5 * time.Second) // nil-safe reset: this test starts clean
@@ -90,7 +92,7 @@ func TestRegisterAddsWorkflowToList(t *testing.T) {
 		t.Fatalf("List() missing hello-world: %v", names)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, echoTestWorkflow, "ping")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, echoTestWorkflow, "ping")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}
@@ -136,7 +138,7 @@ func TestEnqueueReturnsExecution(t *testing.T) {
 	if ex.CreatedAt.IsZero() {
 		t.Fatal("Enqueue returned a zero CreatedAt")
 	}
-	if ex.State != StateQueued && ex.State != StateRunning {
+	if ex.State != status.Queued && ex.State != status.Running {
 		t.Fatalf("Enqueue: got state %s, want queued or running", ex.State)
 	}
 }

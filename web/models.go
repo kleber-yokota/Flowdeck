@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/status"
+	"flowdeck/web/graph"
 )
 
 // indexPage is the data for the index full page (the HTMX shell that loads
@@ -47,8 +49,8 @@ type stepsView struct {
 // newStepsView builds the fragment data from the run's state and its
 // steps: a terminal run stops the 2s poll (no hx attributes on the
 // fragment — the same mechanism as the badge).
-func newStepsView(id string, state core.State, steps []core.Step) stepsView {
-	return stepsView{WorkflowID: id, Terminal: badgeStates[state].terminal, Graph: executedPathToSVG(steps)}
+func newStepsView(id string, state status.State, steps []core.Step) stepsView {
+	return stepsView{WorkflowID: id, Terminal: state.Terminal(), Graph: graph.ExecutedPathToSVG(steps)}
 }
 
 // badge is the data for the badge fragment (the 2s poll partial) and for
@@ -63,26 +65,21 @@ type badge struct {
 	CreatedAt time.Time
 }
 
-// badgeStates maps the core states onto the badge presentation (the four
-// colors of the dashboard; terminal states show a dot).
-var badgeStates = map[core.State]struct {
-	label    string
-	terminal bool
-}{
-	core.StateQueued:  {label: "Queued"},
-	core.StateRunning: {label: "Running"},
-	core.StateSuccess: {label: "Success", terminal: true},
-	core.StateError:   {label: "Failed", terminal: true},
+// badgeLabels maps the core states onto the badge labels (the
+// presentation of the four colors; the terminal rule lives on core.State).
+var badgeLabels = map[status.State]string{
+	status.Queued:  "Queued",
+	status.Running: "Running",
+	status.Success: "Success",
+	status.Error:   "Failed",
 }
 
-func badgeFor(id string, state core.State) badge {
-	b := badge{WorkflowID: id, Class: string(state)}
-	if meta, ok := badgeStates[state]; ok {
-		b.Label, b.Terminal = meta.label, meta.terminal
-	} else {
-		b.Label = string(state)
+func badgeFor(id string, state status.State) badge {
+	label := string(state)
+	if l, ok := badgeLabels[state]; ok {
+		label = l
 	}
-	return b
+	return badge{WorkflowID: id, Class: string(state), Label: label, Terminal: state.Terminal()}
 }
 
 // row maps one execution onto its listing row: the badge plus the first
@@ -114,7 +111,7 @@ func retriesFor(attempts int) []retry {
 	}
 	rs := make([]retry, 0, retries)
 	for i := 1; i <= retries; i++ {
-		rs = append(rs, retry{Number: i, Label: "failed (recovered)", Class: string(core.StateError)})
+		rs = append(rs, retry{Number: i, Label: "failed (recovered)", Class: string(status.Error)})
 	}
 	return rs
 }

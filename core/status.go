@@ -5,20 +5,8 @@ import (
 	"fmt"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-)
 
-// State is the UI state of a workflow run — one of the four badge colors
-// of the dashboard.
-type State string
-
-// The four execution states, in the order the run moves through them:
-//
-//	queued -> running -> success | error
-const (
-	StateQueued  State = "queued"  // in queue  (#7cc0ff)
-	StateRunning State = "running" // running   (#ff9142)
-	StateSuccess State = "success" // success   (#46d19a)
-	StateError   State = "error"   // failed    (#ff5450)
+	"flowdeck/core/status"
 )
 
 // ErrUnknownExecution is returned by Status when the workflow ID is not
@@ -36,12 +24,12 @@ var ErrUnknownExecution = errors.New("core: unknown workflow execution")
 // ctxOrErr returns the live DBOS context, or ErrNotLaunched — the read
 // guard of every query (the core must be booted and launched).
 func ctxOrErr() (dbos.Context, error) {
-	mu.RLock()
-	defer mu.RUnlock()
-	if !booted || !launched || dbosCtx == nil {
+	theCore.mu.RLock()
+	defer theCore.mu.RUnlock()
+	if !theCore.booted || !theCore.launched || theCore.dbosCtx == nil {
 		return nil, ErrNotLaunched
 	}
-	return dbosCtx, nil
+	return theCore.dbosCtx, nil
 }
 
 // listByID lists the status rows of one execution without loading
@@ -55,7 +43,7 @@ func listByID(c dbos.Context, workflowID string) ([]dbos.WorkflowStatus, error) 
 	)
 }
 
-func Status(workflowID string) (State, error) {
+func Status(workflowID string) (status.State, error) {
 	c, err := ctxOrErr()
 	if err != nil {
 		return "", err
@@ -70,17 +58,19 @@ func Status(workflowID string) (State, error) {
 	return mapState(statuses[0].Status)
 }
 
-// mapState maps a DBOS workflow state onto the UI states.
-func mapState(s dbos.WorkflowStatusType) (State, error) {
+// mapState maps a DBOS workflow state onto the UI states (the phase 2
+// contract: every DBOS state lands on one of the four, unknown states are
+// rejected, not guessed).
+func mapState(s dbos.WorkflowStatusType) (status.State, error) {
 	switch s {
 	case dbos.WorkflowStatusEnqueued, dbos.WorkflowStatusDelayed:
-		return StateQueued, nil
+		return status.Queued, nil
 	case dbos.WorkflowStatusPending:
-		return StateRunning, nil
+		return status.Running, nil
 	case dbos.WorkflowStatusSuccess:
-		return StateSuccess, nil
+		return status.Success, nil
 	case dbos.WorkflowStatusError, dbos.WorkflowStatusCancelled, dbos.WorkflowStatusMaxRecoveryAttemptsExceeded:
-		return StateError, nil
+		return status.Error, nil
 	default:
 		return "", fmt.Errorf("core: unmapped workflow state: %s", s)
 	}

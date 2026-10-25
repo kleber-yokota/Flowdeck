@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/status"
 )
 
 // The steps partial (phase 4, STEP 3, polling): a live run returns the
@@ -15,11 +16,14 @@ import (
 func TestStepsPartialPollsWhenRunning(t *testing.T) {
 	steps := func(id string) ([]core.Step, error) {
 		return []core.Step{
-			{Name: "fetch", State: core.StateSuccess},
-			{Name: "parse", State: core.StateSuccess},
+			{Name: "fetch", State: status.Success},
+			{Name: "parse", State: status.Success},
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateRunning), steps, okDetail, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Running)
+	d.Steps = steps
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-live/steps")
@@ -44,11 +48,14 @@ func TestStepsPartialPollsWhenRunning(t *testing.T) {
 func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 	steps := func(id string) ([]core.Step, error) {
 		return []core.Step{
-			{Name: "fetch", State: core.StateSuccess},
-			{Name: "store", State: core.StateSuccess},
+			{Name: "fetch", State: status.Success},
+			{Name: "store", State: status.Success},
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateSuccess), steps, okDetail, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Success)
+	d.Steps = steps
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-done/steps")
@@ -72,11 +79,14 @@ func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 func TestStepsPartialColorsTheFailedStep(t *testing.T) {
 	steps := func(id string) ([]core.Step, error) {
 		return []core.Step{
-			{Name: "fetch", State: core.StateSuccess},
-			{Name: "parse", State: core.StateError},
+			{Name: "fetch", State: status.Success},
+			{Name: "parse", State: status.Error},
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateError), steps, okDetail, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Error)
+	d.Steps = steps
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-failed/steps")
@@ -95,12 +105,15 @@ func TestStepsPartialColorsTheFailedStep(t *testing.T) {
 func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 	steps := func(id string) ([]core.Step, error) {
 		return []core.Step{
-			{Name: "fetch", State: core.StateSuccess},
-			{Name: "parse", State: core.StateSuccess},
-			{Name: "store", State: core.StateSuccess},
+			{Name: "fetch", State: status.Success},
+			{Name: "parse", State: status.Success},
+			{Name: "store", State: status.Success},
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateSuccess), steps, okDetail, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Success)
+	d.Steps = steps
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-order/steps")
@@ -120,8 +133,10 @@ func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 
 // A run the core does not know is a clean 404.
 func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
-	statuser := func(id string) (core.State, error) { return "", core.ErrUnknownExecution }
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, statuser, okSteps, okDetail, okPing))
+	statuser := func(id string) (status.State, error) { return "", core.ErrUnknownExecution }
+	d := testPort()
+	d.Status = statuser
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/executions/ghost/steps"); status != http.StatusNotFound {
@@ -131,8 +146,10 @@ func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
-	statuser := func(id string) (core.State, error) { return "", core.ErrNotLaunched }
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, statuser, okSteps, okDetail, okPing))
+	statuser := func(id string) (status.State, error) { return "", core.ErrNotLaunched }
+	d := testPort()
+	d.Status = statuser
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/executions/abc/steps"); status != http.StatusServiceUnavailable {
@@ -147,12 +164,15 @@ func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
 		return core.ExecutionDetail{
 			ID:        id,
 			Name:      "wf-alpha",
-			State:     core.StateRunning,
+			State:     status.Running,
 			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 			Attempts:  1,
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateRunning), okSteps, detailer, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Running)
+	d.Detail = detailer
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-live")
@@ -178,12 +198,15 @@ func TestExecutionDetailPageTerminalExecutedPath(t *testing.T) {
 		return core.ExecutionDetail{
 			ID:        id,
 			Name:      "wf-alpha",
-			State:     core.StateSuccess,
+			State:     status.Success,
 			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 			Attempts:  1,
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateSuccess), okSteps, detailer, okPing))
+	d := testPort()
+	d.Status = stateStatuser(status.Success)
+	d.Detail = detailer
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-ok")

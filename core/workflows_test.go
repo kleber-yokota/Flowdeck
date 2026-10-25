@@ -25,7 +25,7 @@ func TestHelloWorldRegistersAndRuns(t *testing.T) {
 		t.Fatalf("registry missing hello-world: %v", names)
 	}
 
-	handle, err := dbos.RunWorkflow(dbosCtx, HelloWorld, "FlowDeck")
+	handle, err := dbos.RunWorkflow(theCore.dbosCtx, HelloWorld, "FlowDeck")
 	if err != nil {
 		t.Fatalf("RunWorkflow: %v", err)
 	}

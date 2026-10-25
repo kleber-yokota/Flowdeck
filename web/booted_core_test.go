@@ -38,7 +38,7 @@ func bootSQLiteCoreForTest(t *testing.T) {
 func TestWorkflowPageWithBootedCore(t *testing.T) {
 	bootSQLiteCoreForTest(t)
 
-	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping))
+	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
 	defer srv.Close()
 
 	// The list comes from the core registry (never hardcoded in the web).

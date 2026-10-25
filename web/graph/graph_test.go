@@ -1,4 +1,4 @@
-package web
+package graph
 
 import (
 	"encoding/xml"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/status"
 )
 
 // TestPathsGraphBuildsTheTree: the common prefix is drawn once and the if
@@ -129,7 +130,7 @@ func TestNewGraphLayoutEmpty(t *testing.T) {
 // TestPathsToSVGEmitsNodesAndEdges: one rect per step, one line per
 // continuation, and every edge carries the arrowhead marker.
 func TestPathsToSVGEmitsNodesAndEdges(t *testing.T) {
-	svg := string(pathsToSVG([][]string{{"a", "b"}, {"a", "c"}}))
+	svg := string(PathsToSVG([][]string{{"a", "b"}, {"a", "c"}}))
 	if n := strings.Count(svg, `<rect class="g-node"`); n != 3 {
 		t.Errorf("rects: got %d, want 3", n)
 	}
@@ -148,7 +149,7 @@ func TestPathsToSVGEmitsNodesAndEdges(t *testing.T) {
 
 // TestPathsToSVGEscapesStepNames: the node labels are escaped, not raw.
 func TestPathsToSVGEscapesStepNames(t *testing.T) {
-	svg := string(pathsToSVG([][]string{{"a<b>"}}))
+	svg := string(PathsToSVG([][]string{{"a<b>"}}))
 	if !strings.Contains(svg, "a&lt;b&gt;") || strings.Contains(svg, "a<b>") {
 		t.Errorf("step name not escaped: %q", svg)
 	}
@@ -160,7 +161,7 @@ func TestPathsToSVGIsWellFormedXML(t *testing.T) {
 		{nil},
 		{{"a", "b", "c"}, {"a", "d"}, {"a", "e", "f"}},
 	} {
-		svg := string(pathsToSVG(paths))
+		svg := string(PathsToSVG(paths))
 		if err := xml.Unmarshal([]byte(svg), new(struct{})); err != nil {
 			t.Errorf("not well-formed XML (%v): %v", paths, err)
 		}
@@ -172,11 +173,11 @@ func TestPathsToSVGIsWellFormedXML(t *testing.T) {
 // per continuation, and every node colored by the step's state.
 func TestExecutedPathToSVGLinearChain(t *testing.T) {
 	steps := []core.Step{
-		{Name: "fetch", State: core.StateSuccess},
-		{Name: "parse", State: core.StateSuccess},
-		{Name: "store", State: core.StateSuccess},
+		{Name: "fetch", State: status.Success},
+		{Name: "parse", State: status.Success},
+		{Name: "store", State: status.Success},
 	}
-	svg := string(executedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps))
 	if n := strings.Count(svg, `<rect class="g-node`); n != 3 {
 		t.Errorf("rects: got %d, want 3", n)
 	}
@@ -197,10 +198,10 @@ func TestExecutedPathToSVGLinearChain(t *testing.T) {
 // failed state (the rest of the path keeps the success color).
 func TestExecutedPathToSVGFailedStep(t *testing.T) {
 	steps := []core.Step{
-		{Name: "fetch", State: core.StateSuccess},
-		{Name: "parse", State: core.StateError},
+		{Name: "fetch", State: status.Success},
+		{Name: "parse", State: status.Error},
 	}
-	svg := string(executedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps))
 	if !strings.Contains(svg, `class="g-node success"`) {
 		t.Errorf("svg missing the successful node: %q", svg)
 	}

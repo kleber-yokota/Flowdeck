@@ -45,7 +45,7 @@ func TestE2EWorkflowPageGraph(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping))
+	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
 	defer srv.Close()
 
 	// The list comes from the core registry (never hardcoded in the web).
@@ -142,7 +142,7 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping))
+	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
 	defer srv.Close()
 
 	// Dispatch a linear run: the executed path is fetch → parse → transform

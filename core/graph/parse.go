@@ -1,7 +1,6 @@
-package core
+package graph
 
 import (
-	"embed"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -9,48 +8,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// The source of this package, embedded so the parser can read it at Boot —
-// inside the container the source is not on disk.
-//
-//go:embed *.go
-var coreSource embed.FS
-
-// Paths returns the possible paths (sequences of steps) of the named
-// workflow, built at Boot from this package's source (phase 4, STEP 1). The
-// web calls this (PATHS(name)) and renders the map without touching
-// Postgres. It returns nil if the core is not booted (or is shutting down)
-// or the name is unknown.
-func Paths(name string) [][]string {
-	mu.RLock()
-	defer mu.RUnlock()
-	if !booted {
-		return nil
-	}
-	return pathsMap[name]
-}
-
-// buildPaths reads this package's embedded source (test files excluded)
-// and builds the map: workflow name → all possible paths.
-func buildPaths() (map[string][][]string, error) {
-	files := map[string][]byte{}
-	entries, err := coreSource.ReadDir(".")
-	if err != nil {
-		return nil, fmt.Errorf("list core source: %w", err)
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		data, err := coreSource.ReadFile(name)
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", name, err)
-		}
-		files[name] = data
-	}
-	return pathsFromSources(files)
-}
 
 // pathsFromSources parses the given Go source files and builds the map:
 // workflow name → all possible paths. The marker is the per-file DBOS

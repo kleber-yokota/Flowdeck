@@ -6,18 +6,20 @@ import (
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/status"
 )
 
 // mapState is the phase 2 contract: every DBOS state lands on one of the
 // four UI states, and unknown states are rejected, not guessed.
 func TestMapState(t *testing.T) {
-	for state, want := range map[dbos.WorkflowStatusType]State{
-		dbos.WorkflowStatusEnqueued:  StateQueued,
-		dbos.WorkflowStatusDelayed:   StateQueued,
-		dbos.WorkflowStatusPending:   StateRunning,
-		dbos.WorkflowStatusSuccess:   StateSuccess,
-		dbos.WorkflowStatusError:     StateError,
-		dbos.WorkflowStatusCancelled: StateError,
+	for state, want := range map[dbos.WorkflowStatusType]status.State{
+		dbos.WorkflowStatusEnqueued:  status.Queued,
+		dbos.WorkflowStatusDelayed:   status.Queued,
+		dbos.WorkflowStatusPending:   status.Running,
+		dbos.WorkflowStatusSuccess:   status.Success,
+		dbos.WorkflowStatusError:     status.Error,
+		dbos.WorkflowStatusCancelled: status.Error,
 	} {
 		got, err := mapState(state)
 		if err != nil {
@@ -78,9 +80,9 @@ func TestStatusReachesSuccess(t *testing.T) {
 			t.Fatalf("Status: %v", err)
 		}
 		switch state {
-		case StateQueued, StateRunning:
+		case status.Queued, status.Running:
 			// keep polling
-		case StateSuccess:
+		case status.Success:
 			return
 		default:
 			t.Fatalf("unexpected terminal state: %s", state)

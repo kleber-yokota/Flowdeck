@@ -1,4 +1,8 @@
-package web
+// Package graph is the SVG layout of the paths graphs: the possible-paths
+// map (phase 4, STEP 2) and the executed path of a run (phase 4, STEP 3)
+// share the same drawing — one rect per step and one arrow per
+// continuation, the if forks the branches.
+package graph
 
 import (
 	"fmt"
@@ -71,10 +75,10 @@ func nodeFromPaths(paths [][]string) pathNode {
 	return node
 }
 
-// pathsToSVG renders the paths graph (phase 4, STEP 2) as a static SVG:
+// PathsToSVG renders the paths graph (phase 4, STEP 2) as a static SVG:
 // the steps are nodes, each continuation is an arrow, and the if forks the
 // branches — the common prefix is drawn once.
-func pathsToSVG(paths [][]string) template.HTML {
+func PathsToSVG(paths [][]string) template.HTML {
 	g := newGraphLayout(pathsGraph(paths))
 	g.label = "possible paths"
 	return template.HTML(g.svg())
@@ -227,12 +231,12 @@ func (g *graphLayout) svg() string {
 	return b.String()
 }
 
-// executedPathToSVG renders the executed path of a run (phase 4, STEP 3)
+// ExecutedPathToSVG renders the executed path of a run (phase 4, STEP 3)
 // as the same graph as the possible paths, with the single row of the
 // steps that ran, in execution order: each node is colored by the step's
 // state (success/error — every executed step is terminal). It is separate
 // from the boot map: the path comes from Postgres, the map from the code.
-func executedPathToSVG(steps []core.Step) template.HTML {
+func ExecutedPathToSVG(steps []core.Step) template.HTML {
 	nodes := make([]pathNode, 0, len(steps))
 	for _, s := range steps {
 		nodes = append(nodes, pathNode{Step: s.Name, State: string(s.State)})
