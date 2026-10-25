@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FlowDeck · Sequence · Phase 4</title>
-<meta name="description" content="FlowDeck · Sequence · Phase 4 — Step 1: boot (AST parser builds the map of possible paths); Step 2: overview GET /workflows/{name} (all possible paths from the map); Step 3: execution GET /executions/{id} (the executed path, steps ordered by step_id, polled every 2s).">
+<meta name="description" content="FlowDeck · Sequence · Phase 4 — Step 1: boot (AST parser builds the map of possible paths); Step 2: overview GET /workflows/{name} (all possible paths from the map, rendered as an SVG graph); Step 3: execution GET /executions/{id} (the executed path as an SVG graph, steps ordered by step_id, polled every 2s).">
 <meta name="keywords" content="FlowDeck, sequence diagram, Phase 4, workflow, execution, steps, step_id, possible paths, executed path, AST, go/parser, DBOS, HTMX, Postgres 18">
 <style>
   html, body { background: #0b0c0e; margin: 0; }
@@ -33,7 +33,7 @@
   <main class="diagram-container">
     <svg viewBox="0 0 1160 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fase4Title fase4Desc">
       <title id="fase4Title">FlowDeck · Sequence · Phase 4 — Step 1 boot (AST), Step 2 overview (all possible paths), Step 3 execution (executed path)</title>
-      <desc id="fase4Desc">Phase 4 shows three steps separated by lines. Step 1 (boot): the core parses its own Go source with go/parser and go/ast, extracts each workflow's RunAsStep steps and surrounding if branches, and builds an in-memory map of workflow name to possible paths. This runs once at boot. Step 2 (overview): the browser does a GET /workflows/{name}, the web calls PATHS(name) on the core, which returns the map of all possible paths without touching Postgres, and the browser renders the paths. Step 3 (execution): the browser does a GET /executions/{id}, the web calls STEPS(id) on the core, which queries Postgres for the executed step rows ordered by step_id, and the browser renders the executed path. The execution view is polled every 2s until terminal. The executed path comes from Postgres, separate from the AST map.</desc>
+      <desc id="fase4Desc">Phase 4 shows three steps separated by lines. Step 1 (boot): the core parses its own Go source with go/parser and go/ast, extracts each workflow's RunAsStep steps and surrounding if branches, and builds an in-memory map of workflow name to possible paths. This runs once at boot. Step 2 (overview): the browser does a GET /workflows/{name}, the web calls PATHS(name) on the core, which returns the map of all possible paths without touching Postgres, and the browser renders the paths as an SVG graph. Step 3 (execution): the browser does a GET /executions/{id}, the web calls STEPS(id) on the core, which queries Postgres for the executed step rows ordered by step_id, and the browser renders the executed path as an SVG graph — the single path that ran, one node per executed step, colored by step state. The execution view is polled every 2s until terminal. The executed path comes from Postgres, separate from the AST map.</desc>
 
       <defs>
         <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
@@ -156,17 +156,19 @@
       <text x="932" y="236" class="note">extracts RunAsStep + surrounding if</text>
       <text x="932" y="252" class="note">built once · never per request</text>
 
-      <rect x="920" y="294" width="224" height="84" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+      <rect x="920" y="294" width="224" height="100" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
       <text x="932" y="310" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">STEP 2 · OVERVIEW</text>
       <text x="932" y="328" class="note">shows: ALL possible paths</text>
       <text x="932" y="344" class="note">only calls the boot map (PATHS)</text>
       <text x="932" y="360" class="note">map lookup · no re-parse · no DB</text>
+      <text x="932" y="376" class="note">render: SVG graph (all paths)</text>
 
-      <rect x="920" y="452" width="224" height="84" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
+      <rect x="920" y="452" width="224" height="100" rx="3" fill="url(#panel)" stroke="#b8bcc4" stroke-width="0.9"/>
       <text x="932" y="468" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">STEP 3 · EXECUTION</text>
       <text x="932" y="486" class="note">shows: the path that ran</text>
       <text x="932" y="502" class="note">reads Postgres per run (step_id asc)</text>
       <text x="932" y="518" class="note">separate from the AST map</text>
+      <text x="932" y="534" class="note">render: SVG graph (single path)</text>
 
       <!-- ===== FRONTEND RULES ===== -->
       <rect x="84" y="672" width="1044" height="102" rx="3" fill="url(#panel)" stroke="#ff9142" stroke-width="0.9"/>

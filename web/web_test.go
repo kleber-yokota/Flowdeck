@@ -36,6 +36,12 @@ func okStatuser(workflowID string) (core.State, error) {
 	return core.StateQueued, nil
 }
 
+// okSteps returns the executed path of a clean run: a single successful
+// step (phase 4, STEP 3 stub).
+func okSteps(workflowID string) ([]core.Step, error) {
+	return []core.Step{{Name: "greet", State: core.StateSuccess}}, nil
+}
+
 func okDetail(id string) (core.ExecutionDetail, error) {
 	return core.ExecutionDetail{}, core.ErrUnknownExecution
 }

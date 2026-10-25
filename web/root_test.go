@@ -11,7 +11,7 @@ import (
 )
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/")
@@ -39,7 +39,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 			{Name: "wf-beta"},
 		}
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -62,7 +62,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 }
 
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -76,7 +76,7 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The fragment is dynamic: it must never be cached by the browser.
 func TestWorkflowsPartialNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/workflows")
@@ -98,7 +98,7 @@ func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
 	fakeLister := func() []core.Workflow {
 		return []core.Workflow{{Name: "wf-alpha"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows")
@@ -116,7 +116,7 @@ func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
 
 // The vendored assets are served from the embedded FS — no CDN at runtime.
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/static/htmx.min.js")
@@ -130,7 +130,7 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 }
 
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
@@ -144,7 +144,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)

@@ -1,0 +1,9 @@
+{{- if .Terminal }}
+<div class="executed-path">{{ .Graph }}</div>
+{{- else }}
+<div class="executed-path"
+    hx-get="/executions/{{ .WorkflowID }}/steps"
+    hx-trigger="every 2s"
+    hx-swap="outerHTML"
+    hx-target="this">{{ .Graph }}</div>
+{{- end }}

@@ -4,6 +4,8 @@ import (
 	"encoding/xml"
 	"strings"
 	"testing"
+
+	"flowdeck/core"
 )
 
 // TestPathsGraphBuildsTheTree: the common prefix is drawn once and the if
@@ -162,6 +164,60 @@ func TestPathsToSVGIsWellFormedXML(t *testing.T) {
 		if err := xml.Unmarshal([]byte(svg), new(struct{})); err != nil {
 			t.Errorf("not well-formed XML (%v): %v", paths, err)
 		}
+	}
+}
+
+// TestExecutedPathToSVGLinearChain: the executed path is the same graph,
+// with the single row of the steps that ran — one node per step, one edge
+// per continuation, and every node colored by the step's state.
+func TestExecutedPathToSVGLinearChain(t *testing.T) {
+	steps := []core.Step{
+		{Name: "fetch", State: core.StateSuccess},
+		{Name: "parse", State: core.StateSuccess},
+		{Name: "store", State: core.StateSuccess},
+	}
+	svg := string(executedPathToSVG(steps))
+	if n := strings.Count(svg, `<rect class="g-node`); n != 3 {
+		t.Errorf("rects: got %d, want 3", n)
+	}
+	if n := strings.Count(svg, `<line class="g-edge"`); n != 2 {
+		t.Errorf("lines: got %d, want 2", n)
+	}
+	for _, want := range []string{`class="g-node success"`, `>fetch<`, `>parse<`, `>store<`, `aria-label="executed path"`} {
+		if !strings.Contains(svg, want) {
+			t.Errorf("svg does not contain %q", want)
+		}
+	}
+	if err := xml.Unmarshal([]byte(svg), new(struct{})); err != nil {
+		t.Errorf("not well-formed XML: %v", err)
+	}
+}
+
+// TestExecutedPathToSVGFailedStep: a failed step is colored with the
+// failed state (the rest of the path keeps the success color).
+func TestExecutedPathToSVGFailedStep(t *testing.T) {
+	steps := []core.Step{
+		{Name: "fetch", State: core.StateSuccess},
+		{Name: "parse", State: core.StateError},
+	}
+	svg := string(executedPathToSVG(steps))
+	if !strings.Contains(svg, `class="g-node success"`) {
+		t.Errorf("svg missing the successful node: %q", svg)
+	}
+	if !strings.Contains(svg, `class="g-node error"`) {
+		t.Errorf("svg missing the failed node: %q", svg)
+	}
+}
+
+// TestExecutedPathToSVGEmpty: a run with no steps yet is a valid empty
+// canvas (no nodes, still a sized svg).
+func TestExecutedPathToSVGEmpty(t *testing.T) {
+	g := newGraphLayout(nil)
+	if len(g.nodes) != 0 || len(g.edges) != 0 {
+		t.Fatalf("empty layout: got %d nodes / %d edges", len(g.nodes), len(g.edges))
+	}
+	if g.width <= 0 || g.height <= 0 {
+		t.Errorf("empty canvas must be sized: %v x %v", g.width, g.height)
 	}
 }
 

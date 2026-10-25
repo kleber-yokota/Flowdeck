@@ -45,7 +45,7 @@ func TestE2EWorkflowPageGraph(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 
-	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Detail, core.Ping))
+	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping))
 	defer srv.Close()
 
 	// The list comes from the core registry (never hardcoded in the web).
@@ -110,5 +110,75 @@ func TestE2EWorkflowPageGraph(t *testing.T) {
 			t.Fatalf("run %s did not reach success in time", id)
 		}
 		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// The execution page shows the executed path (phase 4, STEP 3): the steps
+// partial is polled every 2s and stops when the run is terminal — the
+// fragment then shows the path that ran, as the same SVG graph as the
+// possible paths (read from Postgres, separate from the boot map).
+func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
+	dbURL := os.Getenv("DBOS_E2E_DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("DBOS_E2E_DATABASE_URL not set — skipping e2e test")
+	}
+
+	core.Shutdown(5 * time.Second) // nil-safe: this test starts clean
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	t.Cleanup(cancel)
+	// The dedicated system database (the "_web" suffix) isolates this test
+	// from the core e2e boots that may run concurrently.
+	u, err := url.Parse(dbURL)
+	if err != nil {
+		t.Fatalf("parse DBOS_E2E_DATABASE_URL: %v", err)
+	}
+	u.Path = strings.TrimSuffix(u.Path, "/") + "_web_steps"
+	u.RawPath = ""
+	if err := core.Boot(ctx, "flowdeck_web_steps_e2e", u.String()); err != nil {
+		t.Fatalf("boot: %v", err)
+	}
+	t.Cleanup(func() { core.Shutdown(5 * time.Second) })
+	if err := core.Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping))
+	defer srv.Close()
+
+	// Dispatch a linear run: the executed path is fetch → parse → transform
+	// → store.
+	resp, err := post(t, srv.URL+"/run/pipeline")
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dispatch: status %d, want 200", resp.StatusCode)
+	}
+	id := executionID(t, readAll(t, resp))
+
+	// Poll the steps partial (the page's 2s poll) until the run is
+	// terminal: the fragment then has no hx attributes.
+	deadline := time.Now().Add(30 * time.Second)
+	var body string
+	for {
+		if _, body = get(t, srv.URL+"/executions/"+id+"/steps"); !strings.Contains(body, `hx-trigger="every 2s"`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("run %s did not reach a terminal state in time", id)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	for _, want := range []string{`<svg`, `>fetch<`, `>parse<`, `>transform<`, `>store<`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("terminal fragment missing %q", want)
+		}
+	}
+
+	// The full page embeds the executed path (the same SVG).
+	if status, body := get(t, srv.URL+"/executions/"+id); status != http.StatusOK ||
+		!strings.Contains(body, `>fetch<`) || !strings.Contains(body, `>store<`) {
+		t.Fatalf("execution page: status %d, body %q", status, body)
 	}
 }

@@ -6,15 +6,20 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"flowdeck/core"
 )
 
 // pathNode is a step node of the paths graph: the continuations are
 // Children — one child per distinct next step, so the if forks the
-// children. Terminal marks a step where some path ends.
+// children. Terminal marks a step where some path ends. State is the
+// step's state on the executed path (success/error) — empty on the
+// possible-paths map (phase 4, STEP 2), where no step has run.
 type pathNode struct {
 	Step     string
 	Terminal bool
 	Children []pathNode
+	State    string
 }
 
 // pathsGraph builds the tree of a workflow's possible paths: the common
@@ -71,6 +76,7 @@ func nodeFromPaths(paths [][]string) pathNode {
 // branches — the common prefix is drawn once.
 func pathsToSVG(paths [][]string) template.HTML {
 	g := newGraphLayout(pathsGraph(paths))
+	g.label = "possible paths"
 	return template.HTML(g.svg())
 }
 
@@ -79,6 +85,7 @@ func pathsToSVG(paths [][]string) template.HTML {
 // its children — a linear chain runs in one row and the if forks the rows.
 type graphLayout struct {
 	maxDepth int
+	label    string // aria-label of the svg
 	nodes    []graphNode
 	edges    [][2]graphNode
 	width    float64
@@ -87,6 +94,7 @@ type graphLayout struct {
 
 type graphNode struct {
 	step     string
+	state    string  // executed-path state (success/error); empty on possible paths
 	x, y, w  float64 // x/y are the node's center
 	children []graphNode
 }
@@ -137,9 +145,10 @@ func newGraphLayout(roots []pathNode) *graphLayout {
 	var place func(n pathNode, depth int) graphNode
 	place = func(n pathNode, depth int) graphNode {
 		node := graphNode{
-			step: n.Step,
-			w:    graphCharW*float64(len(n.Step)) + 2*graphPadX,
-			x:    graphMargin + float64(depth)*colW,
+			step:  n.Step,
+			state: n.State,
+			w:     graphCharW*float64(len(n.Step)) + 2*graphPadX,
+			x:     graphMargin + float64(depth)*colW,
 		}
 		node.x += node.w / 2
 		if len(n.Children) == 0 {
@@ -179,20 +188,47 @@ func newGraphLayout(roots []pathNode) *graphLayout {
 func (g *graphLayout) svg() string {
 	w, h := int(math.Round(g.width)), int(math.Round(g.height))
 	var b strings.Builder
-	fmt.Fprintf(&b, `<svg class="paths-graph" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="possible paths">`, w, h, w, h)
+	fmt.Fprintf(&b, `<svg class="paths-graph" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s">`, w, h, w, h, g.label)
 	b.WriteString(`<defs><marker id="flowdeck-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path class="g-arrow" d="M0,0 L10,5 L0,10 Z"/></marker></defs>`)
 	for _, e := range g.edges {
 		fmt.Fprintf(&b, `<line class="g-edge" x1="%s" y1="%s" x2="%s" y2="%s" marker-end="url(#flowdeck-arrow)"/>`,
 			num(e[0].x+e[0].w/2), num(e[0].y), num(e[1].x-e[1].w/2-1), num(e[1].y))
 	}
 	for _, n := range g.nodes {
-		fmt.Fprintf(&b, `<rect class="g-node" x="%s" y="%s" width="%s" height="%s" rx="5"/>`,
-			num(n.x-n.w/2), num(n.y-graphNodeH/2), num(n.w), num(graphNodeH))
+		cls := "g-node"
+		if n.state != "" {
+			cls += " " + n.state
+		}
+		fmt.Fprintf(&b, `<rect class="%s" x="%s" y="%s" width="%s" height="%s" rx="5"/>`,
+			cls, num(n.x-n.w/2), num(n.y-graphNodeH/2), num(n.w), num(graphNodeH))
 		fmt.Fprintf(&b, `<text class="g-text" x="%s" y="%s" text-anchor="middle">%s</text>`,
 			num(n.x), num(n.y+5), template.HTMLEscapeString(n.step))
 	}
 	b.WriteString(`</svg>`)
 	return b.String()
+}
+
+// executedPathToSVG renders the executed path of a run (phase 4, STEP 3)
+// as the same graph as the possible paths, with the single row of the
+// steps that ran, in execution order: each node is colored by the step's
+// state (success/error — every executed step is terminal). It is separate
+// from the boot map: the path comes from Postgres, the map from the code.
+func executedPathToSVG(steps []core.Step) template.HTML {
+	nodes := make([]pathNode, 0, len(steps))
+	for _, s := range steps {
+		nodes = append(nodes, pathNode{Step: s.Name, State: string(s.State)})
+	}
+	for i := len(nodes) - 1; i > 0; i-- {
+		nodes[i-1].Children = []pathNode{nodes[i]}
+	}
+	// Only the first step is a root: the rest hang off it as continuations.
+	roots := []pathNode{}
+	if len(nodes) > 0 {
+		roots = []pathNode{nodes[0]}
+	}
+	g := newGraphLayout(roots)
+	g.label = "executed path"
+	return template.HTML(g.svg())
 }
 
 // num formats a layout coordinate (one decimal is enough for px).

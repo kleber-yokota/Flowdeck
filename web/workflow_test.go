@@ -20,7 +20,7 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 	fakeLister := func() []core.Workflow {
 		return []core.Workflow{{Name: "wf-alpha"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -51,7 +51,7 @@ func TestWorkflowPageColumnsLayout(t *testing.T) {
 	fakePaths := func(name string) [][]string {
 		return [][]string{{"one", "two"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -74,7 +74,7 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 	fakePaths := func(name string) [][]string {
 		return [][]string{{"base", "left"}, {"base", "right"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -109,7 +109,7 @@ func TestWorkflowPageRendersLinearGraph(t *testing.T) {
 	fakePaths := func(name string) [][]string {
 		return [][]string{{"fetch", "parse", "store"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -150,7 +150,7 @@ func TestWorkflowPageListsExecutions(t *testing.T) {
 			{ID: "run-older", State: core.StateQueued, CreatedAt: older},
 		}, nil
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, listExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, okPaths, listExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -188,7 +188,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 	downExecutions := func(name string) ([]core.Execution, error) {
 		return nil, core.ErrNotLaunched
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, downExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(fakeLister, okPaths, downExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/workflows/wf-alpha"); status != http.StatusServiceUnavailable {
@@ -198,7 +198,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 
 // A page for a workflow that is not in the core registry is a clean 404.
 func TestWorkflowPageUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {

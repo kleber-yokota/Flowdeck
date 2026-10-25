@@ -150,6 +150,11 @@ a.name { color: inherit; text-decoration: none; }
 
 .g-edge { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
 .g-node { fill: #101114; stroke: var(--steel); stroke-opacity: 0.35; }
+/* Executed path (phase 4, STEP 3): the same graph, with the single row of
+   the steps that ran — the nodes are colored by the step's state
+   (success/failed; every executed step is terminal) */
+.g-node.success { stroke: var(--success); stroke-opacity: 0.8; }
+.g-node.error { stroke: var(--error); stroke-opacity: 0.8; }
 .g-text {
   font-family: ui-monospace, "Geist Mono", monospace;
   font-size: 14px;
@@ -253,3 +258,17 @@ a.name { color: inherit; text-decoration: none; }
   font-size: 0.75rem;
   color: var(--error);
 }
+
+/* Executed path (phase 4, STEP 3) — the section on the detail page */
+.executed-path-section { margin-top: 1.5rem; }
+
+.path-label {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--soft);
+  margin: 0 0 0.5rem;
+}
+
+.executed-path svg { display: block; max-width: 100%; height: auto; }
