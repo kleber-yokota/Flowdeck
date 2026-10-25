@@ -1,7 +1,10 @@
 name: ci
 
+# push only on main + pull_request on every branch: one push to a branch
+# with an open PR must not fire two runs (push + pull_request).
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
