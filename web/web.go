@@ -64,28 +64,7 @@ func New(
 	// (phase 3, LIST): every execution the core knows, newest first —
 	// workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		if !registered(listWorkflows(), name) {
-			http.Error(w, "unknown workflow", http.StatusNotFound)
-			return
-		}
-		exs, err := executions(name)
-		if err != nil {
-			fail(w, "executions", err)
-			return
-		}
-		rows := make([]badge, 0, len(exs))
-		for _, e := range exs {
-			rows = append(rows, row(e))
-		}
-		// Phase 4, STEP 2: the paths come from the boot map (PATHS: map
-		// lookup, no re-parse, no DB) — never hardcoded in the web.
-		page(w, "workflow.html", workflowPage{
-			Title:      name + " · FlowDeck",
-			Name:       name,
-			Graph:      pathsToSVG(paths(name)),
-			Executions: rows,
-		})
+		handleWorkflowPage(w, r, listWorkflows, paths, executions)
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -115,50 +94,14 @@ func New(
 		partial(w, "badge.html", badgeFor(id, state))
 	})
 
-	// Full page: the detail of one execution (phase 3, DETAIL — click on the
-	// workflow ID in the list): badge state, the attempts (retries 1..N-1
-	// are the failures recovered by a retry, retry N the final status),
-	// on failure the error and the step that failed, and the executed path
-	// (phase 4, STEP 3: the steps that ran, in execution order).
+	// Full page: the detail of one execution (phase 3, DETAIL).
 	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		d, err := detail(id)
-		if err != nil {
-			fail(w, "detail", err)
-			return
-		}
-		exSteps, err := steps(id)
-		if err != nil {
-			fail(w, "steps", err)
-			return
-		}
-		page(w, "execution-detail.html", executionDetail{
-			ExecutionDetail: d,
-			Title:           d.ID + " · FlowDeck",
-			Badge:           badgeFor(d.ID, d.State),
-			Retries:         retriesFor(d.Attempts),
-			Steps:           newStepsView(id, d.State, exSteps),
-		})
+		handleExecutionDetail(w, r, detail, steps)
 	})
 
-	// HTMX partial: the executed path of a run (phase 4, STEP 3, polling):
-	// the SVG of the steps that ran, in execution order (the branch the run
-	// took), read from Postgres per poll — separate from the boot map of
-	// possible paths. Polled every 2s while the run is live; the fragment
-	// drops the hx attributes when the run is terminal and the poll stops.
+	// HTMX partial: the executed path of a run (phase 4, STEP 3, polling).
 	mux.HandleFunc("GET /executions/{id}/steps", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		state, err := status(id)
-		if err != nil {
-			fail(w, "status", err)
-			return
-		}
-		exSteps, err := steps(id)
-		if err != nil {
-			fail(w, "steps", err)
-			return
-		}
-		partial(w, "steps.html", newStepsView(id, state, exSteps))
+		handleExecutionSteps(w, r, status, steps)
 	})
 
 	// Health: the web pings the core; the container healthcheck pings this
@@ -175,6 +118,90 @@ func New(
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 
 	return withRecovery(withRequestLog(mux))
+}
+
+// handleWorkflowPage renders the full page of one registered workflow:
+// the dispatch button, the possible paths (phase 4, STEP 2, overview) and
+// the runs of it (phase 3, LIST): every execution the core knows, newest
+// first — workflow ID + badge.
+func handleWorkflowPage(w http.ResponseWriter, r *http.Request,
+	listWorkflows func() []core.Workflow,
+	paths func(name string) [][]string,
+	executions func(name string) ([]core.Execution, error)) {
+	name := r.PathValue("name")
+	if !registered(listWorkflows(), name) {
+		http.Error(w, "unknown workflow", http.StatusNotFound)
+		return
+	}
+	exs, err := executions(name)
+	if err != nil {
+		fail(w, "executions", err)
+		return
+	}
+	rows := make([]badge, 0, len(exs))
+	for _, e := range exs {
+		rows = append(rows, row(e))
+	}
+	// Phase 4, STEP 2: the paths come from the boot map (PATHS: map
+	// lookup, no re-parse, no DB) — never hardcoded in the web.
+	page(w, "workflow.html", workflowPage{
+		Title:      name + " · FlowDeck",
+		Name:       name,
+		Graph:      pathsToSVG(paths(name)),
+		Executions: rows,
+	})
+}
+
+// handleExecutionDetail renders the full page of one execution (phase 3,
+// DETAIL — click on the workflow ID in the list): badge state, the
+// attempts (retries 1..N-1 are the failures recovered by a retry, retry N
+// the final status), on failure the error and the step that failed, and
+// the executed path (phase 4, STEP 3: the steps that ran, in execution
+// order).
+func handleExecutionDetail(w http.ResponseWriter, r *http.Request,
+	detail func(workflowID string) (core.ExecutionDetail, error),
+	steps func(workflowID string) ([]core.Step, error)) {
+	id := r.PathValue("id")
+	d, err := detail(id)
+	if err != nil {
+		fail(w, "detail", err)
+		return
+	}
+	exSteps, err := steps(id)
+	if err != nil {
+		fail(w, "steps", err)
+		return
+	}
+	page(w, "execution-detail.html", executionDetail{
+		ExecutionDetail: d,
+		Title:           d.ID + " · FlowDeck",
+		Badge:           badgeFor(d.ID, d.State),
+		Retries:         retriesFor(d.Attempts),
+		Steps:           newStepsView(id, d.State, exSteps),
+	})
+}
+
+// handleExecutionSteps renders the HTMX partial of the executed path of a
+// run (phase 4, STEP 3, polling): the SVG of the steps that ran, in
+// execution order (the branch the run took), read from Postgres per poll —
+// separate from the boot map of possible paths. Polled every 2s while the
+// run is live; the fragment drops the hx attributes when the run is
+// terminal and the poll stops.
+func handleExecutionSteps(w http.ResponseWriter, r *http.Request,
+	status func(workflowID string) (core.State, error),
+	steps func(workflowID string) ([]core.Step, error)) {
+	id := r.PathValue("id")
+	state, err := status(id)
+	if err != nil {
+		fail(w, "status", err)
+		return
+	}
+	exSteps, err := steps(id)
+	if err != nil {
+		fail(w, "steps", err)
+		return
+	}
+	partial(w, "steps.html", newStepsView(id, state, exSteps))
 }
 
 // registered reports whether name is in the core's workflow registry (the
