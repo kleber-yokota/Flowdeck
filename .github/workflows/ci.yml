@@ -19,6 +19,12 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - name: go vet
         run: go vet ./...
+      - name: Generated workflow imports are up to date
+        # workflows/zz_generated.go must match the workflow subpackages on
+        # disk (the generator: cmd/workflowgen, run via go:generate).
+        run: |
+          go generate ./workflows
+          git diff --exit-code workflows/zz_generated.go
       - name: Install complexity tools
         run: |
           go install github.com/fzipp/gocyclo/cmd/gocyclo@latest

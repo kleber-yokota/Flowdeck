@@ -9,6 +9,8 @@
 // which rewrites zz_generated.go (the blank imports that pull the
 // subpackages into the binary). main.go never changes for a new workflow.
 //
+//go:generate go run flowdeck/cmd/workflowgen
+
 package workflows
 
 import (
