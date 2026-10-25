@@ -5,7 +5,8 @@ import (
 	"time"
 )
 
-// loadConfig must fail fast when the required env vars are missing.
+// loadConfig must fail fast when the required env vars are missing (the core
+// reads them in its own init — this is the early-error twin).
 func TestLoadConfigRequiresEnv(t *testing.T) {
 	t.Setenv("DBOS_APP_NAME", "")
 	t.Setenv("DBOS_SYSTEM_DATABASE_URL", "")
@@ -24,9 +25,6 @@ func TestLoadConfigDefaults(t *testing.T) {
 	cfg, err := loadConfig()
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
-	}
-	if cfg.appName != "flowdeck" || cfg.dbURL != "postgres://db:5432/flowdeck" {
-		t.Fatalf("config: got appName=%q dbURL=%q", cfg.appName, cfg.dbURL)
 	}
 	if cfg.httpAddr != ":8080" {
 		t.Fatalf("default addr: got %q want %q", cfg.httpAddr, ":8080")

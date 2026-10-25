@@ -1,217 +1,258 @@
-package core
+package core_test
 
 import (
 	"context"
 	"errors"
-	"maps"
-	"path/filepath"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-	_ "github.com/dbos-inc/dbos-transact-golang/dbos/driver/sqlite"
 
+	"flowdeck/core"
+	"flowdeck/core/graph"
 	"flowdeck/core/status"
+
+	// The workflow files register themselves in the env-driven core DBOS
+	// context (their init) — the same single blank import main.go carries;
+	// workflows/zz_generated.go pulls in every subpackage.
+	_ "flowdeck/workflows"
 )
 
-// Test-only workflow, registered via register() to exercise the mechanism.
-func echoTestWorkflow(ctx dbos.Context, msg string) (string, error) {
-	return "pong:" + msg, nil
-}
-
-// registerTestWorkflow registers a test workflow the same way a workflow
-// file does: a visible dbos.RegisterWorkflow call, applied at Launch.
-func registerTestWorkflow(name string, wf dbos.Workflow[string, string]) {
-	register(name,
-		func(ctx dbos.Context) {
-			dbos.RegisterWorkflow(ctx, wf,
-				dbos.WithWorkflowName(name),
-				dbos.WithMaxRecoveryAttempts(3),
-			)
-		},
-		wf,
-	)
-}
-
-// bootCoreForTest resets the singleton and the registry, boots a fresh core
-// on the given database URL, and guarantees (in cleanup, LIFO order):
-//   - Shutdown before the boot context is canceled (DBOS uses it at Launch);
-//   - the registry is restored, so test registrations (M3) never leak into
-//     other tests, even with -count=2 or -shuffle.
-func bootCoreForTest(t *testing.T, dbURL string) {
-	t.Helper()
-
-	theCore.mu.Lock()
-	savedRegs, savedNames := theCore.registrations, maps.Clone(theCore.registeredNames)
-	theCore.mu.Unlock()
-	t.Cleanup(func() {
-		theCore.mu.Lock()
-		theCore.registrations, theCore.registeredNames = savedRegs, savedNames
-		theCore.mu.Unlock()
-	})
-
-	Shutdown(5 * time.Second) // nil-safe reset: this test starts clean
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// The context must stay alive until after Shutdown (DBOS uses it at Launch),
-	// so cancel it in cleanup, not when the helper returns.
-	t.Cleanup(cancel)
-
-	if err := Boot(ctx, "flowdeck_test", dbURL); err != nil {
-		t.Fatalf("boot: %v", err)
+// The core tests use the env-driven lifecycle: core.init() has already
+// created the DBOS context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL
+// (see .env.test), and the workflow files (which import core) have
+// registered their workflows in their own init. This TestMain only
+// registers the test-only failing workflow and starts the executor once.
+func TestMain(m *testing.M) {
+	if c := core.Ctx(); c != nil {
+		dbos.RegisterWorkflow(c, failingTestWorkflow,
+			dbos.WithWorkflowName("failing-test"),
+			dbos.WithMaxRecoveryAttempts(3),
+		)
+		if err := core.Launch(); err != nil {
+			fmt.Fprintln(os.Stderr, "core_test: launch:", err)
+			os.Exit(1)
+		}
 	}
-	t.Cleanup(func() { Shutdown(5 * time.Second) })
+	os.Exit(m.Run())
 }
 
-// bootSQLiteCoreForTest boots the core on a temporary SQLite database —
-// no Postgres needed for the fast test cycle.
-func bootSQLiteCoreForTest(t *testing.T) {
+// needCore skips the test when the env-driven context is absent (the env
+// vars were not exported before the test binary started).
+func needCore(t *testing.T) {
 	t.Helper()
-	bootCoreForTest(t, "sqlite:"+filepath.Join(t.TempDir(), "core-test.db"))
+	if core.Ctx() == nil {
+		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
+	}
 }
 
-// register() must record the workflow so Launch applies it to the DBOS
-// context and List() returns it — the web listing depends on this.
-func TestRegisterAddsWorkflowToList(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	registerTestWorkflow("extra-test", echoTestWorkflow)
-
-	if err := Launch(); err != nil {
-		t.Fatalf("launch: %v", err)
+// failingTestWorkflow is a workflow that fails in a named step — it
+// exercises the failure path (retries, Detail: error + the failed step).
+// Test-only: registered here by the TestMain, never part of the workflows
+// package, so it does not appear in the production registry.
+func failingTestWorkflow(ctx dbos.Context, _ string) (string, error) {
+	_, err := dbos.RunAsStep(ctx, failingTestStep(), dbos.WithStepName("boom-step"))
+	if err != nil {
+		return "", err
 	}
+	return "", nil
+}
 
+// failingTestStep is a step that always fails.
+func failingTestStep() dbos.Step[string] {
+	return func(_ context.Context) (string, error) {
+		return "", errors.New("boom: step failed")
+	}
+}
+
+// pollState polls the badge state until the wanted one (a success stops the
+// poll too — the run finished, just not with the wanted state).
+func pollState(t *testing.T, id string, want status.State) (status.State, error) {
+	t.Helper()
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		st, err := core.Status(id)
+		if err != nil {
+			return st, fmt.Errorf("Status: %w", err)
+		}
+		if st == want || st == status.Success {
+			return st, nil
+		}
+		if time.Now().After(deadline) {
+			return st, fmt.Errorf("poll deadline, last state %s", st)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// The registry (the web listing's source) has the shipped workflows — the
+// registration is the workflow files' init, applied to the env context.
+func TestListShowsRegisteredWorkflows(t *testing.T) {
+	needCore(t)
 	names := map[string]bool{}
-	for _, w := range List() {
+	for _, w := range core.List() {
 		names[w.Name] = true
 	}
-	if !names["extra-test"] {
-		t.Fatalf("register() did not register: List() missing extra-test: %v", names)
-	}
-	if !names["hello-world"] {
-		t.Fatalf("List() missing hello-world: %v", names)
-	}
-
-	handle, err := dbos.RunWorkflow(theCore.dbosCtx, echoTestWorkflow, "ping")
-	if err != nil {
-		t.Fatalf("RunWorkflow: %v", err)
-	}
-	result, err := handle.GetResult()
-	if err != nil {
-		t.Fatalf("GetResult: %v", err)
-	}
-	if result != "pong:ping" {
-		t.Fatalf("result: got %q want %q", result, "pong:ping")
-	}
-}
-
-// register() must fail fast (panic) on a duplicate name — a programming
-// error that would otherwise surface far away, inside dbos.RegisterWorkflow.
-func TestRegisterDuplicateNamePanics(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic on duplicate register()")
+	for _, want := range []string{"hello-world", "pipeline", "decide", "buy"} {
+		if !names[want] {
+			t.Fatalf("registry missing %s: %v", want, names)
 		}
-	}()
-	registerTestWorkflow("hello-world", echoTestWorkflow) // init() already registered it
+	}
 }
 
-// Enqueue is the dispatch ACK path: it puts a run on the queue and returns
-// the new workflow ID (the web renders the "queued" badge with it).
-// Enqueue is the dispatch ACK path: it puts a run on the queue and returns
-// the new execution (id + state + created_at) — the web renders the
-// "queued" row with it.
+// Enqueue (the dispatch) returns the new execution (id + state +
+// created_at) — the dispatch ACK the web renders as the "queued" row.
 func TestEnqueueReturnsExecution(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	if err := Launch(); err != nil {
-		t.Fatalf("launch: %v", err)
-	}
-
-	ex, err := Enqueue("hello-world", nil)
+	needCore(t)
+	ex, err := core.Enqueue("hello-world", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if ex.ID == "" {
-		t.Fatal("Enqueue returned an empty workflow ID")
-	}
-	if ex.CreatedAt.IsZero() {
-		t.Fatal("Enqueue returned a zero CreatedAt")
+	if ex.ID == "" || ex.ID == "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("ACK without an execution id: %+v", ex)
 	}
 	if ex.State != status.Queued && ex.State != status.Running {
-		t.Fatalf("Enqueue: got state %s, want queued or running", ex.State)
+		t.Fatalf("ACK state: got %s, want queued/running", ex.State)
+	}
+	if ex.CreatedAt.IsZero() {
+		t.Fatal("ACK without a created_at")
 	}
 }
 
-// Enqueue must reject a name that is not in the registry (the web maps it
-// to 404 instead of failing deep in DBOS).
+// Enqueue of a name that is not in the registry errors with
+// ErrUnknownWorkflow (the web maps it to a 400).
 func TestEnqueueUnknownWorkflow(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	if err := Launch(); err != nil {
-		t.Fatalf("launch: %v", err)
-	}
-
-	if _, err := Enqueue("nope", nil); !errors.Is(err, ErrUnknownWorkflow) {
-		t.Fatalf("Enqueue: got %v, want ErrUnknownWorkflow", err)
+	needCore(t)
+	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, core.ErrUnknownWorkflow) {
+		t.Fatalf("Enqueue unknown: got %v, want ErrUnknownWorkflow", err)
 	}
 }
 
-// Enqueue before Launch must fail cleanly (core not up yet).
-func TestEnqueueWithoutLaunchErrors(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	if _, err := Enqueue("hello-world", nil); !errors.Is(err, ErrNotLaunched) {
-		t.Fatalf("Enqueue before Launch: got %v, want ErrNotLaunched", err)
+// A run that fails in a step reaches the failed state, and Detail shows the
+// error and the failed step (phase 3, DETAIL: on failure: error + the failed
+// step).
+func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("failing-test", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	st, err := pollState(t, ex.ID, status.Error)
+	if err != nil {
+		t.Fatalf("poll to error: %v", err)
+	}
+	if st != status.Error {
+		t.Fatalf("failing run state: got %s, want error", st)
+	}
+	d, err := core.Detail(ex.ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if !strings.Contains(d.Error, "boom: step failed") {
+		t.Fatalf("Detail error: got %q", d.Error)
+	}
+	if d.FailedStep != "boom-step" {
+		t.Fatalf("Detail failed step: got %q, want boom-step", d.FailedStep)
+	}
+	if d.Attempts < 1 {
+		t.Fatalf("Detail attempts: %d, want >= 1", d.Attempts)
 	}
 }
 
-// Boot is a singleton: a second Boot in the same cycle must fail.
-func TestBootTwiceErrors(t *testing.T) {
-	bootSQLiteCoreForTest(t)
+// mustStepNames returns the step names of the run, failing the test if the
+// steps cannot be read.
+func mustStepNames(t *testing.T, ex core.Execution) []string {
+	t.Helper()
+	steps, err := core.Steps(ex.ID)
+	if err != nil {
+		t.Fatalf("Steps: %v", err)
+	}
+	names := make([]string, 0, len(steps))
+	for _, s := range steps {
+		names = append(names, s.Name)
+	}
+	return names
+}
 
-	if err := Boot(context.Background(), "flowdeck_test", ""); err == nil {
-		t.Fatal("expected error on second Boot (singleton)")
+// Executions lists the runs of a workflow (phase 3, LIST), newest first:
+// the run I enqueued is in the list, with its final state (the assertions
+// filter by id — the test database may hold runs from other tests).
+func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("hello-world", "one")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+	list, err := core.Executions("hello-world")
+	if err != nil {
+		t.Fatalf("Executions: %v", err)
+	}
+	found := false
+	for _, e := range list {
+		if e.ID != ex.ID {
+			continue
+		}
+		found = true
+		if e.State != status.Success {
+			t.Fatalf("execution %s state: got %s, want success", e.ID, e.State)
+		}
+	}
+	if !found {
+		t.Fatalf("run %s not in Executions(hello-world)", ex.ID)
 	}
 }
 
-// Launch without a prior Boot must fail.
-func TestLaunchWithoutBootErrors(t *testing.T) {
-	Shutdown(5 * time.Second)
-
-	if err := Launch(); err == nil {
-		t.Fatal("expected error on Launch without Boot")
+// Executions of a name with no runs is empty (no error).
+func TestExecutionsUnknownWorkflowIsEmpty(t *testing.T) {
+	needCore(t)
+	list, err := core.Executions("no-such-workflow")
+	if err != nil {
+		t.Fatalf("Executions: %v", err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("Executions(unknown): got %d rows, want 0", len(list))
 	}
 }
 
-// Launch is a singleton: a second Launch in the same cycle must fail.
-func TestLaunchTwiceErrors(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	if err := Launch(); err != nil {
-		t.Fatalf("first launch: %v", err)
+// The reads of an execution that is not known by the core error with
+// ErrUnknownExecution (the web maps it to a 404).
+func TestDetailAndStepsOfUnknownExecution(t *testing.T) {
+	needCore(t)
+	unknown := "00000000-0000-0000-0000-000000000000"
+	if _, err := core.Detail(unknown); !errors.Is(err, core.ErrUnknownExecution) {
+		t.Fatalf("Detail unknown: got %v, want ErrUnknownExecution", err)
 	}
-	if err := Launch(); err == nil {
-		t.Fatal("expected error on second Launch (singleton)")
+	if _, err := core.Steps(unknown); !errors.Is(err, core.ErrUnknownExecution) {
+		t.Fatalf("Steps unknown: got %v, want ErrUnknownExecution", err)
 	}
-}
-
-// List before Boot must return nil (core not booted), not panic.
-func TestListBeforeBootReturnsNil(t *testing.T) {
-	Shutdown(5 * time.Second) // nil-safe reset: make sure the core is down
-
-	if got := List(); got != nil {
-		t.Fatalf("List before Boot: got %v, want nil", got)
+	if _, err := core.Status(unknown); !errors.Is(err, core.ErrUnknownExecution) {
+		t.Fatalf("Status unknown: got %v, want ErrUnknownExecution", err)
 	}
 }
 
-// List after Shutdown must return nil (core torn down), not panic.
-func TestListAfterShutdownReturnsNil(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	Shutdown(5 * time.Second) // explicit: core is torn down before the test ends
-
-	if got := List(); got != nil {
-		t.Fatalf("List after Shutdown: got %v, want nil", got)
+// The embedded source (parsed, no imports involved) is the ground truth
+// for which workflows exist: every workflow it declares must be registered
+// in the core DBOS. A mismatch means workflows/zz_generated.go is stale —
+// a new subpackage was added without running: go generate ./workflows.
+func TestRegistrationMatchesSource(t *testing.T) {
+	needCore(t)
+	g, err := graph.New(os.DirFS("../workflows"))
+	if err != nil {
+		t.Fatalf("build graph from source: %v", err)
+	}
+	registered := map[string]bool{}
+	for _, w := range core.List() {
+		registered[w.Name] = true
+	}
+	for name := range g.ByName {
+		if !registered[name] {
+			t.Fatalf("source declares workflow %q but the registry does not — run 'go generate ./workflows'", name)
+		}
 	}
 }

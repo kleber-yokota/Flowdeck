@@ -31,7 +31,11 @@ jobs:
       - name: Cognitive complexity gate (production max 10)
         run: gocognit -over 10 -ignore '_test\.go$' .
       - name: Test (race, count=2, shuffled — catches registry/state leaks)
-        run: go test -race -count=2 -shuffle=on ./...
+        run: |
+          set -a && source .env.test && set +a
+          # -p 1: one test binary at a time — the binaries share the SQLite
+          # test database, and the first one creates and migrates it.
+          go test -race -count=2 -shuffle=on -p 1 ./...
 
   e2e:
     runs-on: ubuntu-latest
@@ -56,8 +60,12 @@ jobs:
           go-version-file: go.mod
       - name: E2E against Postgres 18
         env:
-          DBOS_E2E_DATABASE_URL: postgres://flowdeck:flowdeck@localhost:5432/flowdeck?sslmode=disable
-        run: go test -tags e2e -run TestE2E ./...
+          DBOS_APP_NAME: flowdeck_e2e
+          DBOS_SYSTEM_DATABASE_URL: postgres://flowdeck:flowdeck@localhost:5432/flowdeck?sslmode=disable
+        # -p 1: one test binary at a time, so only one executor polls the
+        # queue at a time (a job claimed by a process that has not
+        # registered the workflow would fail).
+        run: go test -tags e2e -run TestE2E -p 1 ./...
 
   vulncheck:
     runs-on: ubuntu-latest

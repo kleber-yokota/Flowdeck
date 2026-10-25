@@ -1,8 +1,10 @@
 package web
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +12,11 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/graph"
 	"flowdeck/core/status"
+
+	// The workflow files register themselves in the env-driven core DBOS
+	// context (their init) — the same single blank import main.go carries;
+	// workflows/zz_generated.go pulls in every subpackage.
+	_ "flowdeck/workflows"
 )
 
 // Shared stubs: every test file builds its httptest server from these,
@@ -114,4 +121,51 @@ func executionID(t *testing.T, row string) string {
 	start := idx + len(prefix)
 	end := start + strings.Index(row[start:], `"`)
 	return row[start:end]
+}
+
+// containsAll reports whether s contains every frag.
+func containsAll(s string, frags ...string) bool {
+	for _, frag := range frags {
+		if !strings.Contains(s, frag) {
+			return false
+		}
+	}
+	return true
+}
+
+// containsAny reports whether s contains at least one frag.
+func containsAny(s string, frags ...string) bool {
+	for _, frag := range frags {
+		if strings.Contains(s, frag) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestMain brings the env-driven core up for the booted tests: the paths
+// graph from the workflows tree on disk (the unit twin of main.go's
+// //go:embed workflows) and the executor (only when the env context exists
+// — the mock tests run without it).
+func TestMain(m *testing.M) {
+	if err := core.SetWorkflowsSource(os.DirFS("../workflows")); err != nil {
+		fmt.Fprintln(os.Stderr, "web: set workflows source:", err)
+		os.Exit(1)
+	}
+	if core.Ctx() != nil {
+		if err := core.Launch(); err != nil {
+			fmt.Fprintln(os.Stderr, "web: launch:", err)
+			os.Exit(1)
+		}
+	}
+	os.Exit(m.Run())
+}
+
+// needCore skips the test when the env-driven context is absent (the env
+// vars were not exported before the test binary started).
+func needCore(t *testing.T) {
+	t.Helper()
+	if core.Ctx() == nil {
+		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
+	}
 }

@@ -1,63 +1,36 @@
-package core
+package core_test
 
 import (
-	"slices"
+	"os"
 	"testing"
-	"time"
+
+	"flowdeck/core"
 )
 
-// Phase 4, STEP 1: Boot parses this package's own source and builds the
-// map name → possible paths. hello-world has one RunAsStep ("greet"), so
-// its only possible path is [greet].
-func TestBootBuildsPathsMap(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	got := theCore.paths.Of("hello-world")
-	if !equalPaths(got, [][]string{{"greet"}}) {
-		t.Fatalf("Paths(hello-world): got %v, want %v", got, [][]string{{"greet"}})
+// SetWorkflowsSource builds the possible-paths graph from the workflows
+// tree (the unit twin of main.go's //go:embed workflows): every registered
+// workflow is in the graph, with its steps and the if forks — including
+// the subpackage workflow, found by the recursive walk of the tree.
+func TestPathsGraphFromWorkflowsTree(t *testing.T) {
+	if err := core.SetWorkflowsSource(os.DirFS("../workflows")); err != nil {
+		t.Fatalf("SetWorkflowsSource: %v", err)
 	}
-}
+	g := core.NewPort().Graph
 
-// Phase 4, STEP 1: the boot map of the branched workflow (decide) forks on
-// the if: base → left and base → right.
-func TestBootBuildsPathsMapDecide(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	got := theCore.paths.Of("decide")
-	if !equalPaths(got, [][]string{{"base", "left"}, {"base", "right"}}) {
-		t.Fatalf("Paths(decide): got %v", got)
+	if got := g.Of("hello-world"); len(got) != 1 || len(got[0]) != 1 || got[0][0] != "greet" {
+		t.Fatalf("hello-world paths: got %v", got)
 	}
-}
-
-// Phase 4, STEP 1: the boot map of the linear workflow (pipeline) is a
-// single path with all the steps in source order.
-func TestBootBuildsPathsMapPipeline(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	got := theCore.paths.Of("pipeline")
-	if !equalPaths(got, [][]string{{"fetch", "parse", "transform", "store"}}) {
-		t.Fatalf("Paths(pipeline): got %v", got)
+	if got := g.Of("pipeline"); len(got) != 1 || len(got[0]) != 4 || got[0][0] != "fetch" || got[0][3] != "store" {
+		t.Fatalf("pipeline paths: got %v", got)
 	}
-}
-
-// The port before Boot carries the empty graph: Of returns nil (core not
-// booted), like List().
-func TestPortBeforeBootCarriesEmptyGraph(t *testing.T) {
-	Shutdown(5 * time.Second)
-
-	if got := NewPort().Graph.Of("hello-world"); got != nil {
-		t.Fatalf("graph before Boot: got %v, want nil", got)
+	if got := g.Of("decide"); len(got) != 2 || len(got[0]) != 2 || got[0][0] != "base" {
+		t.Fatalf("decide paths: got %v", got)
 	}
-}
-
-func equalPaths(a, b [][]string) bool {
-	if len(a) != len(b) {
-		return false
+	if got := g.Of("buy"); len(got) != 1 || len(got[0]) != 1 || got[0][0] != "charge" {
+		t.Fatalf("buy paths (subpackage): got %v", got)
 	}
-	for i := range a {
-		if !slices.Equal(a[i], b[i]) {
-			return false
-		}
+	// The graph of an unregistered name is empty (no parse, no crash).
+	if got := g.Of("ghost"); len(got) != 0 {
+		t.Fatalf("ghost paths: got %v", got)
 	}
-	return true
 }

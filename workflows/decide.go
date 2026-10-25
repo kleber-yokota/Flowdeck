@@ -1,19 +1,22 @@
-package core
+package workflows
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core"
 )
 
+// Registers the decide workflow in the core DBOS context — the context is
+// up since core's init (dependency order: core before this package). With
+// no env (unit tests, tools) the context is nil and the registration is
+// skipped.
 func init() {
-	register("decide",
-		func(ctx dbos.Context) {
-			dbos.RegisterWorkflow(ctx, Decide,
-				dbos.WithWorkflowName("decide"),
-				dbos.WithMaxRecoveryAttempts(3),
-			)
-		},
-		Decide,
-	)
+	if c := core.Ctx(); c != nil {
+		dbos.RegisterWorkflow(c, Decide,
+			dbos.WithWorkflowName("decide"),
+			dbos.WithMaxRecoveryAttempts(3),
+		)
+	}
 }
 
 // Decide is a workflow with a branch: after the first step, the second step
