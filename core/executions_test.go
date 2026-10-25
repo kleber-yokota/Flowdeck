@@ -203,6 +203,105 @@ func TestDetailFailureReportsErrorAndFailedStep(t *testing.T) {
 	}
 }
 
+// Steps returns the executed path of a branched run: the steps in
+// execution order (step_id asc) — the branch of the if the run took
+// (phase 4, STEP 3). The not-taken branch is not in the path.
+func TestStepsReturnsTakenBranch(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	tests := []struct {
+		payload string
+		want    []string
+	}{
+		{"", []string{"base", "right"}},
+		{"left", []string{"base", "left"}},
+	}
+	for _, tt := range tests {
+		handle, err := dbos.RunWorkflow(dbosCtx, Decide, tt.payload)
+		if err != nil {
+			t.Fatalf("RunWorkflow: %v", err)
+		}
+		if _, err := handle.GetResult(); err != nil {
+			t.Fatalf("GetResult: %v", err)
+		}
+		steps, err := Steps(handle.GetWorkflowID())
+		if err != nil {
+			t.Fatalf("Steps: %v", err)
+		}
+		if len(steps) != len(tt.want) {
+			t.Fatalf("payload %q: got %v, want %v", tt.payload, steps, tt.want)
+		}
+		for i, s := range steps {
+			if s.Name != tt.want[i] {
+				t.Fatalf("payload %q: Steps[%d] got %q, want %q", tt.payload, i, s.Name, tt.want[i])
+			}
+			if s.State != StateSuccess {
+				t.Fatalf("Steps[%d]: got state %s, want %s", i, s.State, StateSuccess)
+			}
+		}
+	}
+}
+
+// The executed path of a failed run is the single failed step, with the
+// failed state (phase 4, STEP 3).
+func TestStepsOfFailedRun(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+	registerTestWorkflow("failing-test", failingTestWorkflow)
+
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	handle, err := dbos.RunWorkflow(dbosCtx, failingTestWorkflow, "x")
+	if err != nil {
+		t.Fatalf("RunWorkflow: %v", err)
+	}
+	if _, err := handle.GetResult(); err == nil {
+		t.Fatal("expected the workflow to fail")
+	}
+
+	steps, err := Steps(handle.GetWorkflowID())
+	if err != nil {
+		t.Fatalf("Steps: %v", err)
+	}
+	if len(steps) != 1 {
+		t.Fatalf("Steps: got %v, want one step", steps)
+	}
+	if steps[0].Name != "boom-step" {
+		t.Fatalf("Steps[0]: got %q, want %q", steps[0].Name, "boom-step")
+	}
+	if steps[0].State != StateError {
+		t.Fatalf("Steps[0]: got state %s, want %s", steps[0].State, StateError)
+	}
+}
+
+// Steps on an ID the core does not know returns ErrUnknownExecution (the
+// web maps it to 404).
+func TestStepsUnknownExecution(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	if _, err := Steps("00000000-0000-0000-0000-000000000000"); !errors.Is(err, ErrUnknownExecution) {
+		t.Fatalf("Steps: got %v, want ErrUnknownExecution", err)
+	}
+}
+
+// Steps before Launch must fail cleanly (core not up yet).
+func TestStepsWithoutLaunchErrors(t *testing.T) {
+	bootSQLiteCoreForTest(t)
+
+	if _, err := Steps("abc"); !errors.Is(err, ErrNotLaunched) {
+		t.Fatalf("Steps before Launch: got %v, want ErrNotLaunched", err)
+	}
+}
+
 // Detail on an ID the core does not know returns ErrUnknownExecution (the
 // web maps it to 404).
 func TestDetailUnknownExecution(t *testing.T) {
