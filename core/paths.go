@@ -67,31 +67,47 @@ func pathsFromSources(files map[string][]byte) (map[string][][]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", name, err)
 		}
-		for _, decl := range file.Decls {
-			if fd, ok := decl.(*ast.FuncDecl); ok {
-				funcs[fd.Name.Name] = fd
-			}
-		}
-		// RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) — the
-		// per-file DBOS registration.
-		ast.Inspect(file, func(n ast.Node) bool {
-			call, isCall := n.(*ast.CallExpr)
-			if !isCall || len(call.Args) < 2 || calleeName(call.Fun) != "RegisterWorkflow" {
-				return true
-			}
-			fn, ok := call.Args[1].(*ast.Ident)
-			if !ok {
-				return true
-			}
-			regName, ok := optionName(call, "WithWorkflowName")
-			if !ok {
-				return true
-			}
-			regs[regName] = fn.Name
-			return true
-		})
+		collectFuncs(file, funcs)
+		collectRegistrations(file, regs)
 	}
+	return pathsFromRegistrations(regs, funcs), nil
+}
 
+// collectFuncs records the file's function declarations — the workflow
+// func bodies are walked later, by possiblePaths.
+func collectFuncs(file *ast.File, funcs map[string]*ast.FuncDecl) {
+	for _, decl := range file.Decls {
+		if fd, ok := decl.(*ast.FuncDecl); ok {
+			funcs[fd.Name.Name] = fd
+		}
+	}
+}
+
+// collectRegistrations records the per-file DBOS registrations:
+// RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) — matched by
+// function name, so any import alias of the dbos package is found.
+func collectRegistrations(file *ast.File, regs map[string]string) {
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall || len(call.Args) < 2 || calleeName(call.Fun) != "RegisterWorkflow" {
+			return true
+		}
+		fn, ok := call.Args[1].(*ast.Ident)
+		if !ok {
+			return true
+		}
+		regName, ok := optionName(call, "WithWorkflowName")
+		if !ok {
+			return true
+		}
+		regs[regName] = fn.Name
+		return true
+	})
+}
+
+// pathsFromRegistrations builds the map: registered name → all possible
+// paths (workflow funcs not defined in this package's source are skipped).
+func pathsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDecl) map[string][][]string {
 	out := make(map[string][][]string, len(regs))
 	for name, fnName := range regs {
 		fd := funcs[fnName]
@@ -100,7 +116,7 @@ func pathsFromSources(files map[string][]byte) (map[string][][]string, error) {
 		}
 		out[name] = possiblePaths(fd.Body)
 	}
-	return out, nil
+	return out
 }
 
 // possiblePaths returns every sequence of steps that can run in the
