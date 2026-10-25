@@ -21,7 +21,7 @@ func TestStatusBadgeRendersState(t *testing.T) {
 		core.StateError:   `class="badge error terminal"`,
 	} {
 		t.Run(string(state), func(t *testing.T) {
-			srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, stateStatuser(state), okDetail, okPing))
+			srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(state), okSteps, okDetail, okPing))
 			defer srv.Close()
 
 			status, body := get(t, srv.URL+"/status/abc")
@@ -61,7 +61,7 @@ func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
 		core.StateError:   true,
 	} {
 		t.Run(string(state), func(t *testing.T) {
-			srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, stateStatuser(state), okDetail, okPing))
+			srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(state), okSteps, okDetail, okPing))
 			defer srv.Close()
 
 			status, body := get(t, srv.URL+"/status/abc")
@@ -82,7 +82,7 @@ func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
 
 // The poll fragment is dynamic: it must never be cached by the browser.
 func TestStatusBadgeNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, stateStatuser(core.StateQueued), okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, stateStatuser(core.StateQueued), okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/status/abc")
@@ -103,7 +103,7 @@ func TestStatusUnknownExecutionIs404(t *testing.T) {
 	statuser := func(workflowID string) (core.State, error) {
 		return "", core.ErrUnknownExecution
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, statuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, statuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/status/ghost"); status != http.StatusNotFound {
@@ -116,7 +116,7 @@ func TestStatusCoreDownIs503(t *testing.T) {
 	statuser := func(workflowID string) (core.State, error) {
 		return "", core.ErrNotLaunched
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, statuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, statuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/status/abc"); status != http.StatusServiceUnavailable {

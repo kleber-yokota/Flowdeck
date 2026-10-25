@@ -17,6 +17,20 @@ func echoTestWorkflow(ctx dbos.Context, msg string) (string, error) {
 	return "pong:" + msg, nil
 }
 
+// registerTestWorkflow registers a test workflow the same way a workflow
+// file does: a visible dbos.RegisterWorkflow call, applied at Launch.
+func registerTestWorkflow(name string, wf dbos.Workflow[string, string]) {
+	register(name,
+		func(ctx dbos.Context) {
+			dbos.RegisterWorkflow(ctx, wf,
+				dbos.WithWorkflowName(name),
+				dbos.WithMaxRecoveryAttempts(3),
+			)
+		},
+		wf,
+	)
+}
+
 // bootCoreForTest resets the singleton and the registry, boots a fresh core
 // on the given database URL, and guarantees (in cleanup, LIFO order):
 //   - Shutdown before the boot context is canceled (DBOS uses it at Launch);
@@ -59,7 +73,7 @@ func bootSQLiteCoreForTest(t *testing.T) {
 func TestRegisterAddsWorkflowToList(t *testing.T) {
 	bootSQLiteCoreForTest(t)
 
-	register("extra-test", echoTestWorkflow)
+	registerTestWorkflow("extra-test", echoTestWorkflow)
 
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)
@@ -97,7 +111,7 @@ func TestRegisterDuplicateNamePanics(t *testing.T) {
 			t.Fatal("expected panic on duplicate register()")
 		}
 	}()
-	register("hello-world", echoTestWorkflow) // init() already registered it
+	registerTestWorkflow("hello-world", echoTestWorkflow) // init() already registered it
 }
 
 // Enqueue is the dispatch ACK path: it puts a run on the queue and returns

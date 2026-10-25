@@ -16,7 +16,7 @@ import (
 // the execution row fragment: "queued" badge + the visible workflow ID
 // (the ACK) — the browser prepends it to the executions list.
 func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okExecutions, okEnqueuer, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
@@ -59,7 +59,7 @@ func TestRunUnknownWorkflowIs404(t *testing.T) {
 	enqueue := func(name string, payload any) (core.Execution, error) {
 		return core.Execution{}, fmt.Errorf("%w: %s", core.ErrUnknownWorkflow, name)
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, enqueue, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, enqueue, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/ghost", "application/octet-stream", nil)
@@ -77,7 +77,7 @@ func TestRunEnqueueFailureIs500(t *testing.T) {
 	enqueue := func(name string, payload any) (core.Execution, error) {
 		return core.Execution{}, errors.New("boom")
 	}
-	srv := httptest.NewServer(New(emptyLister, okExecutions, enqueue, okStatuser, okDetail, okPing))
+	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, enqueue, okStatuser, okSteps, okDetail, okPing))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)

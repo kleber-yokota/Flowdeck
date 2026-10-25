@@ -4,7 +4,7 @@
   {{template "head.html" .}}
 </head>
 <body>
-  <main class="frame">
+  <main class="frame wide">
     <p class="eyebrow"><a class="back" href="/">Workflows</a></p>
     <h1>{{ .Name }}</h1>
     <button type="button"
@@ -14,15 +14,28 @@
             hx-swap="afterbegin">
       Run
     </button>
-    <!-- The runs of this workflow, newest first (phase 3, LIST): each row
-         links to the execution detail; the badge polls GET /status every
-         2s until the run reaches a terminal state. Each dispatch enqueues a
-         run in the core (DBOS queue) and prepends a row (the ACK). -->
-    <ul id="executions" class="executions">
+    <div class="columns">
+      <!-- Left: what was executed — the runs of this workflow, newest first
+           (phase 3, LIST). Each row links to the execution detail; the badge
+           polls GET /status every 2s until the run reaches a terminal state.
+           Each dispatch enqueues a run in the core (DBOS queue) and prepends
+           a row (the ACK). -->
+      <section class="col">
+        <p class="col-label">Executions</p>
+        <ul id="executions" class="executions">
 {{range .Executions}}
 {{template "execution.html" .}}
 {{end}}
-    </ul>
+        </ul>
+      </section>
+      <!-- Right: the generated graph (phase 4, STEP 2, overview) — every
+           possible path of the workflow, from the boot map (map lookup, no
+           re-parse, no DB): steps are nodes and the if forks the branches. -->
+      <section class="col">
+        <p class="col-label">Paths</p>
+        <div class="graph">{{.Graph}}</div>
+      </section>
+    </div>
   </main>
 </body>
 </html>

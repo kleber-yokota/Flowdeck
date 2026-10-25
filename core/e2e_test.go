@@ -3,6 +3,7 @@
 package core
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -59,7 +60,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	}
 
 	bootCoreForTest(t, dbURL)
-	register("failing-test", failingTestWorkflow)
+	registerTestWorkflow("failing-test", failingTestWorkflow)
 	if err := Launch(); err != nil {
 		t.Fatalf("launch: %v", err)
 	}
@@ -119,6 +120,112 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	}
 	if len(exs) != 1 || exs[0].ID != id || exs[0].State != StateError {
 		t.Fatalf("Executions: got %v, want the single failed run", exs)
+	}
+}
+
+// The executed path of a dispatched branched run is the taken branch:
+// the step rows in Postgres, step_id asc (phase 4, STEP 3).
+func TestE2EStepsOfExecutedPath(t *testing.T) {
+	dbURL := os.Getenv("DBOS_E2E_DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("DBOS_E2E_DATABASE_URL not set — skipping e2e test")
+	}
+
+	bootCoreForTest(t, dbURL)
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	// Enqueue the branched workflow with a payload that takes the left
+	// branch: the executed path is base → left.
+	ex, err := Enqueue("decide", "left")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	id := ex.ID
+
+	deadline := time.Now().Add(30 * time.Second)
+	state, err := waitForTerminal(t, id, deadline)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if state != StateSuccess {
+		t.Fatalf("run state: got %s, want %s", state, StateSuccess)
+	}
+
+	steps, err := Steps(id)
+	if err != nil {
+		t.Fatalf("Steps: %v", err)
+	}
+	want := []string{"base", "left"}
+	if len(steps) != len(want) {
+		t.Fatalf("Steps: got %v, want %v", steps, want)
+	}
+	for i, s := range steps {
+		if s.Name != want[i] {
+			t.Fatalf("Steps[%d]: got %q, want %q", i, s.Name, want[i])
+		}
+		if s.State != StateSuccess {
+			t.Fatalf("Steps[%d]: got state %s, want %s", i, s.State, StateSuccess)
+		}
+	}
+}
+
+// A dispatched failing run: the executed path is the single failed step —
+// the retries do not leave duplicate rows in the path (phase 4, STEP 3).
+func TestE2EStepsOfFailedRun(t *testing.T) {
+	dbURL := os.Getenv("DBOS_E2E_DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("DBOS_E2E_DATABASE_URL not set — skipping e2e test")
+	}
+
+	bootCoreForTest(t, dbURL)
+	// A name of its own: the e2e database is persistent across runs, and
+	// TestE2EDetailOfFailedRun asserts it sees exactly one failing-test run.
+	registerTestWorkflow("failing-steps-test", failingTestWorkflow)
+	if err := Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+
+	ex, err := Enqueue("failing-steps-test", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	id := ex.ID
+
+	deadline := time.Now().Add(30 * time.Second)
+	state, err := waitForTerminal(t, id, deadline)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if state != StateError {
+		t.Fatalf("run state: got %s, want %s", state, StateError)
+	}
+
+	steps, err := Steps(id)
+	if err != nil {
+		t.Fatalf("Steps: %v", err)
+	}
+	if len(steps) != 1 || steps[0].Name != "boom-step" || steps[0].State != StateError {
+		t.Fatalf("Steps: got %v, want the single failed step", steps)
+	}
+}
+
+// waitForTerminal polls Status until the run reaches success or error.
+func waitForTerminal(t *testing.T, id string, deadline time.Time) (State, error) {
+	t.Helper()
+	for {
+		state, err := Status(id)
+		if err != nil {
+			return "", err
+		}
+		if state == StateSuccess || state == StateError {
+			return state, nil
+		}
+		if time.Now().After(deadline) {
+			return "", fmt.Errorf("run did not reach a terminal state in time (last: %s)", state)
+		}
+		time.Sleep(500 * time.Millisecond)
 	}
 }
 

@@ -7,7 +7,15 @@ import (
 // Each workflow file registers itself in its own init() — there is no
 // central list. A new workflow = a new file in this package with its init().
 func init() {
-	register("hello-world", HelloWorld)
+	register("hello-world",
+		func(ctx dbos.Context) {
+			dbos.RegisterWorkflow(ctx, HelloWorld,
+				dbos.WithWorkflowName("hello-world"),
+				dbos.WithMaxRecoveryAttempts(3),
+			)
+		},
+		HelloWorld,
+	)
 }
 
 // HelloWorld is an example workflow with a durable step.

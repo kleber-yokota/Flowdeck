@@ -1,6 +1,7 @@
 package web
 
 import (
+	"html/template"
 	"time"
 
 	"flowdeck/core"
@@ -13,21 +14,41 @@ type indexPage struct {
 }
 
 // workflowPage is the data for the per-workflow full page: the dispatch
-// button and the runs of the workflow (phase 3, LIST), newest first.
+// button, the generated paths graph (phase 4, STEP 2, overview — the boot
+// map) and the runs of the workflow (phase 3, LIST), newest first.
 type workflowPage struct {
 	Title      string
 	Name       string
+	Graph      template.HTML
 	Executions []badge
 }
 
 // executionDetail is the data for the per-execution detail page (phase 3,
 // DETAIL). core.ExecutionDetail is embedded so the template reads ID,
-// Name, Attempts, Error and FailedStep directly.
+// Name, Attempts, Error and FailedStep directly. Steps is the executed
+// path (phase 4, STEP 3): the steps that ran, in execution order.
 type executionDetail struct {
 	core.ExecutionDetail
 	Title   string
 	Badge   badge
 	Retries []retry
+	Steps   stepsView
+}
+
+// stepsView is the data for the executed-path fragment (phase 4, STEP 3):
+// the SVG graph of the steps that ran in this run (execution order — the
+// branch the run took), read per poll from Postgres.
+type stepsView struct {
+	WorkflowID string
+	Terminal   bool
+	Graph      template.HTML
+}
+
+// newStepsView builds the fragment data from the run's state and its
+// steps: a terminal run stops the 2s poll (no hx attributes on the
+// fragment — the same mechanism as the badge).
+func newStepsView(id string, state core.State, steps []core.Step) stepsView {
+	return stepsView{WorkflowID: id, Terminal: badgeStates[state].terminal, Graph: executedPathToSVG(steps)}
 }
 
 // badge is the data for the badge fragment (the 2s poll partial) and for

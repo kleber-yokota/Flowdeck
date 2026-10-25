@@ -22,17 +22,23 @@ var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
 // New builds the HTMX web server — an abstraction over the core.
 // listWorkflows returns the workflows registered in the core (single
 // source of truth); the web knows nothing about specific workflows.
+// paths reports the possible paths of a workflow (phase 4, STEP 2 — the
+// boot map: map lookup, no re-parse, no DB).
 // executions lists the runs of a workflow (phase 3, LIST).
 // enqueue dispatches a registered workflow (core → DBOS queue) and returns
 // the new execution (id + state + created_at). status reports the state of
 // a run (the read half of the dispatch, polled every 2s by the badge).
+// steps returns the executed path of a run (phase 4, STEP 3: the steps that
+// ran, in execution order — polled every 2s until the run is terminal).
 // detail reads one run for its page (phase 3, DETAIL). ping reports whether
 // the core is up (health endpoint).
 func New(
 	listWorkflows func() []core.Workflow,
+	paths func(name string) [][]string,
 	executions func(name string) ([]core.Execution, error),
 	enqueue func(name string, payload any) (core.Execution, error),
 	status func(workflowID string) (core.State, error),
+	steps func(workflowID string) ([]core.Step, error),
 	detail func(workflowID string) (core.ExecutionDetail, error),
 	ping func() error,
 ) http.Handler {
@@ -53,8 +59,9 @@ func New(
 		partial(w, "workflows.html", listWorkflows())
 	})
 
-	// Full page: one registered workflow — the dispatch button and the runs
-	// of it (phase 3, LIST): every execution the core knows, newest first —
+	// Full page: one registered workflow — the dispatch button, the
+	// possible paths (phase 4, STEP 2, overview) and the runs of it
+	// (phase 3, LIST): every execution the core knows, newest first —
 	// workflow ID + badge.
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
@@ -71,7 +78,14 @@ func New(
 		for _, e := range exs {
 			rows = append(rows, row(e))
 		}
-		page(w, "workflow.html", workflowPage{Title: name + " · FlowDeck", Name: name, Executions: rows})
+		// Phase 4, STEP 2: the paths come from the boot map (PATHS: map
+		// lookup, no re-parse, no DB) — never hardcoded in the web.
+		page(w, "workflow.html", workflowPage{
+			Title:      name + " · FlowDeck",
+			Name:       name,
+			Graph:      pathsToSVG(paths(name)),
+			Executions: rows,
+		})
 	})
 
 	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
@@ -103,8 +117,9 @@ func New(
 
 	// Full page: the detail of one execution (phase 3, DETAIL — click on the
 	// workflow ID in the list): badge state, the attempts (retries 1..N-1
-	// are the failures recovered by a retry, retry N the final status) and,
-	// on failure, the error and the step that failed.
+	// are the failures recovered by a retry, retry N the final status),
+	// on failure the error and the step that failed, and the executed path
+	// (phase 4, STEP 3: the steps that ran, in execution order).
 	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		d, err := detail(id)
@@ -112,12 +127,38 @@ func New(
 			fail(w, "detail", err)
 			return
 		}
+		exSteps, err := steps(id)
+		if err != nil {
+			fail(w, "steps", err)
+			return
+		}
 		page(w, "execution-detail.html", executionDetail{
 			ExecutionDetail: d,
 			Title:           d.ID + " · FlowDeck",
 			Badge:           badgeFor(d.ID, d.State),
 			Retries:         retriesFor(d.Attempts),
+			Steps:           newStepsView(id, d.State, exSteps),
 		})
+	})
+
+	// HTMX partial: the executed path of a run (phase 4, STEP 3, polling):
+	// the SVG of the steps that ran, in execution order (the branch the run
+	// took), read from Postgres per poll — separate from the boot map of
+	// possible paths. Polled every 2s while the run is live; the fragment
+	// drops the hx attributes when the run is terminal and the poll stops.
+	mux.HandleFunc("GET /executions/{id}/steps", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		state, err := status(id)
+		if err != nil {
+			fail(w, "status", err)
+			return
+		}
+		exSteps, err := steps(id)
+		if err != nil {
+			fail(w, "steps", err)
+			return
+		}
+		partial(w, "steps.html", newStepsView(id, state, exSteps))
 	})
 
 	// Health: the web pings the core; the container healthcheck pings this

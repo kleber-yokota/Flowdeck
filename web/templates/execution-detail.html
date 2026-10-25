@@ -28,6 +28,13 @@
 {{end}}
     </section>
 {{end}}
+    <!-- Executed path (phase 4, STEP 3): the steps that ran, in execution
+         order (the branch the run took) — SVG read from Postgres, polled
+         every 2s until the run is terminal -->
+    <section class="executed-path-section">
+      <p class="path-label">Executed path</p>
+      {{template "steps.html" .Steps}}
+    </section>
   </main>
 </body>
 </html>
