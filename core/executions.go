@@ -33,12 +33,9 @@ type ExecutionDetail struct {
 // LIST: GET /workflows/{name} → LIST(name) → the web renders one row per
 // run: workflow ID + badge).
 func Executions(name string) ([]Execution, error) {
-	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-	if !up || c == nil {
-		return nil, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return nil, err
 	}
 	statuses, err := dbos.ListWorkflows(c,
 		dbos.WithFilterName(name),
@@ -74,18 +71,11 @@ type Step struct {
 // STEPS(id) → SELECT steps · id). It is separate from the boot map of
 // possible paths: the map is code, the path is what ran.
 func Steps(workflowID string) ([]Step, error) {
-	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-	if !up || c == nil {
-		return nil, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return nil, err
 	}
-	statuses, err := dbos.ListWorkflows(c,
-		dbos.WithFilterWorkflowIDs(workflowID),
-		dbos.WithFilterLoadInput(false),
-		dbos.WithFilterLoadOutput(false),
-	)
+	statuses, err := listByID(c, workflowID)
 	if err != nil {
 		return nil, fmt.Errorf("core: steps %s: %w", workflowID, err)
 	}
@@ -111,12 +101,9 @@ func Steps(workflowID string) ([]Step, error) {
 // status row (SELECT · workflow_id: status, retries, error) and the step
 // rows (SELECT STEPS · id: the step that errored, on failure).
 func Detail(workflowID string) (ExecutionDetail, error) {
-	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-	if !up || c == nil {
-		return ExecutionDetail{}, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return ExecutionDetail{}, err
 	}
 	statuses, err := dbos.ListWorkflows(c,
 		dbos.WithFilterWorkflowIDs(workflowID),

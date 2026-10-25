@@ -33,23 +33,34 @@ var ErrUnknownExecution = errors.New("core: unknown workflow execution")
 // It is the read half of the dispatch (phase 2): the web polls it every 2s
 // and swaps the badge. Nothing is executed here — the DBOS executor owns
 // the run, this only observes its durable state in the system database.
-func Status(workflowID string) (State, error) {
+// ctxOrErr returns the live DBOS context, or ErrNotLaunched — the read
+// guard of every query (the core must be booted and launched).
+func ctxOrErr() (dbos.Context, error) {
 	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-
-	if !up || c == nil {
-		return "", ErrNotLaunched
+	defer mu.RUnlock()
+	if !booted || !launched || dbosCtx == nil {
+		return nil, ErrNotLaunched
 	}
+	return dbosCtx, nil
+}
 
-	// The badge poll hits this every 2s per open execution, so skip
-	// input/output loading: only the status row is needed.
-	statuses, err := dbos.ListWorkflows(c,
+// listByID lists the status rows of one execution without loading
+// input/output: only the status row is needed (the 2s badge poll must
+// stay cheap).
+func listByID(c dbos.Context, workflowID string) ([]dbos.WorkflowStatus, error) {
+	return dbos.ListWorkflows(c,
 		dbos.WithFilterWorkflowIDs(workflowID),
 		dbos.WithFilterLoadInput(false),
 		dbos.WithFilterLoadOutput(false),
 	)
+}
+
+func Status(workflowID string) (State, error) {
+	c, err := ctxOrErr()
+	if err != nil {
+		return "", err
+	}
+	statuses, err := listByID(c, workflowID)
 	if err != nil {
 		return "", fmt.Errorf("core: status %s: %w", workflowID, err)
 	}

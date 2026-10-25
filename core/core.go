@@ -87,11 +87,7 @@ func dispatch(ctx dbos.Context, name string, payload any) (Execution, error) {
 	id := handle.GetWorkflowID()
 	// The ACK row shows badge + date + id: read the new execution's
 	// created_at (the dispatch itself already wrote it to the queue).
-	statuses, err := dbos.ListWorkflows(ctx,
-		dbos.WithFilterWorkflowIDs(id),
-		dbos.WithFilterLoadInput(false),
-		dbos.WithFilterLoadOutput(false),
-	)
+	statuses, err := listByID(ctx, id)
 	if err != nil {
 		return Execution{}, fmt.Errorf("core: enqueue status %s: %w", id, err)
 	}
@@ -221,12 +217,11 @@ func Enqueue(name string, payload any) (Execution, error) {
 			break
 		}
 	}
-	c := dbosCtx
-	up := booted && launched
 	mu.RUnlock()
 
-	if !up || c == nil {
-		return Execution{}, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return Execution{}, err
 	}
 	if reg == nil {
 		return Execution{}, fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
