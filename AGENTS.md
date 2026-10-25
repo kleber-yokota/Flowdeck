@@ -49,6 +49,10 @@ Visual theme: dark metallic background `#0b0c0e`, steel borders (`#b8bcc4`/`#8f9
 - **Phase 2 — dispatch and track**: HTMX `POST` → enqueue on Postgres (ACK) → DBOS runs the job and updates the status → the 2s polling updates the badge through the four colors.
 - **Phase 3 — runs of a workflow**: `GET /workflows/{name}` lists all executions (workflow_id + badge); clicking the workflow_id → detail: status, retries, status of each retry — on failure: error + the failed step.
 
+## Code map (where to read before editing)
+
+- Package map (files, functions, contacts) + task→files routing: the sections of `diagrams/mapa-pacotes.html` — start with `#tasks` (where to start per task) and `#contacts` (where the modules touch: per edge, file/function + identifiers), then the package sections (`#package-main`, `#package-core`, `#package-status`, `#package-graph`, `#package-web`, `#package-webgraph`, `#package-dbos`), each a table: file | responsibility | functions. The SVG in the same file is the human view of the same data. It is the single source for the package/file layout — do not restate it here.
+
 ## Implementation rule (always apply)
 
 Implement what `diagrams/` says, **simply and directly**: the diagram is the spec and the source of truth — build exactly what it shows, with the smallest reasonable set of pieces. No abstractions, layers, options or dependencies beyond what the diagram shows. If a solution is harder to read than the diagram, it is wrong — simplify it.
@@ -68,4 +72,26 @@ go test ./...
 docker compose up --build
 ```
 
-Service structure: one compose file (`docker-compose.yml`) with `postgres:18` (port `5432`) and the FlowDeck service (`:8080`). A single `main.go` does the boot (DBOS core → HTMX webserver); the code lives in two packages: `core/` (the DBOS core singleton: `Boot`/`Launch`/`Shutdown`/`List` in `core.go`, steps in `steps.go`, workflows in `workflows.go` — each file registers itself in its own `init()`, no central list) and `web/` (HTMX webserver + templates).
+Service structure: one compose file (`docker-compose.yml`) with `postgres:18` (port `5432`) and the FlowDeck service (`:8080`). A single `main.go` does the boot (DBOS core → HTMX webserver); the package/file layout lives in the Code map above (single source).
+
+## Code analysis (structure, coupling, complexity)
+
+Tool suite used to find refactoring targets — function complexity, package coupling and function-level call relationships. Binaries install into the Go bin:
+
+| Tool | Install | What it shows | Typical run |
+| --- | --- | --- | --- |
+| gocyclo | `go install github.com/fzipp/gocyclo/cmd/gocyclo@latest` | cyclomatic complexity per function | `gocyclo -top 20 . \| grep -v '_test.go'` |
+| gocognit | `go install github.com/uudashr/gocognit/cmd/gocognit@latest` | cognitive complexity per function | `gocognit -top 20 . \| grep -v '_test.go'` |
+| goimportmaps | `go install github.com/mickamy/goimportmaps/cmd/goimportmaps@latest` | package import graph + coupling metrics (Ca/Ce/I) | `goimportmaps graph --metrics` |
+| gopkgview | `go install github.com/grishy/gopkgview@latest` | visual browser for the package dependency graph (coarse view) | `gopkgview --skip-browser` |
+| callgraph (x/tools) | `go install golang.org/x/tools/cmd/callgraph@latest` | function-level call graph, static + RTA (resolves interface dispatch) | `callgraph -algo rta ./... > /tmp/callgraph.txt` |
+| go-callvis | `go install github.com/ofabry/go-callvis@latest` | function-level call graph as SVG + interactive server | `go-callvis -nostd -skipbrowser -file /tmp/graph.svg -group pkg -focus flowdeck/core ./...` |
+
+How to read them:
+- The function-level tools (`callgraph`, `go-callvis`) are the primary lens — the package view alone misses coupling that lives inside a package.
+- RTA over-approximates calls through function values (`core.Port` fields, `ready func() error`): count **static** edges for coupling numbers; read dynamic edges as "possible".
+- `go-callvis` published as v0.7.1 pins `golang.org/x/tools v0.28.0`, whose SSA builder panics on the Go 1.27 stdlib (`unexpected expr: *ast.KeyValueExpr`) — rebuild from source with `golang.org/x/tools@v0.52.0`.
+
+Baseline (branch `refactor-2`): max cognitive complexity of any production function is **10** (the `(*graphLayout).measure` of `web/graph`); **zero** static `web → dbos` call edges (all 38 `flowdeck → dbos` edges live in `core`); fan-in hotspots are `core.ctxOrErr` (5), `core.mapState` (4), `core.listByID` (3). Re-run the metrics after refactors and keep the baseline — or beat it.
+
+CI gates the baseline: the `ci` workflow runs `gocyclo -over 9` and `gocognit -over 10` over non-test files and fails when any production function is above the baseline. If a change genuinely needs more, raise the threshold in `.github/workflows/ci.yml` and update this baseline in the same commit.
