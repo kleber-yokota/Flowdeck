@@ -1,19 +1,22 @@
-package core
+package workflows
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core"
 )
 
+// Registers the pipeline workflow in the core DBOS context — the context
+// is up since core's init (dependency order: core before this package).
+// With no env (unit tests, tools) the context is nil and the registration
+// is skipped.
 func init() {
-	register("pipeline",
-		func(ctx dbos.Context) {
-			dbos.RegisterWorkflow(ctx, Pipeline,
-				dbos.WithWorkflowName("pipeline"),
-				dbos.WithMaxRecoveryAttempts(3),
-			)
-		},
-		Pipeline,
-	)
+	if c := core.Ctx(); c != nil {
+		dbos.RegisterWorkflow(c, Pipeline,
+			dbos.WithWorkflowName("pipeline"),
+			dbos.WithMaxRecoveryAttempts(3),
+		)
+	}
 }
 
 // Pipeline is a workflow with linear steps: four steps in a row — a single

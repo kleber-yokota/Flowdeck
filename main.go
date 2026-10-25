@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,7 +16,17 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/web"
+
+	_ "flowdeck/workflows" // the workflow files register themselves in the core DBOS context (init); zz_generated.go pulls in every subpackage
 )
+
+// The source of the workflow packages, embedded so the core's paths parser
+// can read it at boot — inside the container the source is not on disk.
+// The directory pattern embeds the whole tree (subpackages included), so a
+// new workflow folder is picked up by the parser for free.
+//
+//go:embed workflows
+var workflowsSource embed.FS
 
 func main() {
 	healthcheck := flag.Bool("healthcheck", false,
@@ -32,22 +43,18 @@ func main() {
 
 // config is the process configuration, read from the environment.
 type config struct {
-	appName     string
-	dbURL       string
 	httpAddr    string
 	httpTimeout time.Duration
 	coreTimeout time.Duration
 }
 
 func loadConfig() (config, error) {
-	appName := os.Getenv("DBOS_APP_NAME")
-	dbURL := os.Getenv("DBOS_SYSTEM_DATABASE_URL")
-	if appName == "" || dbURL == "" {
+	// The core reads these in its own init; validate here for an early
+	// error before the web boots.
+	if os.Getenv("DBOS_APP_NAME") == "" || os.Getenv("DBOS_SYSTEM_DATABASE_URL") == "" {
 		return config{}, errors.New("DBOS_APP_NAME and DBOS_SYSTEM_DATABASE_URL are required")
 	}
 	return config{
-		appName:     appName,
-		dbURL:       dbURL,
 		httpAddr:    envOr("FLOWDECK_HTTP_ADDR", ":8080"),
 		httpTimeout: envDuration("FLOWDECK_HTTP_TIMEOUT", 5*time.Second),
 		coreTimeout: envDuration("FLOWDECK_CORE_TIMEOUT", 5*time.Second),
@@ -84,17 +91,18 @@ func run() error {
 	// SIGINT + SIGTERM (docker compose stop) → clean shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-
-	// The core lifecycle is controlled by core.Shutdown, not the signal:
-	// DBOS derives its internal context from the one passed to Boot, so a
-	// signal-cancelable ctx would cancel the core before the ordered
-	// Shutdown below runs.
-	if err := core.Boot(context.WithoutCancel(ctx), cfg.appName, cfg.dbURL); err != nil {
-		return err
-	}
 	defer core.Shutdown(cfg.coreTimeout)
 
-	// The core registers its workflows and starts the executor
+	// The possible-paths graph (phase 4, STEP 1): parse the embedded
+	// workflows source (each file's RegisterWorkflow + the workflow funcs),
+	// once, before the web serves it.
+	if err := core.SetWorkflowsSource(workflowsSource); err != nil {
+		return err
+	}
+
+	// The core DBOS context is up since core's init (env), and the workflow
+	// files registered their workflows there in their init — Launch starts
+	// the executor.
 	if err := core.Launch(); err != nil {
 		return err
 	}
@@ -110,7 +118,7 @@ func run() error {
 	// and dispatches through it (enqueue → DBOS queue)
 	srv := &http.Server{
 		Addr:              cfg.httpAddr,
-		Handler:           web.New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping),
+		Handler:           web.New(core.NewPort(), core.Ready),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      10 * time.Second,

@@ -1,4 +1,8 @@
-package web
+// Package graph is the SVG layout of the paths graphs: the possible-paths
+// map (phase 4, STEP 2) and the executed path of a run (phase 4, STEP 3)
+// share the same drawing — one rect per step and one arrow per
+// continuation, the if forks the branches.
+package graph
 
 import (
 	"fmt"
@@ -71,10 +75,10 @@ func nodeFromPaths(paths [][]string) pathNode {
 	return node
 }
 
-// pathsToSVG renders the paths graph (phase 4, STEP 2) as a static SVG:
+// PathsToSVG renders the paths graph (phase 4, STEP 2) as a static SVG:
 // the steps are nodes, each continuation is an arrow, and the if forks the
 // branches — the common prefix is drawn once.
-func pathsToSVG(paths [][]string) template.HTML {
+func PathsToSVG(paths [][]string) template.HTML {
 	g := newGraphLayout(pathsGraph(paths))
 	g.label = "possible paths"
 	return template.HTML(g.svg())
@@ -111,10 +115,19 @@ const (
 
 func newGraphLayout(roots []pathNode) *graphLayout {
 	g := &graphLayout{}
+	colW, rowH := g.measure(roots)
+	g.collect(g.place(roots, colW, rowH))
+	return g
+}
+
+// measure sizes the canvas: the max depth is kept on the layout, the
+// leaf count (the rows) and the max node width set the width/height, and
+// the column/row pitch is returned for place.
+func (g *graphLayout) measure(roots []pathNode) (colW, rowH float64) {
 	var maxW float64
 	leaves := 0
-	var measure func(n pathNode, depth int)
-	measure = func(n pathNode, depth int) {
+	var m func(n pathNode, depth int)
+	m = func(n pathNode, depth int) {
 		w := graphCharW*float64(len(n.Step)) + 2*graphPadX
 		if w > maxW {
 			maxW = w
@@ -126,22 +139,27 @@ func newGraphLayout(roots []pathNode) *graphLayout {
 			leaves++
 		}
 		for _, c := range n.Children {
-			measure(c, depth+1)
+			m(c, depth+1)
 		}
 	}
 	for _, r := range roots {
-		measure(r, 0)
+		m(r, 0)
 	}
 	if leaves == 0 {
 		leaves = 1 // no paths: a valid (empty) canvas
 	}
-	colW := maxW + graphColGap
-	rowH := graphNodeH + graphRowGap
+	colW = maxW + graphColGap
+	rowH = graphNodeH + graphRowGap
 	g.width = 2*graphMargin + float64(g.maxDepth+1)*colW
 	g.height = 2*graphMargin + (float64(leaves)-0.5)*rowH + graphNodeH/2
+	return colW, rowH
+}
 
+// place lays out the nodes: the leaves stack rows and each parent centers
+// on the average y of its children — a linear chain runs in one row and
+// the if forks the rows.
+func (g *graphLayout) place(roots []pathNode, colW, rowH float64) []graphNode {
 	slot := 0.0
-	placed := make([]graphNode, 0, len(roots))
 	var place func(n pathNode, depth int) graphNode
 	place = func(n pathNode, depth int) graphNode {
 		node := graphNode{
@@ -157,18 +175,24 @@ func newGraphLayout(roots []pathNode) *graphLayout {
 		} else {
 			sum := 0.0
 			for _, c := range n.Children {
-				node.children = append(node.children, place(c, depth+1))
-			}
-			for _, c := range node.children {
-				sum += c.y
+				child := place(c, depth+1)
+				node.children = append(node.children, child)
+				sum += child.y
 			}
 			node.y = sum / float64(len(node.children))
 		}
 		return node
 	}
+	placed := make([]graphNode, 0, len(roots))
 	for _, r := range roots {
 		placed = append(placed, place(r, 0))
 	}
+	return placed
+}
+
+// collect appends the placed nodes to the layout, one edge per
+// continuation (parent -> child).
+func (g *graphLayout) collect(placed []graphNode) {
 	var walk func(n graphNode)
 	walk = func(n graphNode) {
 		g.nodes = append(g.nodes, n)
@@ -180,7 +204,6 @@ func newGraphLayout(roots []pathNode) *graphLayout {
 	for _, r := range placed {
 		walk(r)
 	}
-	return g
 }
 
 // svg emits the static SVG: edges under the nodes, one rect + label per
@@ -208,12 +231,12 @@ func (g *graphLayout) svg() string {
 	return b.String()
 }
 
-// executedPathToSVG renders the executed path of a run (phase 4, STEP 3)
+// ExecutedPathToSVG renders the executed path of a run (phase 4, STEP 3)
 // as the same graph as the possible paths, with the single row of the
 // steps that ran, in execution order: each node is colored by the step's
 // state (success/error — every executed step is terminal). It is separate
 // from the boot map: the path comes from Postgres, the map from the code.
-func executedPathToSVG(steps []core.Step) template.HTML {
+func ExecutedPathToSVG(steps []core.Step) template.HTML {
 	nodes := make([]pathNode, 0, len(steps))
 	for _, s := range steps {
 		nodes = append(nodes, pathNode{Step: s.Name, State: string(s.State)})

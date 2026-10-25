@@ -19,8 +19,29 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - name: go vet
         run: go vet ./...
+      - name: Generated workflow imports are up to date
+        # workflows/zz_generated.go must match the workflow subpackages on
+        # disk (the generator: cmd/workflowgen, run via go:generate).
+        run: |
+          go generate ./workflows
+          git diff --exit-code workflows/zz_generated.go
+      - name: Install complexity tools
+        run: |
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install github.com/uudashr/gocognit/cmd/gocognit@latest
+      # Gates at the AGENTS.md baseline: production (non-test) functions may
+      # not exceed cyclomatic 9 / cognitive 10. To raise it, change the
+      # threshold here and update the baseline in AGENTS.md together.
+      - name: Cyclomatic complexity gate (production max 9)
+        run: gocyclo -over 9 -ignore '_test\.go$' .
+      - name: Cognitive complexity gate (production max 10)
+        run: gocognit -over 10 -ignore '_test\.go$' .
       - name: Test (race, count=2, shuffled — catches registry/state leaks)
-        run: go test -race -count=2 -shuffle=on ./...
+        run: |
+          set -a && source .env.test && set +a
+          # -p 1: one test binary at a time — the binaries share the SQLite
+          # test database, and the first one creates and migrates it.
+          go test -race -count=2 -shuffle=on -p 1 ./...
 
   e2e:
     runs-on: ubuntu-latest
@@ -45,8 +66,12 @@ jobs:
           go-version-file: go.mod
       - name: E2E against Postgres 18
         env:
-          DBOS_E2E_DATABASE_URL: postgres://flowdeck:flowdeck@localhost:5432/flowdeck?sslmode=disable
-        run: go test -tags e2e -run TestE2E ./...
+          DBOS_APP_NAME: flowdeck_e2e
+          DBOS_SYSTEM_DATABASE_URL: postgres://flowdeck:flowdeck@localhost:5432/flowdeck?sslmode=disable
+        # -p 1: one test binary at a time, so only one executor polls the
+        # queue at a time (a job claimed by a process that has not
+        # registered the workflow would fail).
+        run: go test -tags e2e -run TestE2E -p 1 ./...
 
   vulncheck:
     runs-on: ubuntu-latest

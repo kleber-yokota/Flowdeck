@@ -1,60 +1,53 @@
-# FlowDeck — Diagramas
+# FlowDeck — Diagrams
 
-Estilo: pele escura metálica (fundo `#0b0c0e`, bordas aço, destaque laranja) com as cores de status
-`na fila` (azul claro), `em execução` (laranja), `sucesso` (verde) e `falha` (vermelho).
+Style: dark metallic skin (background `#0b0c0e`, steel borders, orange highlight) with the status colors
+`queued` (light blue), `running` (orange), `success` (green) and `failed` (red).
 
-## Arquitetura
+## Phase 1 — Dynamic listing
 
-- **Uma máquina, docker-compose**: o serviço **FlowDeck (Go)** contém a camada **Web (HTMX, :8080)**
-  que faz boot do **core DBOS**; o core conversa com o **Postgres 18 (:5432)**. O DBOS não sobe
-  nenhum webserver — a web é a abstração sobre o boot do core.
+- The browser requests the page; the core lists the registered workflows (registry, **zero hardcoding in the web**);
+- the UI renders the list from the registry.
 
-## Fase 1 — Listagem dinâmica
+## Phase 2 — Dispatch, run and track
 
-- O navegador pede a página; o core lista os workflows registrados (registry, **zero hardcode na web**);
-  a UI renderiza a lista via HTMX.
+- HTMX POST dispatches a run (ACK + badge `queued` + visible `workflow_id`);
+- the core enqueues in DBOS (Postgres); the DBOS executor runs the steps and updates the status;
+- the front polls `GET /status` every 2s: `queued → running → success | failed` (badge colors: light blue, orange, green, red).
 
-## Fase 2 — Disparar, executar e acompanhar
+## Phase 3 — Runs of a workflow
 
-- O usuário seleciona o workflow e dispara (POST HTMX); webserver → core → Postgres 18 (com retorno);
-- Em paralelo: o executor do DBOS seleciona o job na fila (`SELECT NEXT`), executa e
-  atualiza o status (`UPDATE SUCESSO`);
-- polling de 2s (`hx`) consulta o status e atualiza o badge nas quatro cores.
+- `GET /workflows/{name}` lists every execution (workflow_id + badge);
+- click on the workflow_id → DETAIL: status, retries, error on failure, and the step that errored.
 
-## Fase 3 — Execuções de um workflow
+## Phase 4 — Paths graph (SVG)
 
-- `GET /workflows/{nome}` lista **todas as execuções** do workflow pelo `workflow_id`,
-  cada uma com badge de status (a listagem vem do core, nunca da web);
-- click num `workflow_id` → detalhe da execução: **status**, **quantos retries teve** e
-  **o status de cada retry**; em caso de falha: **o erro** e **o step que deu o erro**.
+- The core parses the workflow source at boot (AST: `RegisterWorkflow` → possible paths, including `if` branches);
+- the `decide` page shows the generated SVG graph (overview) and, after dispatch, the SVG graph of the steps that ran (executed path);
+- no hardcoded SVG: the parser finds the workflow and generates the full graph (steps, branches, final state).
 
-## Fase 4 — Steps: caminhos possíveis + caminho executado
+## Package map (navigable)
 
-Duas views, hierarquia `workflow → caminhos → steps`:
+- Ranked package graph (7 nodes, 9 edges, zero cycles): `main` → `web` → `core` + `web/graph`
+  → `core/status` + `core/graph` + `dbos` (third); edge labels = the functions that
+  contact across modules;
+- `core` is the convergence point (fan-in 3: `main`, `web`, `web/graph`); the `web`↔`core`
+  contact is the single `Port`; `core/status` and `core/graph` are pure;
+- **Clickable nodes**: clicking a package shows its files, functions and contacts
+  — navigate without reading the code;
+- Navigation without JavaScript (anchors + `:target`): deep-link by hash, keyboard and
+  back button work; each detail section has drill-down links to the contact packages.
+- **One file, two readers**: the `#tasks` section (task→files routing), the `#contacts`
+  section (where the modules touch: per edge, file/function + identifiers) and the
+  `<section id="package-*">` blocks (file | responsibility | functions) are the
+  machine-readable map (AGENTS.md points to them); the SVG is the human view of the same
+  data. No separate map exists — if you update it, it is here.
 
-- **Geral** — `GET /workflows/{nome}`: mostra **todos os caminhos possíveis** do workflow
-  (as branches do `if`/`else`). Os caminhos **derivam do código**: no boot o core faz parse do
-  próprio fonte (stdlib `go/parser` + `go/ast`, embutido via `go:embed`) e extrai cada `RunAsStep`
-  e o `if` que a envolve → mapa `nome → caminhos` em memória (sem Postgres);
-- **Execução** — `GET /executions/{id}`: mostra **o caminho que rodou** naquela execução —
-  o core lê as rows de step daquele run no Postgres (`step_id asc`) e devolve os steps na
-  **ordem de execução** (a branch do `if` tomada);
-- **genérico**: as duas views funcionam para qualquer workflow; tudo é **lido do core,
-  nunca hardcoded na web** (o mesmo mecanismo para todo workflow).
-
-## Estados
-
-- `na fila → em execução (retry) → sucesso / falha` — terminais com dots; mesmas cores dos badges da UI.
-
-## Arquivos
+## Files
 
 - `arquitetura.html`
-- `sequencia-fase-1.html`
-- `sequencia-fase-2.html`
-- `sequencia-fase-3.html`
-- `sequencia-fase-4.html`
 - `estados-workflow.html`
-
-`.diagram-design` (na raiz do repo) é o perfil `profile: flowdeck` da ferramenta
-**diagram-design** — é o que gera estes `.html` com o estilo acima; mantê-lo permite
-regenerar os diagramas com a mesma paleta.
+- `mapa-pacotes.html`
+- `sequencia-fase-1.html` (listing)
+- `sequencia-fase-2.html` (dispatch, run, track)
+- `sequencia-fase-3.html` (runs of a workflow)
+- `sequencia-fase-4.html` (paths graph)

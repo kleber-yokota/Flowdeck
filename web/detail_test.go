@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/status"
 )
 
 // The detail page (phase 3, DETAIL) renders the badge, the retry rows
@@ -18,14 +19,16 @@ func TestExecutionDetailRendersFailure(t *testing.T) {
 		return core.ExecutionDetail{
 			ID:         id,
 			Name:       "wf-alpha",
-			State:      core.StateError,
+			State:      status.Error,
 			CreatedAt:  time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 			Attempts:   3,
 			Error:      "boom: step failed",
 			FailedStep: "boom-step",
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, detailer, okPing))
+	d := testPort()
+	d.Detail = detailer
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-failed")
@@ -62,10 +65,12 @@ func TestExecutionDetailRendersFailure(t *testing.T) {
 // A live run on the detail page keeps polling the badge every 2s.
 func TestExecutionDetailBadgePollsWhenRunning(t *testing.T) {
 	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{ID: id, Name: "wf-alpha", State: core.StateRunning, Attempts: 1,
+		return core.ExecutionDetail{ID: id, Name: "wf-alpha", State: status.Running, Attempts: 1,
 			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local)}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, detailer, okPing))
+	d := testPort()
+	d.Detail = detailer
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-live")
@@ -94,12 +99,14 @@ func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
 		return core.ExecutionDetail{
 			ID:        id,
 			Name:      "wf-alpha",
-			State:     core.StateSuccess,
+			State:     status.Success,
 			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 			Attempts:  1,
 		}, nil
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, detailer, okPing))
+	d := testPort()
+	d.Detail = detailer
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/executions/run-ok")
@@ -127,7 +134,7 @@ func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
 
 // A run the core does not know is a clean 404.
 func TestExecutionDetailUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	srv := httptest.NewServer(New(testPort(), okReady))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/executions/ghost"); status != http.StatusNotFound {
@@ -140,7 +147,9 @@ func TestExecutionDetailCoreDownIs503(t *testing.T) {
 	downDetail := func(id string) (core.ExecutionDetail, error) {
 		return core.ExecutionDetail{}, core.ErrNotLaunched
 	}
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, downDetail, okPing))
+	d := testPort()
+	d.Detail = downDetail
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/executions/abc"); status != http.StatusServiceUnavailable {

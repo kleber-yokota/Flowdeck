@@ -5,6 +5,8 @@ import (
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/status"
 )
 
 // Execution is one run of a workflow as listed on the per-workflow page
@@ -12,7 +14,7 @@ import (
 // execution date (created_at). The list is newest first.
 type Execution struct {
 	ID        string
-	State     State
+	State     status.State
 	CreatedAt time.Time
 }
 
@@ -22,7 +24,7 @@ type Execution struct {
 type ExecutionDetail struct {
 	ID         string
 	Name       string
-	State      State
+	State      status.State
 	CreatedAt  time.Time
 	Attempts   int
 	Error      string
@@ -33,12 +35,9 @@ type ExecutionDetail struct {
 // LIST: GET /workflows/{name} → LIST(name) → the web renders one row per
 // run: workflow ID + badge).
 func Executions(name string) ([]Execution, error) {
-	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-	if !up || c == nil {
-		return nil, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return nil, err
 	}
 	statuses, err := dbos.ListWorkflows(c,
 		dbos.WithFilterName(name),
@@ -65,7 +64,7 @@ func Executions(name string) ([]Execution, error) {
 // terminal, the rows exist only once the step completed).
 type Step struct {
 	Name  string
-	State State
+	State status.State
 }
 
 // Steps returns the executed path of a run: the steps that ran, in
@@ -74,18 +73,11 @@ type Step struct {
 // STEPS(id) → SELECT steps · id). It is separate from the boot map of
 // possible paths: the map is code, the path is what ran.
 func Steps(workflowID string) ([]Step, error) {
-	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-	if !up || c == nil {
-		return nil, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return nil, err
 	}
-	statuses, err := dbos.ListWorkflows(c,
-		dbos.WithFilterWorkflowIDs(workflowID),
-		dbos.WithFilterLoadInput(false),
-		dbos.WithFilterLoadOutput(false),
-	)
+	statuses, err := listByID(c, workflowID)
 	if err != nil {
 		return nil, fmt.Errorf("core: steps %s: %w", workflowID, err)
 	}
@@ -98,9 +90,9 @@ func Steps(workflowID string) ([]Step, error) {
 	}
 	steps := make([]Step, 0, len(rows))
 	for _, row := range rows { // Postgres returns the rows step_id asc
-		st := StateSuccess
+		st := status.Success
 		if row.Error != nil {
-			st = StateError
+			st = status.Error
 		}
 		steps = append(steps, Step{Name: row.StepName, State: st})
 	}
@@ -111,12 +103,9 @@ func Steps(workflowID string) ([]Step, error) {
 // status row (SELECT · workflow_id: status, retries, error) and the step
 // rows (SELECT STEPS · id: the step that errored, on failure).
 func Detail(workflowID string) (ExecutionDetail, error) {
-	mu.RLock()
-	c := dbosCtx
-	up := booted && launched
-	mu.RUnlock()
-	if !up || c == nil {
-		return ExecutionDetail{}, ErrNotLaunched
+	c, err := ctxOrErr()
+	if err != nil {
+		return ExecutionDetail{}, err
 	}
 	statuses, err := dbos.ListWorkflows(c,
 		dbos.WithFilterWorkflowIDs(workflowID),

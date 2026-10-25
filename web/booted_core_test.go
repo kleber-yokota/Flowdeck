@@ -1,105 +1,94 @@
 package web
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"flowdeck/core"
-
-	_ "github.com/dbos-inc/dbos-transact-golang/dbos/driver/sqlite"
 )
 
-// bootSQLiteCoreForTest resets the core singleton and boots a fresh core
-// on a temporary SQLite database (the DBOS sqlite driver) — no Postgres
-// needed for the full-stack test, the same fast cycle the core tests use.
-func bootSQLiteCoreForTest(t *testing.T) {
+// The booted-core tests (no stubs): the core is up from the environment
+// (core.init + the workflow files' init, see .env.test), this package's
+// TestMain started the executor and built the paths graph from the
+// workflows tree. NewPort wraps the live core: the listing comes from the
+// registry and the graph from the parsed source.
+func bootedTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-
-	core.Shutdown(5 * time.Second) // nil-safe: this test starts clean
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	t.Cleanup(cancel)
-	if err := core.Boot(ctx, "flowdeck_web_test", "sqlite:"+filepath.Join(t.TempDir(), "web-test.db")); err != nil {
-		t.Fatalf("boot: %v", err)
-	}
-	t.Cleanup(func() { core.Shutdown(5 * time.Second) })
-	if err := core.Launch(); err != nil {
-		t.Fatalf("launch: %v", err)
-	}
+	needCore(t)
+	return httptest.NewServer(New(core.NewPort(), core.Ready))
 }
 
-// TestWorkflowPageWithBootedCore: the full stack with a booted core — the
-// paths graph on the page comes from the real boot map (phase 4, STEP 2:
-// map lookup, no re-parse, no DB), and a dispatch runs to success.
+// The workflow pages of a booted core (phase 1 + 4, STEP 2): the registry
+// listing, the paths graph per workflow, and a dispatch that the executor
+// runs to success (phase 2: the 2s poll swaps the badge).
 func TestWorkflowPageWithBootedCore(t *testing.T) {
-	bootSQLiteCoreForTest(t)
-
-	srv := httptest.NewServer(New(core.List, core.Paths, core.Executions, core.Enqueue, core.Status, core.Steps, core.Detail, core.Ping))
+	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	// The list comes from the core registry (never hardcoded in the web).
-	if status, body := get(t, srv.URL+"/workflows"); status != http.StatusOK ||
-		!strings.Contains(body, "decide") || !strings.Contains(body, "pipeline") || !strings.Contains(body, "hello-world") {
-		t.Fatalf("workflows list: status %d, body %q", status, body)
+	// The core is up (the /healthz contact).
+	if code, _ := get(t, srv.URL+"/healthz"); code != http.StatusOK {
+		t.Fatalf("healthz: %d, want 200", code)
 	}
 
-	// The generated graph (phase 4, STEP 2): the if forks the branches —
-	// the common prefix is drawn once.
-	status, body := get(t, srv.URL+"/workflows/decide")
-	if status != http.StatusOK {
-		t.Fatalf("decide page: status %d, want 200", status)
+	// The listing has every registered workflow — from the registry, no
+	// hardcoding in the web.
+	code, body := get(t, srv.URL+"/workflows")
+	if code != http.StatusOK || !containsAll(body, ">decide<", ">hello-world<", ">pipeline<", ">buy<") {
+		t.Fatalf("listing: %d, body: %s", code, body)
 	}
-	if !strings.Contains(body, `<svg`) {
-		t.Error("decide page without the generated graph")
+
+	// The paths graph of each workflow (parsed source, map lookup). The
+	// branched workflow draws the common prefix once and forks.
+	code, decide := get(t, srv.URL+"/workflows/decide")
+	if code != http.StatusOK {
+		t.Fatalf("decide page: %d", code)
 	}
-	if n := strings.Count(body, ">base<"); n != 1 {
-		t.Errorf("prefix drawn %d times, want 1", n)
+	if !strings.Contains(decide, `<svg`) {
+		t.Fatalf("decide page without the generated graph")
+	}
+	if n := strings.Count(decide, ">base<"); n != 1 {
+		t.Fatalf("prefix drawn %d times, want 1", n)
 	}
 	for _, want := range []string{">left<", ">right<"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("decide graph missing %q", want)
+		if !strings.Contains(decide, want) {
+			t.Fatalf("decide graph missing %q", want)
 		}
 	}
-
-	// The linear workflow: one row of steps.
-	if status, body = get(t, srv.URL+"/workflows/pipeline"); status != http.StatusOK ||
-		!strings.Contains(body, ">fetch<") || !strings.Contains(body, ">store<") {
-		t.Fatalf("pipeline page: status %d", status)
+	code, pipeline := get(t, srv.URL+"/workflows/pipeline")
+	if code != http.StatusOK || !containsAll(pipeline, ">fetch<", ">store<") {
+		t.Fatalf("pipeline graph: %d", code)
 	}
 
-	// An unknown workflow is a clean 404.
-	if status, _ := get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
-		t.Errorf("ghost: status %d, want 404", status)
+	// An unknown workflow is a clean 404 (the registry is the source).
+	if code, _ := get(t, srv.URL+"/workflows/ghost"); code != http.StatusNotFound {
+		t.Fatalf("ghost: %d, want 404", code)
 	}
 
-	// Dispatch (phase 2): the web enqueues on the core; the executor runs
-	// the run to success (the badge is terminal: "badge success terminal").
+	// Dispatch: the ACK row is queued.
 	resp, err := post(t, srv.URL+"/run/pipeline")
 	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch: status %d, want 200", resp.StatusCode)
+		t.Fatalf("dispatch: %v", err)
 	}
 	ack := readAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("dispatch ACK without the queued badge: %q", ack)
+		t.Fatalf("ACK: %s", ack)
 	}
 	id := executionID(t, ack)
 
+	// The executor runs the job off the queue: the badge reaches success
+	// (the poller the page uses, here asserted directly).
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		if _, body := get(t, srv.URL+"/status/"+id); strings.Contains(body, `class="badge success terminal"`) {
+		code, row := get(t, srv.URL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("run %s did not reach success in time", id)
+			t.Fatalf("no success badge: %d, %s", code, row)
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 }

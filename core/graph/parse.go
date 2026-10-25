@@ -1,7 +1,6 @@
-package core
+package graph
 
 import (
-	"embed"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -9,48 +8,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// The source of this package, embedded so the parser can read it at Boot —
-// inside the container the source is not on disk.
-//
-//go:embed *.go
-var coreSource embed.FS
-
-// Paths returns the possible paths (sequences of steps) of the named
-// workflow, built at Boot from this package's source (phase 4, STEP 1). The
-// web calls this (PATHS(name)) and renders the map without touching
-// Postgres. It returns nil if the core is not booted (or is shutting down)
-// or the name is unknown.
-func Paths(name string) [][]string {
-	mu.RLock()
-	defer mu.RUnlock()
-	if !booted {
-		return nil
-	}
-	return pathsMap[name]
-}
-
-// buildPaths reads this package's embedded source (test files excluded)
-// and builds the map: workflow name → all possible paths.
-func buildPaths() (map[string][][]string, error) {
-	files := map[string][]byte{}
-	entries, err := coreSource.ReadDir(".")
-	if err != nil {
-		return nil, fmt.Errorf("list core source: %w", err)
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		data, err := coreSource.ReadFile(name)
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", name, err)
-		}
-		files[name] = data
-	}
-	return pathsFromSources(files)
-}
 
 // pathsFromSources parses the given Go source files and builds the map:
 // workflow name → all possible paths. The marker is the per-file DBOS
@@ -67,31 +24,47 @@ func pathsFromSources(files map[string][]byte) (map[string][][]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", name, err)
 		}
-		for _, decl := range file.Decls {
-			if fd, ok := decl.(*ast.FuncDecl); ok {
-				funcs[fd.Name.Name] = fd
-			}
-		}
-		// RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) — the
-		// per-file DBOS registration.
-		ast.Inspect(file, func(n ast.Node) bool {
-			call, isCall := n.(*ast.CallExpr)
-			if !isCall || len(call.Args) < 2 || calleeName(call.Fun) != "RegisterWorkflow" {
-				return true
-			}
-			fn, ok := call.Args[1].(*ast.Ident)
-			if !ok {
-				return true
-			}
-			regName, ok := optionName(call, "WithWorkflowName")
-			if !ok {
-				return true
-			}
-			regs[regName] = fn.Name
-			return true
-		})
+		collectFuncs(file, funcs)
+		collectRegistrations(file, regs)
 	}
+	return pathsFromRegistrations(regs, funcs), nil
+}
 
+// collectFuncs records the file's function declarations — the workflow
+// func bodies are walked later, by possiblePaths.
+func collectFuncs(file *ast.File, funcs map[string]*ast.FuncDecl) {
+	for _, decl := range file.Decls {
+		if fd, ok := decl.(*ast.FuncDecl); ok {
+			funcs[fd.Name.Name] = fd
+		}
+	}
+}
+
+// collectRegistrations records the per-file DBOS registrations:
+// RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) — matched by
+// function name, so any import alias of the dbos package is found.
+func collectRegistrations(file *ast.File, regs map[string]string) {
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall || len(call.Args) < 2 || calleeName(call.Fun) != "RegisterWorkflow" {
+			return true
+		}
+		fn, ok := call.Args[1].(*ast.Ident)
+		if !ok {
+			return true
+		}
+		regName, ok := optionName(call, "WithWorkflowName")
+		if !ok {
+			return true
+		}
+		regs[regName] = fn.Name
+		return true
+	})
+}
+
+// pathsFromRegistrations builds the map: registered name → all possible
+// paths (workflow funcs not defined in this package's source are skipped).
+func pathsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDecl) map[string][][]string {
 	out := make(map[string][][]string, len(regs))
 	for name, fnName := range regs {
 		fd := funcs[fnName]
@@ -100,7 +73,7 @@ func pathsFromSources(files map[string][]byte) (map[string][][]string, error) {
 		}
 		out[name] = possiblePaths(fd.Body)
 	}
-	return out, nil
+	return out
 }
 
 // possiblePaths returns every sequence of steps that can run in the

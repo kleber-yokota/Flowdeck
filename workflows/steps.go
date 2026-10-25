@@ -1,4 +1,4 @@
-package core
+package workflows
 
 import (
 	"context"

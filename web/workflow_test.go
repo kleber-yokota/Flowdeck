@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/status"
 )
 
 // graphNodeY matches a graph node rect: the node's y coordinate is group 1.
@@ -20,7 +21,9 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 	fakeLister := func() []core.Workflow {
 		return []core.Workflow{{Name: "wf-alpha"}}
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.List = fakeLister
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -36,7 +39,7 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 			t.Errorf("page does not contain %q", want)
 		}
 	}
-	// okPaths returns no paths: no graph nodes are rendered.
+	// The empty graph returns no paths: no graph nodes are rendered.
 	if strings.Contains(body, `class="g-node"`) {
 		t.Error("graph nodes rendered without paths")
 	}
@@ -45,13 +48,10 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 // The workflow page layout (phase 4): the executions list (what was
 // executed) is on the left and the generated paths graph is on the right.
 func TestWorkflowPageColumnsLayout(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
-	}
-	fakePaths := func(name string) [][]string {
-		return [][]string{{"one", "two"}}
-	}
-	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
+	d.Graph = fakeGraph("wf-alpha", [][]string{{"one", "two"}})
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -68,13 +68,10 @@ func TestWorkflowPageColumnsLayout(t *testing.T) {
 // graph: the common prefix is drawn once and the if forks the branches —
 // not one row per path (from the boot map: map lookup, no re-parse, no DB).
 func TestWorkflowPageRendersForkedGraph(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
-	}
-	fakePaths := func(name string) [][]string {
-		return [][]string{{"base", "left"}, {"base", "right"}}
-	}
-	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
+	d.Graph = fakeGraph("wf-alpha", [][]string{{"base", "left"}, {"base", "right"}})
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -103,13 +100,10 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 // A workflow without an if renders a single linear row (all the nodes on
 // the same row).
 func TestWorkflowPageRendersLinearGraph(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
-	}
-	fakePaths := func(name string) [][]string {
-		return [][]string{{"fetch", "parse", "store"}}
-	}
-	srv := httptest.NewServer(New(fakeLister, fakePaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
+	d.Graph = fakeGraph("wf-alpha", [][]string{{"fetch", "parse", "store"}})
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -146,11 +140,14 @@ func TestWorkflowPageListsExecutions(t *testing.T) {
 	older := time.Date(2026, 5, 13, 13, 30, 0, 0, time.Local)
 	listExecutions := func(name string) ([]core.Execution, error) {
 		return []core.Execution{
-			{ID: "run-newer", State: core.StateSuccess, CreatedAt: newer},
-			{ID: "run-older", State: core.StateQueued, CreatedAt: older},
+			{ID: "run-newer", State: status.Success, CreatedAt: newer},
+			{ID: "run-older", State: status.Queued, CreatedAt: older},
 		}, nil
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, listExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.List = fakeLister
+	d.Executions = listExecutions
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	status, body := get(t, srv.URL+"/workflows/wf-alpha")
@@ -188,7 +185,10 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 	downExecutions := func(name string) ([]core.Execution, error) {
 		return nil, core.ErrNotLaunched
 	}
-	srv := httptest.NewServer(New(fakeLister, okPaths, downExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	d := testPort()
+	d.List = fakeLister
+	d.Executions = downExecutions
+	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/workflows/wf-alpha"); status != http.StatusServiceUnavailable {
@@ -198,7 +198,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 
 // A page for a workflow that is not in the core registry is a clean 404.
 func TestWorkflowPageUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(emptyLister, okPaths, okExecutions, okEnqueuer, okStatuser, okSteps, okDetail, okPing))
+	srv := httptest.NewServer(New(testPort(), okReady))
 	defer srv.Close()
 
 	if status, _ := get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
