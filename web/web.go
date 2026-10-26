@@ -55,17 +55,7 @@ func New(p core.Port, ready func() error) http.Handler {
 	// badge + visible workflow ID — the ACK), prepended to the executions
 	// list on the workflow page.
 	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		values, err := formValues(r)
-		if err != nil {
-			http.Error(w, "invalid form", http.StatusBadRequest)
-			return
-		}
-		ex, enqueueErr := p.Enqueue(r.PathValue("name"), values)
-		if enqueueErr != nil {
-			fail(w, "enqueue", enqueueErr)
-			return
-		}
-		partial(w, "execution.html", row(ex))
+		handleRunDispatch(w, r, p)
 	})
 
 	// HTMX partial: the execution badge for the 2s poll (phase 2). Returns
@@ -97,13 +87,7 @@ func New(p core.Port, ready func() error) http.Handler {
 	// completed step). The response is the badge fragment (the ACK,
 	// enqueued again), swapped into the badge of the detail page.
 	mux.HandleFunc("POST /resume/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		ex, err := p.Resume(id)
-		if err != nil {
-			fail(w, "resume", err)
-			return
-		}
-		partial(w, "badge.html", badgeFor(ex.ID, ex.State))
+		handleResume(w, r, p)
 	})
 
 	// Health: the web asks the core if it is ready (core.Ready); the
@@ -121,6 +105,39 @@ func New(p core.Port, ready func() error) http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 
 	return withRecovery(withRequestLog(mux))
+}
+
+// handleRunDispatch is the POST /run/{name} handler (phase 2, dispatch
+// with the form values — phase 5, EXECUTE): the core sanitizes the values
+// against the parsed spec and enqueues; the response is the execution row
+// fragment (the ACK), prepended to the executions list on the workflow
+// page.
+func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
+	values, err := formValues(r)
+	if err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	ex, err := p.Enqueue(r.PathValue("name"), values)
+	if err != nil {
+		fail(w, "enqueue", err)
+		return
+	}
+	partial(w, "execution.html", row(ex))
+}
+
+// handleResume is the POST /resume/{id} handler (phase 5, RESUME): the
+// re-enqueue of a failed run by id — the same stored input, restarting
+// from the last completed step. The response is the badge fragment (the
+// ACK), swapped into the badge of the detail page.
+func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
+	id := r.PathValue("id")
+	ex, err := p.Resume(id)
+	if err != nil {
+		fail(w, "resume", err)
+		return
+	}
+	partial(w, "badge.html", badgeFor(ex.ID, ex.State))
 }
 
 // formValues reads the raw values of the dispatch form (the fields the

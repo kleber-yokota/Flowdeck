@@ -442,7 +442,7 @@
           </tr>
           <tr>
             <td><a href="#package-web">web</a> ←</td>
-            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code></td>
+            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code></td>
             <td><code>core.Port</code> (the whole domain contract: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume)</td>
           </tr>
         </tbody>
@@ -660,8 +660,8 @@
         <tbody>
           <tr>
             <td><code>web.go</code></td>
-            <td>Routes + polling (2s) + health <code>/healthz</code> (from the injected <code>ready</code>) + the 3 handlers</td>
-            <td><code>New</code> · <code>handleWorkflowPage</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code></td>
+            <td>Routes + polling (2s) + health <code>/healthz</code> (from the injected <code>ready</code>) + the handlers (dispatch with the form values — phase 5, resume — phase 5)</td>
+            <td><code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · <code>formValues</code></td>
           </tr>
           <tr>
             <td><code>render.go</code></td>
@@ -722,7 +722,7 @@
         <tbody>
           <tr>
             <td><a href="#package-core">core</a> → (domain)</td>
-            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · models.go · <code>badgeFor</code> · <code>newStepsView</code> · <code>row</code> · render.go · <code>fail</code></td>
+            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · models.go · <code>badgeFor</code> · <code>newStepsView</code> · <code>row</code> · render.go · <code>fail</code></td>
             <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrInvalidInput</code> · <code>core.ErrNotResumable</code></td>
           </tr>
           <tr>
