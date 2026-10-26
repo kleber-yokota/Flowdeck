@@ -238,15 +238,33 @@ func List() []Workflow {
 // webserver.
 // A nil payload runs the workflow with its zero payload (the SDK decodes
 // the stored "null" back into the zero value at run time).
-func Enqueue(name string, payload any) (Execution, error) {
+// Enqueue dispatches a registered workflow with the raw form values
+// (phase 5, EXECUTE): the values are sanitized against the workflow's spec
+// (no extra fields, missing values fall back to the input's zero value,
+// the value converts to the input's type) and the clean input is put on
+// the queue. A nil values map is the zero payload (a dispatch without a
+// form).
+func Enqueue(name string, values map[string]string) (Execution, error) {
 	c, err := ctxOrErr()
 	if err != nil {
 		return Execution{}, err
 	}
 	for _, w := range List() {
-		if w.Name == name {
-			return dispatch(c, name, payload)
+		if w.Name != name {
+			continue
 		}
+		if values == nil {
+			return dispatch(c, name, nil) // no form: the zero payload, no spec needed
+		}
+		spec, ok := specOf(name)
+		if !ok {
+			return Execution{}, fmt.Errorf("%w: %s has no parsed spec", ErrInvalidInput, name)
+		}
+		payload, sanitizeErr := sanitize(name, spec, values)
+		if sanitizeErr != nil {
+			return Execution{}, sanitizeErr
+		}
+		return dispatch(c, name, payload)
 	}
 	return Execution{}, fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
 }

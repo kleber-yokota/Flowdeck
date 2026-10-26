@@ -9,25 +9,26 @@ import (
 	"strings"
 )
 
-// pathsFromSources parses the given Go source files and builds the map:
-// workflow name → all possible paths. The marker is the per-file DBOS
-// registration RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) —
-// matched by function name, so any import alias of the dbos package is
-// found. A RunAsStep call adds a step to every open path; an if forks the
-// paths (taken branch vs not-taken branch).
-func pathsFromSources(files map[string][]byte) (map[string][][]string, error) {
+// pathsFromSources parses the given Go source files and builds the maps:
+// workflow name → all possible paths, and workflow name → parameter spec
+// (input + step defaults). The marker is the per-file DBOS registration
+// RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) — matched by
+// function name, so any import alias of the dbos package is found. A
+// RunAsStep call adds a step to every open path; an if forks the paths
+// (taken branch vs not-taken branch).
+func pathsFromSources(files map[string][]byte) (map[string][][]string, map[string]Spec, error) {
 	fset := token.NewFileSet()
 	funcs := map[string]*ast.FuncDecl{}
 	regs := map[string]string{} // registered name → workflow func name
 	for name, data := range files {
 		file, err := parser.ParseFile(fset, name, data, 0)
 		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", name, err)
+			return nil, nil, fmt.Errorf("parse %s: %w", name, err)
 		}
 		collectFuncs(file, funcs)
 		collectRegistrations(file, regs)
 	}
-	return pathsFromRegistrations(regs, funcs), nil
+	return pathsFromRegistrations(regs, funcs), specsFromRegistrations(regs, funcs), nil
 }
 
 // collectFuncs records the file's function declarations — the workflow

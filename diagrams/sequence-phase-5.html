@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 5 — Parameters, edit and stored input</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/sequence-phase-5.css">
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sequence · Phase 5</p>
+    <h1>Phase 5 — Parameters, edit and stored input</h1>
+
+    <!-- ============ PART A — parameters, defaults and sanitized dispatch ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 984" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-phase-5-params-title sequence-phase-5-params-desc">
+        <title id="sequence-phase-5-params-title">Phase 5 — Parameters: source, defaults and sanitized dispatch</title>
+        <desc id="sequence-phase-5-params-desc">The core parses the workflow source at boot and extracts each workflow's input and the steps' default values; the web renders them at the top of /workflows/{name}; when the user clicks, the form values are posted, sanitized against the spec in the core, enqueued as the clean input, acknowledged with the workflow_id, rendered as queued, dequeued and passed to the workflow function, which passes the values to the steps.</desc>
+        <defs>
+          <marker id="p5a-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <marker id="p5a-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff9142"/>
+          </marker>
+          <marker id="p5a-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#7cc0ff"/>
+          </marker>
+          <marker id="p5a-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polyline points="0 0, 8 3, 0 6" fill="none" stroke="#b8bcc4" stroke-width="1.2"/>
+          </marker>
+          <linearGradient id="p5a-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e4e8"/>
+            <stop offset="0.45" stop-color="#8d939e"/>
+            <stop offset="1" stop-color="#b7bcc4"/>
+          </linearGradient>
+          <linearGradient id="p5a-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- frame: boot -->
+        <rect x="72" y="144" width="816" height="140" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="144" width="44" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="94" y="155" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">BOOT</text>
+
+        <!-- frame: display -->
+        <rect x="72" y="304" width="816" height="176" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="304" width="64" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="104" y="315" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">DISPLAY</text>
+
+        <!-- frame: execute -->
+        <rect x="72" y="500" width="816" height="338" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="500" width="68" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="106" y="511" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">EXECUTE</text>
+
+        <!-- lifelines -->
+        <line x1="120" y1="124" x2="120" y2="862" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="862" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="862" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="862" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- activation bars -->
+        <rect x="556" y="192" width="8" height="56" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="344" width="8" height="104" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="116" y="344" width="8" height="104" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="376" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="116" y="540" width="8" height="196" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="540" width="8" height="196" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="572" width="8" height="156" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="640" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="768" width="8" height="46" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="768" width="8" height="16" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+
+        <!-- messages: boot -->
+        <line x1="340" y1="192" x2="560" y2="192" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
+        <!-- self-action on CORE: the parser keeps the extracted values -->
+        <path d="M 560 232 H 596 V 246 H 560" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
+
+        <!-- messages: display -->
+        <line x1="120" y1="344" x2="340" y2="344" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#p5a-arrow-link)"/>
+        <line x1="340" y1="376" x2="560" y2="376" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
+        <line x1="560" y1="408" x2="340" y2="408" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
+        <line x1="340" y1="440" x2="120" y2="440" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
+
+        <!-- messages: execute -->
+        <line x1="120" y1="540" x2="340" y2="540" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#p5a-arrow-link)"/>
+        <line x1="340" y1="572" x2="560" y2="572" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
+        <!-- self-action on CORE: sanitize the raw values against the parsed spec -->
+        <path d="M 560 604 H 596 V 618 H 560" fill="none" stroke="#ff9142" stroke-width="1.2" marker-end="url(#p5a-arrow-accent)"/>
+        <line x1="560" y1="640" x2="800" y2="640" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
+        <line x1="800" y1="672" x2="560" y2="672" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
+        <line x1="560" y1="704" x2="340" y2="704" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
+        <line x1="340" y1="736" x2="120" y2="736" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
+        <line x1="800" y1="768" x2="560" y2="768" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow-open)"/>
+        <!-- self-action on CORE: the function passes the values to the steps -->
+        <path d="M 560 800 H 596 V 814 H 560" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
+
+        <!-- message labels -->
+        <rect x="398" y="176" width="104" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="185" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">PARSE SOURCE (AST)</text>
+
+        <rect x="518" y="216" width="120" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="578" y="225" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INPUT + STEP DEFAULTS</text>
+
+        <rect x="170" y="328" width="120" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="337" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">GET /WORKFLOWS/{NAME}</text>
+
+        <rect x="417" y="360" width="66" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="369" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">SPEC (NAME)</text>
+
+        <rect x="404" y="392" width="92" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="401" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INPUT + DEFAULTS</text>
+
+        <rect x="186" y="424" width="88" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="433" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · ON TOP</text>
+
+        <rect x="138" y="524" width="184" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="533" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CLICK · POST /run/{name} · VALUES</text>
+
+        <rect x="419" y="556" width="62" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="565" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RAW VALUES</text>
+
+        <rect x="532" y="588" width="92" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="578" y="597" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">SANITIZE (SPEC)</text>
+
+        <rect x="620" y="624" width="120" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="633" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ENQUEUE (CLEAN INPUT)</text>
+
+        <rect x="632" y="656" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="665" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK · workflow_id</text>
+
+        <rect x="394" y="688" width="112" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="697" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">QUEUED · workflow_id</text>
+
+        <rect x="186" y="720" width="88" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="729" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · QUEUED</text>
+
+        <rect x="618" y="752" width="124" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="761" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">DEQUEUE · STORED INPUT</text>
+
+        <rect x="511" y="784" width="134" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="578" y="793" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">fn(INPUT) → STEPS(VALUE)</text>
+
+        <!-- note -->
+        <text x="616" y="806" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">steps take their values from the workflow function</text>
+
+        <!-- actors -->
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="url(#p5a-panel)" stroke="url(#p5a-steel)" stroke-width="1"/>
+        <rect x="48" y="66" width="20" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="58" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+        <text x="120" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Browser</text>
+        <text x="120" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">chrome · htmx</text>
+
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="url(#p5a-panel)" stroke="url(#p5a-steel)" stroke-width="1"/>
+        <rect x="268" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="282" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WEB</text>
+        <text x="340" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">FlowDeck Web</text>
+        <text x="340" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">go · webserver · :8080</text>
+
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
+        <rect x="488" y="66" width="32" height="12" rx="2" fill="transparent" stroke="rgba(255,145,66,0.50)" stroke-width="0.8"/>
+        <text x="504" y="75" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+        <text x="560" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">DBOS Core</text>
+        <text x="560" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">dbos · parser · executor</text>
+
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="url(#p5a-panel)" stroke="url(#p5a-steel)" stroke-width="1"/>
+        <rect x="728" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="742" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+        <text x="800" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Postgres 18</text>
+        <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">compose · :5432</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="886" x2="930" y2="886" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="919" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <line x1="130" y1="918" x2="174" y2="918" stroke="#7cc0ff" stroke-width="1.2"/>
+        <text x="182" y="921" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HTMX REQUEST</text>
+
+        <line x1="300" y1="918" x2="344" y2="918" stroke="#b8bcc4" stroke-width="1.2"/>
+        <text x="352" y="921" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CALL</text>
+
+        <line x1="430" y1="918" x2="474" y2="918" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="482" y="921" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETURN</text>
+
+        <line x1="560" y1="918" x2="604" y2="918" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="612" y="921" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">NOTIFICATION</text>
+
+        <line x1="740" y1="918" x2="784" y2="918" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="792" y="921" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE</text>
+      </svg>
+    </div>
+
+    <!-- ============ PART B — edit, dispatch and stored input ============ -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 788" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-phase-5-dispatch-title sequence-phase-5-dispatch-desc">
+        <title id="sequence-phase-5-dispatch-title">Phase 5 — Edit, dispatch and stored input</title>
+        <desc id="sequence-phase-5-dispatch-desc">The user edits the values and dispatches: the value is written to Postgres once at enqueue and acknowledged with the workflow_id; on a failed run, resume re-enqueues by id and re-reads the same stored input, so the input per workflow_id is immutable.</desc>
+        <defs>
+          <marker id="p5b-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <marker id="p5b-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff9142"/>
+          </marker>
+          <marker id="p5b-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#7cc0ff"/>
+          </marker>
+          <marker id="p5b-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polyline points="0 0, 8 3, 0 6" fill="none" stroke="#b8bcc4" stroke-width="1.2"/>
+          </marker>
+          <linearGradient id="p5b-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e4e8"/>
+            <stop offset="0.45" stop-color="#8d939e"/>
+            <stop offset="1" stop-color="#b7bcc4"/>
+          </linearGradient>
+          <linearGradient id="p5b-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- frame: dispatch -->
+        <rect x="72" y="144" width="816" height="236" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="144" width="72" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="108" y="155" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">DISPATCH</text>
+
+        <!-- frame: resume -->
+        <rect x="72" y="400" width="816" height="240" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="400" width="60" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="102" y="411" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">RESUME</text>
+
+        <!-- lifelines -->
+        <line x1="120" y1="124" x2="120" y2="664" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="664" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="664" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="664" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- activation bars -->
+        <rect x="116" y="192" width="8" height="164" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="192" width="8" height="164" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="224" width="8" height="132" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="256" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="116" y="448" width="8" height="104" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="448" width="8" height="104" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="480" width="8" height="132" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="512" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+
+        <!-- messages: dispatch -->
+        <line x1="120" y1="192" x2="340" y2="192" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#p5b-arrow-link)"/>
+        <line x1="340" y1="224" x2="560" y2="224" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5b-arrow)"/>
+        <line x1="560" y1="256" x2="800" y2="256" stroke="#ff9142" stroke-width="1.2" marker-end="url(#p5b-arrow-accent)"/>
+        <line x1="800" y1="288" x2="560" y2="288" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5b-arrow)"/>
+        <line x1="560" y1="320" x2="340" y2="320" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5b-arrow)"/>
+        <line x1="340" y1="352" x2="120" y2="352" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5b-arrow)"/>
+
+        <!-- messages: resume -->
+        <text x="84" y="436" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[after FAILED run]</text>
+        <line x1="120" y1="448" x2="340" y2="448" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#p5b-arrow-link)"/>
+        <line x1="340" y1="480" x2="560" y2="480" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5b-arrow)"/>
+        <line x1="560" y1="512" x2="800" y2="512" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5b-arrow)"/>
+        <line x1="800" y1="544" x2="560" y2="544" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5b-arrow)"/>
+        <!-- self-action on CORE: restart from the last completed step with the same input -->
+        <path d="M 560 596 H 596 V 610 H 560" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5b-arrow)"/>
+
+        <!-- message labels -->
+        <rect x="182" y="176" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="185" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">POST /run · VALUE</text>
+
+        <rect x="390" y="208" width="120" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="217" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ENQUEUE (NAME, VALUE)</text>
+
+        <rect x="628" y="240" width="104" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="249" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WRITE INPUT (ONCE)</text>
+
+        <rect x="668" y="272" width="24" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="281" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK</text>
+
+        <rect x="394" y="304" width="112" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="313" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">QUEUED · workflow_id</text>
+
+        <rect x="186" y="336" width="88" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="345" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · QUEUED</text>
+
+        <rect x="182" y="432" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="441" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">POST /resume/{id}</text>
+
+        <rect x="417" y="464" width="66" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="473" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RESUME (ID)</text>
+
+        <rect x="636" y="496" width="88" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="505" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">REENQUEUE BY ID</text>
+
+        <rect x="632" y="528" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="537" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">SAME STORED INPUT</text>
+
+        <rect x="521" y="580" width="114" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="578" y="589" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RESTART · SAME INPUT</text>
+
+        <!-- note -->
+        <text x="616" y="602" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">input per workflow_id is immutable</text>
+        <text x="616" y="616" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">editing only affects new dispatches</text>
+
+        <!-- actors -->
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="url(#p5b-panel)" stroke="url(#p5b-steel)" stroke-width="1"/>
+        <rect x="48" y="66" width="20" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="58" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+        <text x="120" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Browser</text>
+        <text x="120" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">chrome · htmx</text>
+
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="url(#p5b-panel)" stroke="url(#p5b-steel)" stroke-width="1"/>
+        <rect x="268" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="282" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WEB</text>
+        <text x="340" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">FlowDeck Web</text>
+        <text x="340" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">go · webserver · :8080</text>
+
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
+        <rect x="488" y="66" width="32" height="12" rx="2" fill="transparent" stroke="rgba(255,145,66,0.50)" stroke-width="0.8"/>
+        <text x="504" y="75" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+        <text x="560" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">DBOS Core</text>
+        <text x="560" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">dbos · executor</text>
+
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="url(#p5b-panel)" stroke="url(#p5b-steel)" stroke-width="1"/>
+        <rect x="728" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="742" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+        <text x="800" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Postgres 18</text>
+        <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">compose · :5432</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="688" x2="930" y2="688" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="721" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <line x1="130" y1="720" x2="174" y2="720" stroke="#7cc0ff" stroke-width="1.2"/>
+        <text x="182" y="723" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HTMX REQUEST</text>
+
+        <line x1="300" y1="720" x2="344" y2="720" stroke="#b8bcc4" stroke-width="1.2"/>
+        <text x="352" y="723" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CALL</text>
+
+        <line x1="430" y1="720" x2="474" y2="720" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="482" y="723" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETURN</text>
+
+        <line x1="600" y1="720" x2="644" y2="720" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="652" y="723" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE</text>
+      </svg>
+    </div>
+
+    <footer>FlowDeck · diagram-design · 2026-10-26</footer>
+  </div>
+</body>
+</html>

@@ -27,6 +27,7 @@ import (
 // registered their workflows in their own init. This TestMain only
 // registers the test-only failing workflow and starts the executor once.
 func TestMain(m *testing.M) {
+	core.SetWorkflowsSource(os.DirFS("../workflows"))
 	if c := core.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, failingTestWorkflow,
 			dbos.WithWorkflowName("failing-test"),
@@ -88,6 +89,36 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 	}
 }
 
+// Phase 5, BOOT: the core exposes the spec of a registered workflow —
+// the input and the steps' default values, parsed from the source at boot
+// (the web renders them on top of the workflow page).
+func TestSpecOfRegisteredWorkflow(t *testing.T) {
+	spec, err := core.Spec("decide")
+	if err != nil {
+		t.Fatalf("core.Spec(decide): %v", err)
+	}
+	if spec.Input.Name != "msg" || spec.Input.Type != "string" {
+		t.Fatalf("decide input: got %+v, want {msg string}", spec.Input)
+	}
+	wantSteps := map[string]string{"base": "base", "left": "left", "right": "right"}
+	if len(spec.Steps) != len(wantSteps) {
+		t.Fatalf("decide steps: got %v, want %v", spec.Steps, wantSteps)
+	}
+	for _, s := range spec.Steps {
+		if wantSteps[s.Name] != s.Default {
+			t.Fatalf("decide step %s: got default %q, want %q", s.Name, s.Default, wantSteps[s.Name])
+		}
+	}
+}
+
+// Spec of a name that is not in the source errors with ErrUnknownWorkflow
+// (the web maps it to a 404).
+func TestSpecOfUnknownWorkflow(t *testing.T) {
+	if _, err := core.Spec("no-such-workflow"); !errors.Is(err, core.ErrUnknownWorkflow) {
+		t.Fatalf("Spec unknown: got %v, want ErrUnknownWorkflow", err)
+	}
+}
+
 // The registry (the web listing's source) has the shipped workflows — the
 // registration is the workflow files' init, applied to the env context.
 func TestListShowsRegisteredWorkflows(t *testing.T) {
@@ -96,7 +127,7 @@ func TestListShowsRegisteredWorkflows(t *testing.T) {
 	for _, w := range core.List() {
 		names[w.Name] = true
 	}
-	for _, want := range []string{"hello-world", "pipeline", "decide", "buy"} {
+	for _, want := range []string{"hello-world", "pipeline", "decide", "buy", "pause"} {
 		if !names[want] {
 			t.Fatalf("registry missing %s: %v", want, names)
 		}
@@ -128,6 +159,34 @@ func TestEnqueueUnknownWorkflow(t *testing.T) {
 	needCore(t)
 	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, core.ErrUnknownWorkflow) {
 		t.Fatalf("Enqueue unknown: got %v, want ErrUnknownWorkflow", err)
+	}
+}
+
+// Phase 5, EXECUTE: the dispatch sanitizes the raw form values against
+// the spec (the core) and enqueues the clean input — the run takes the
+// value (the decide workflow branches on it: base + left, no right).
+func TestEnqueueWithValuesTakesBranch(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("decide", map[string]string{"msg": "left"})
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+	for _, name := range mustStepNames(t, ex) {
+		if name == "right" {
+			t.Fatalf("steps: right ran, want the left branch: %v", mustStepNames(t, ex))
+		}
+	}
+}
+
+// A form value that is not in the spec is rejected (the web maps
+// ErrInvalidInput to a 400).
+func TestEnqueueUnknownField(t *testing.T) {
+	needCore(t)
+	if _, err := core.Enqueue("decide", map[string]string{"msg": "x", "bogus": "y"}); !errors.Is(err, core.ErrInvalidInput) {
+		t.Fatalf("Enqueue: got %v, want ErrInvalidInput", err)
 	}
 }
 
@@ -182,7 +241,7 @@ func mustStepNames(t *testing.T, ex core.Execution) []string {
 // filter by id — the test database may hold runs from other tests).
 func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("hello-world", "one")
+	ex, err := core.Enqueue("hello-world", map[string]string{"msg": "one"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

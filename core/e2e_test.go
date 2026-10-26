@@ -3,7 +3,11 @@
 package core_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
+
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
 	"flowdeck/core/status"
@@ -16,7 +20,7 @@ import (
 // time (a job claimed by a process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	ex, err := core.Enqueue("hello-world", map[string]string{"msg": "FlowDeck"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -49,10 +53,69 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	}
 }
 
+// Phase 5, RESUME, E2E: the resume re-enqueues a failed (canceled) run by
+// id on Postgres — the same stored input, restarting from the last
+// completed step.
+func TestE2EResumeRestartsWithSameInput(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("pause", map[string]string{"msg": "same-input"})
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := pollState(t, ex.ID, status.Running); err != nil {
+		t.Fatalf("poll to running: %v", err)
+	}
+	if err := dbos.CancelWorkflow(core.Ctx(), ex.ID); err != nil {
+		t.Fatalf("CancelWorkflow: %v", err)
+	}
+	if st, err := pollState(t, ex.ID, status.Error); err != nil {
+		t.Fatalf("poll to failed: %v (state %s)", err, st)
+	}
+
+	ack, err := core.Resume(ex.ID)
+	if err != nil {
+		t.Fatalf("Resume: %v", err)
+	}
+	if ack.ID != ex.ID || (ack.State != status.Queued && ack.State != status.Running) {
+		t.Fatalf("ACK: %+v", ack)
+	}
+	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+
+	// The same stored input: the restarted run's output echoes the
+	// dispatch value.
+	var out string
+	if err := readStoredOutput(t, ex.ID, &out); err != nil {
+		t.Fatalf("stored output: %v", err)
+	}
+	if out != "paused: same-input" {
+		t.Fatalf("output: got %q, want %q", out, "paused: same-input")
+	}
+}
+
+// readStoredOutput reads the stored output of a finished run (the JSON of
+// the workflow's return value).
+func readStoredOutput(t *testing.T, id string, out *string) error {
+	t.Helper()
+	statuses, err := dbos.ListWorkflows(core.Ctx(),
+		dbos.WithFilterWorkflowIDs(id),
+		dbos.WithFilterLoadInput(false),
+		dbos.WithFilterLoadOutput(true),
+	)
+	if err != nil {
+		return fmt.Errorf("ListWorkflows: %w", err)
+	}
+	if len(statuses) != 1 {
+		return fmt.Errorf("ListWorkflows: %d rows, want 1", len(statuses))
+	}
+	return json.Unmarshal([]byte(statuses[0].Output.(string)), out)
+}
+
 // The executed path of a branched run on Postgres (phase 4, STEP 3).
 func TestE2EStepsOfBranchedRun(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("decide", "left")
+	ex, err := core.Enqueue("decide", map[string]string{"msg": "left"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

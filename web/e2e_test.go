@@ -5,6 +5,7 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +43,61 @@ func TestE2EDispatchRunsToSuccess(t *testing.T) {
 			t.Fatalf("no success badge: %d, %s", code, row)
 		}
 		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// Phase 5, E2E: the dispatch posts the form values — the core sanitizes
+// them and the run takes the value on Postgres (the decide run branches to
+// the left, the executed path shows it).
+func TestE2EFormDispatchTakesBranch(t *testing.T) {
+	needCore(t)
+	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	defer srv.Close()
+
+	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	ack := readAll(t, resp)
+	if !strings.Contains(ack, `class="badge queued"`) {
+		t.Fatalf("ACK: %s", ack)
+	}
+	id := executionID(t, ack)
+
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		code, row := get(t, srv.URL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no success badge: %d, %s", code, row)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	code, steps := get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Fatalf("steps: %d", code)
+	}
+	if !strings.Contains(steps, ">left<") || strings.Contains(steps, ">right<") {
+		t.Fatalf("executed path without the left branch: %s", steps)
+	}
+}
+
+// Phase 5, RESUME, E2E: the resume of an id that is not known by the core
+// is a clean 404 on Postgres.
+func TestE2EResumeUnknownIs404(t *testing.T) {
+	needCore(t)
+	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	defer srv.Close()
+
+	resp, err := post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
+	if err != nil {
+		t.Fatalf("POST /resume: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("resume unknown: got %d, want 404", resp.StatusCode)
 	}
 }
 

@@ -36,7 +36,7 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	// The listing has every registered workflow — from the registry, no
 	// hardcoding in the web.
 	code, body := get(t, srv.URL+"/workflows")
-	if code != http.StatusOK || !containsAll(body, ">decide<", ">hello-world<", ">pipeline<", ">buy<") {
+	if code != http.StatusOK || !containsAll(body, ">decide<", ">hello-world<", ">pipeline<", ">buy<", ">pause<") {
 		t.Fatalf("listing: %d, body: %s", code, body)
 	}
 
@@ -49,11 +49,18 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	if !strings.Contains(decide, `<svg`) {
 		t.Fatalf("decide page without the generated graph")
 	}
-	if n := strings.Count(decide, ">base<"); n != 1 {
+	// The graph column only: the step-defaults list above also names the
+	// steps (phase 5, DISPLAY).
+	graphStart := strings.Index(decide, `<div class="graph">`)
+	if graphStart < 0 {
+		t.Fatalf("decide page without the graph column")
+	}
+	graph := decide[graphStart:]
+	if n := strings.Count(graph, ">base<"); n != 1 {
 		t.Fatalf("prefix drawn %d times, want 1", n)
 	}
 	for _, want := range []string{">left<", ">right<"} {
-		if !strings.Contains(decide, want) {
+		if !strings.Contains(graph, want) {
 			t.Fatalf("decide graph missing %q", want)
 		}
 	}

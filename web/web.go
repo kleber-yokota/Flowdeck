@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"flowdeck/core"
+	corespec "flowdeck/core/graph"
 	"flowdeck/web/graph"
 )
 
@@ -54,9 +55,14 @@ func New(p core.Port, ready func() error) http.Handler {
 	// badge + visible workflow ID — the ACK), prepended to the executions
 	// list on the workflow page.
 	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		ex, err := p.Enqueue(r.PathValue("name"), nil)
+		values, err := formValues(r)
 		if err != nil {
-			fail(w, "enqueue", err)
+			http.Error(w, "invalid form", http.StatusBadRequest)
+			return
+		}
+		ex, enqueueErr := p.Enqueue(r.PathValue("name"), values)
+		if enqueueErr != nil {
+			fail(w, "enqueue", enqueueErr)
 			return
 		}
 		partial(w, "execution.html", row(ex))
@@ -86,6 +92,20 @@ func New(p core.Port, ready func() error) http.Handler {
 		handleExecutionSteps(w, r, p)
 	})
 
+	// HTMX partial: POST resume — the re-enqueue of a failed run by id
+	// (phase 5, RESUME: the same stored input, restarting from the last
+	// completed step). The response is the badge fragment (the ACK,
+	// enqueued again), swapped into the badge of the detail page.
+	mux.HandleFunc("POST /resume/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		ex, err := p.Resume(id)
+		if err != nil {
+			fail(w, "resume", err)
+			return
+		}
+		partial(w, "badge.html", badgeFor(ex.ID, ex.State))
+	})
+
 	// Health: the web asks the core if it is ready (core.Ready); the
 	// container healthcheck pings this
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -103,10 +123,29 @@ func New(p core.Port, ready func() error) http.Handler {
 	return withRecovery(withRequestLog(mux))
 }
 
+// formValues reads the raw values of the dispatch form (the fields the
+// form posts, one value per field). A POST with no body (or an empty
+// form) is the zero payload — nil.
+func formValues(r *http.Request) (map[string]string, error) {
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+	values := make(map[string]string, len(r.PostForm))
+	for name, vals := range r.PostForm {
+		if len(vals) > 0 {
+			values[name] = vals[0]
+		}
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+	return values, nil
+}
+
 // handleWorkflowPage renders the full page of one registered workflow:
-// the dispatch button, the possible paths (phase 4, STEP 2, overview) and
-// the runs of it (phase 3, LIST): every execution the core knows, newest
-// first — workflow ID + badge.
+// the parameter form on top (phase 5, DISPLAY), the dispatch, the possible
+// paths (phase 4, STEP 2, overview) and the runs of it (phase 3, LIST):
+// every execution the core knows, newest first — workflow ID + badge.
 func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	name := r.PathValue("name")
 	if !registered(p.List(), name) {
@@ -122,11 +161,21 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	for _, e := range exs {
 		rows = append(rows, row(e))
 	}
+	// Phase 5, DISPLAY: the spec (input + step defaults) comes from the
+	// core (parsed from the source at boot) — never hardcoded in the web.
+	// A registered workflow without a parsed spec (a test-only
+	// registration) renders without the form: the dispatch still works
+	// with the zero payload.
+	var spec *corespec.Spec
+	if s, specErr := p.Spec(name); specErr == nil {
+		spec = &s
+	}
 	// Phase 4, STEP 2: the paths come from the graph component (the boot
 	// map: map lookup, no re-parse, no DB) — never hardcoded in the web.
 	page(w, "workflow.html", workflowPage{
 		Title:      name + " · FlowDeck",
 		Name:       name,
+		Spec:       spec,
 		Graph:      graph.PathsToSVG(p.Graph.Of(name)),
 		Executions: rows,
 	})

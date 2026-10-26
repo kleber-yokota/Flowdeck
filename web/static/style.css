@@ -120,6 +120,59 @@ a.name { color: inherit; text-decoration: none; }
 
 .run:hover { background: rgba(255, 145, 66, 0.18); }
 
+/* The parameter form on top of the workflow page (phase 5, DISPLAY) —
+   the workflow's input (editable) and the Run submit */
+.params {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.5rem;
+}
+
+.params label {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--soft);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.params input {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--ink);
+  background: rgba(255, 145, 66, 0.08);
+  border: 1px solid rgba(255, 145, 66, 0.55);
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  width: 14rem;
+}
+
+/* The steps' default values (the literals of the source) — read-only */
+.step-defaults {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.step-defaults li {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--soft);
+  border: 1px solid var(--steel);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.step-defaults code { color: var(--ink); }
+
 /* Workflow page — two columns: executions (left) and the generated graph
    (right, phase 4, STEP 2) */
 .columns {

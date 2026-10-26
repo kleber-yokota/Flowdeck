@@ -18,13 +18,20 @@ type Port struct {
 	// boot map: map lookup, no re-parse, no DB). Never nil: empty before
 	// Boot.
 	Graph *graph.PathGraph
+
+	// Spec returns the parameter spec of a workflow (phase 5, BOOT): the
+	// input and the steps' default values — the web renders the form on
+	// top of the workflow page.
+	Spec func(name string) (graph.Spec, error)
 	// Executions lists the runs of a workflow (phase 3, LIST).
 	Executions func(name string) ([]Execution, error)
 
 	// Dispatch: start a run.
-	// Enqueue dispatches a registered workflow (core → DBOS queue) and
-	// returns the new execution (id + state + created_at).
-	Enqueue func(name string, payload any) (Execution, error)
+	// Enqueue dispatches a registered workflow with the raw form values
+	// (sanitized in the core against the workflow's spec — the clean
+	// input is what goes on the DBOS queue) and returns the new execution
+	// (id + state + created_at).
+	Enqueue func(name string, values map[string]string) (Execution, error)
 
 	// Run tracking: follow a run (the 2s polls).
 	// Status reports the state of a run (the read half of the dispatch,
@@ -36,6 +43,11 @@ type Port struct {
 	Steps func(workflowID string) ([]Step, error)
 	// Detail reads one run for its page (phase 3, DETAIL).
 	Detail func(workflowID string) (ExecutionDetail, error)
+
+	// Resume re-enqueues a failed run by id (phase 5, RESUME — the same
+	// stored input, restarting from the last completed step) and returns
+	// the ACK (the same id, enqueued again).
+	Resume func(workflowID string) (Execution, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -52,9 +64,11 @@ func NewPort() Port {
 		List:       List,
 		Graph:      g,
 		Executions: Executions,
+		Spec:       Spec,
 		Enqueue:    Enqueue,
 		Status:     Status,
 		Steps:      Steps,
 		Detail:     Detail,
+		Resume:     Resume,
 	}
 }

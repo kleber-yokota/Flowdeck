@@ -108,11 +108,11 @@
         <rect class="badge-bg" x="350" y="196" width="70" height="14"></rect>
         <text class="fan" x="385" y="206" text-anchor="middle">FAN-IN 4</text>
         <text x="300" y="232" text-anchor="middle" class="fn">core.go · port.go · status.go · executions.go</text>
-        <text x="300" y="245" text-anchor="middle" class="fn">sqlite_driver.go · core_test.go · e2e_test.go</text>
+        <text x="300" y="245" text-anchor="middle" class="fn">spec.go · resume.go · sqlite_driver.go</text>
         <text x="300" y="258" text-anchor="middle" class="fn">init (env) · Ctx · SetWorkflowsSource</text>
-        <text x="300" y="271" text-anchor="middle" class="fn">Launch · Shutdown · List · Enqueue</text>
+        <text x="300" y="271" text-anchor="middle" class="fn">Launch · Shutdown · List · Enqueue · Resume</text>
         <text x="300" y="284" text-anchor="middle" class="fn">Status · Detail · Steps · Executions</text>
-        <text x="300" y="297" text-anchor="middle" class="fn">NewPort · Ready · Port · mapState</text>
+        <text x="300" y="297" text-anchor="middle" class="fn">NewPort · Ready · Port · Spec · mapState</text>
       </g>
       <g class="node">
         <a href="#package-web" aria-label="web package"><rect x="530" y="190" width="280" height="130"></rect></a>
@@ -122,11 +122,12 @@
         <text x="670" y="264" text-anchor="middle" class="fn">New · handleWorkflowPage · handleExecutionDetail</text>
         <text x="670" y="278" text-anchor="middle" class="fn">handleExecutionSteps · badgeFor · partial · fail</text>
         <text x="670" y="292" text-anchor="middle" class="fn">healthz · testPort · bootedTestServer</text>
+        <text x="670" y="306" text-anchor="middle" class="fn">form dispatch (values) · POST /resume</text>
       </g>
       <g class="node leaf">
         <a href="#package-graph" aria-label="core/graph package"><rect x="40" y="380" width="190" height="80"></rect></a>
         <text x="135" y="404" text-anchor="middle">core/graph</text>
-        <text x="135" y="422" text-anchor="middle" class="fn">graph.go · parse.go</text>
+        <text x="135" y="422" text-anchor="middle" class="fn">graph.go · parse.go · spec.go</text>
         <text x="135" y="438" text-anchor="middle" class="fn">New · PathGraph · Of</text>
         <text x="135" y="452" text-anchor="middle" class="fn">pathsFromSources · buildPaths</text>
       </g>
@@ -225,7 +226,7 @@
           <tr>
             <td><code>main → workflows</code></td>
             <td><code>main.go</code> · <code>run</code> (blank imports) · <code>workflowsSource</code> (<code>//go:embed workflows</code>)</td>
-            <td><code>init()</code> registrations (hello-world · pipeline · decide · buy) · the embedded source FS</td>
+            <td><code>init()</code> registrations (hello-world · pipeline · decide · buy · pause) · the embedded source FS</td>
           </tr>
           <tr>
             <td><code>main → web</code></td>
@@ -245,7 +246,7 @@
           <tr>
             <td><code>web → core</code></td>
             <td><code>web.go</code> · <code>New</code> + handlers · <code>models.go</code> · <code>render.go</code></td>
-            <td><code>core.Port</code> (the whole contact) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code></td>
+            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrInvalidInput</code> · <code>core.ErrNotResumable</code></td>
           </tr>
           <tr>
             <td><code>web → core/status</code></td>
@@ -269,13 +270,13 @@
           </tr>
           <tr>
             <td><code>core → core/graph</code></td>
-            <td><code>core.go</code> · <code>SetWorkflowsSource</code> · <code>port.go</code> · <code>NewPort</code></td>
-            <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>Port.Graph</code> · <code>(PathGraph).Of</code></td>
+            <td><code>core.go</code> · <code>SetWorkflowsSource</code> · <code>spec.go</code> · <code>port.go</code> · <code>NewPort</code></td>
+            <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>Port.Graph</code> · <code>(PathGraph).Of</code> · <code>graph.Spec</code> · <code>Port.Spec</code></td>
           </tr>
           <tr>
             <td><code>core → dbos</code></td>
-            <td><code>core.go</code> · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>dispatch</code> · <code>status.go</code> · <code>executions.go</code></td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · status types</td>
+            <td><code>core.go</code> · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>dispatch</code> · <code>status.go</code> · <code>executions.go</code> · <code>resume.go</code></td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · status types</td>
           </tr>
           <tr>
             <td><code>cmd/workflowgen → workflows</code></td>
@@ -336,7 +337,7 @@
     <section id="package-core" class="pkg">
       <a class="close" href="#graph">× CLOSE</a>
       <h2>core <span class="badge">FAN-IN 4</span></h2>
-      <p class="role">DBOS singleton: env-driven context (<code>init</code>), executor, dispatch (Enqueue), reads (Status/Steps/Detail/Executions), graph, Port. The workflow packages register on it via <code>Ctx()</code>.</p>
+      <p class="role">DBOS singleton: env-driven context (<code>init</code>), executor, dispatch (Enqueue with sanitized values), resume (Resume), reads (Status/Steps/Detail/Executions), spec (Spec), graph, Port. The workflow packages register on it via <code>Ctx()</code>.</p>
       <table>
         <thead>
           <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
@@ -363,6 +364,16 @@
             <td><code>Executions</code> · <code>Detail</code> · <code>Steps</code> · <code>optionName</code></td>
           </tr>
           <tr>
+            <td><code>spec.go</code></td>
+            <td>Parameter spec (phase 5, BOOT): the workflow input + step defaults from the graph; dispatch sanitization (<code>values → payload</code>)</td>
+            <td><code>Spec</code> · <code>specOf</code> · <code>sanitize</code> · <code>convertInput</code> · <code>ErrInvalidInput</code></td>
+          </tr>
+          <tr>
+            <td><code>resume.go</code></td>
+            <td>Resume of a failed run by id (phase 5, RESUME): re-enqueue, same stored input, restart from the last completed step</td>
+            <td><code>Resume</code> · <code>ErrNotResumable</code></td>
+          </tr>
+          <tr>
             <td><code>sqlite_driver.go</code></td>
             <td>Links the DBOS SQLite driver (blank import) so env-driven <code>init</code> works with <code>sqlite:</code> URLs (tests, local dev)</td>
             <td>—</td>
@@ -383,8 +394,18 @@
             <td><code>TestMapState*</code></td>
           </tr>
           <tr>
+            <td><code>sanitize_test.go</code></td>
+            <td>Phase 5 sanitization tests: spec → values → payload (string/int, unknown field, no-input)</td>
+            <td><code>TestSanitize*</code></td>
+          </tr>
+          <tr>
+            <td><code>resume_test.go</code></td>
+            <td>Phase 5 resume tests: unknown id, not-failed run, restart a canceled run (same stored input)</td>
+            <td><code>TestResume*</code></td>
+          </tr>
+          <tr>
             <td><code>e2e_test.go</code></td>
-            <td>E2E (build tag <code>e2e</code>, Postgres 18): enqueue → success, failed run detail, branched steps</td>
+            <td>E2E (build tag <code>e2e</code>, Postgres 18): enqueue → success, failed run detail, branched steps, resume of a canceled run</td>
             <td><code>TestE2E*</code></td>
           </tr>
         </tbody>
@@ -406,8 +427,8 @@
           </tr>
           <tr>
             <td><a href="#package-dbos">dbos</a> →</td>
-            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · <code>ctxOrErr</code> · <code>listByID</code> · executions.go · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · status types · SQLite driver</td>
+            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · <code>ctxOrErr</code> · <code>listByID</code> · executions.go · resume.go · <code>Resume</code> · sqlite_driver.go</td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · status types · SQLite driver</td>
           </tr>
           <tr>
             <td><a href="#package-workflows">workflows</a> ←</td>
@@ -422,7 +443,7 @@
           <tr>
             <td><a href="#package-web">web</a> ←</td>
             <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code></td>
-            <td><code>core.Port</code> (the whole domain contract: List · Executions · Enqueue · Status · Steps · Detail · Graph)</td>
+            <td><code>core.Port</code> (the whole domain contract: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume)</td>
           </tr>
         </tbody>
       </table>
@@ -462,6 +483,11 @@
             <td><code>buy/buy.go</code></td>
             <td>Workflow <code>buy</code> (subpackage, 1 step: charge) — the template for <code>workflows/&lt;name&gt;/</code></td>
             <td><code>Buy</code> · <code>ChargeStep</code> · <code>init</code></td>
+          </tr>
+          <tr>
+            <td><code>pause/pause.go</code></td>
+            <td>Workflow <code>pause</code> (subpackage, 1 step: pause, long-running) — the resume target of the phase 5 tests</td>
+            <td><code>Pause</code> · <code>PauseStep</code> · <code>init</code></td>
           </tr>
           <tr>
             <td><code>zz_generated.go</code></td>
@@ -585,7 +611,7 @@
     <section id="package-graph" class="pkg">
       <a class="close" href="#graph">× CLOSE</a>
       <h2>core/graph <span class="badge">PURE · LEAF</span></h2>
-      <p class="role">Possible-paths graph: source parser (AST, recursive <code>.go</code> walk) + read model. No imports. Source: the embedded <code>workflows/</code> tree, injected by <code>core.SetWorkflowsSource</code>.</p>
+      <p class="role">Possible-paths graph + parameter spec (phase 5, BOOT): source parser (AST, recursive <code>.go</code> walk) + read models. No imports. Source: the embedded <code>workflows/</code> tree, injected by <code>core.SetWorkflowsSource</code>.</p>
       <table>
         <thead>
           <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
@@ -598,8 +624,13 @@
           </tr>
           <tr>
             <td><code>parse.go</code></td>
-            <td>AST parser: workflow → possible paths (marker: <code>RegisterWorkflow</code>)</td>
+            <td>AST parser: workflow → possible paths + spec (marker: <code>RegisterWorkflow</code>)</td>
             <td><code>pathsFromSources</code> · <code>buildPaths</code> · <code>walkStmt</code></td>
+          </tr>
+          <tr>
+            <td><code>spec.go</code></td>
+            <td>Parameter spec (phase 5): the workflow input (<code>Param</code>) + step defaults (<code>StepSpec</code>) — parsed from the same registrations</td>
+            <td><code>Spec</code> · <code>Param</code> · <code>StepSpec</code> · <code>specsFromRegistrations</code></td>
           </tr>
         </tbody>
       </table>
@@ -610,8 +641,8 @@
         <tbody>
           <tr>
             <td><a href="#package-core">core</a> ←</td>
-            <td>core.go · <code>SetWorkflowsSource</code> · port.go · <code>NewPort</code></td>
-            <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>(PathGraph).Of</code> · <code>Port.Graph</code></td>
+            <td>core.go · <code>SetWorkflowsSource</code> · spec.go · port.go · <code>NewPort</code></td>
+            <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>(PathGraph).Of</code> · <code>Port.Graph</code> · <code>graph.Spec</code> · <code>Port.Spec</code></td>
           </tr>
         </tbody>
       </table>
@@ -668,8 +699,18 @@
             <td><code>bootedTestServer</code> · <code>TestWorkflowPageWithBootedCore</code></td>
           </tr>
           <tr>
+            <td><code>form_test.go</code></td>
+            <td>Phase 5 form tests: the spec form (input + defaults), the dispatch with values, unknown field 400</td>
+            <td><code>TestWorkflowForm*</code></td>
+          </tr>
+          <tr>
+            <td><code>resume_test.go</code></td>
+            <td>Phase 5 resume tests: the button on a failed run, the 404/400 of <code>POST /resume</code></td>
+            <td><code>TestExecutionDetail*Resume*</code> · <code>TestResume*</code></td>
+          </tr>
+          <tr>
             <td><code>e2e_test.go</code></td>
-            <td>E2E (build tag <code>e2e</code>, Postgres 18): dispatch → success, executed path</td>
+            <td>E2E (build tag <code>e2e</code>, Postgres 18): dispatch → success, executed path, form dispatch (values), resume 404</td>
             <td><code>TestE2E*</code></td>
           </tr>
         </tbody>
@@ -682,7 +723,7 @@
           <tr>
             <td><a href="#package-core">core</a> → (domain)</td>
             <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · models.go · <code>badgeFor</code> · <code>newStepsView</code> · <code>row</code> · render.go · <code>fail</code></td>
-            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code></td>
+            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrInvalidInput</code> · <code>core.ErrNotResumable</code></td>
           </tr>
           <tr>
             <td><a href="#package-core">core</a> → (health)</td>
@@ -773,8 +814,8 @@
         <tbody>
           <tr>
             <td><a href="#package-core">core</a> ←</td>
-            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · executions.go · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · status types · SQLite driver</td>
+            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · executions.go · resume.go · <code>Resume</code> · sqlite_driver.go</td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · status types · SQLite driver</td>
           </tr>
           <tr>
             <td><a href="#package-workflows">workflows</a> ←</td>

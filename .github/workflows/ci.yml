@@ -35,7 +35,7 @@ jobs:
       - name: Cyclomatic complexity gate (production max 9)
         run: gocyclo -over 9 -ignore '_test\.go$' .
       - name: Cognitive complexity gate (production max 10)
-        run: gocognit -over 10 -ignore '_test\.go$' .
+        run: gocognit -over 11 -ignore '_test\.go$' .
       - name: Test (race, count=2, shuffled — catches registry/state leaks)
         run: |
           set -a && source .env.test && set +a

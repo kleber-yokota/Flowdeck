@@ -15,6 +15,7 @@ import (
 // .env.test), this package's inits registered the workflows, and the
 // TestMain starts the executor once — the same lifecycle as production.
 func TestMain(m *testing.M) {
+	core.SetWorkflowsSource(os.DirFS("."))
 	if c := core.Ctx(); c != nil {
 		if err := core.Launch(); err != nil {
 			fmt.Fprintln(os.Stderr, "workflows_test: launch:", err)
@@ -33,10 +34,11 @@ func needCore(t *testing.T) {
 	}
 }
 
-// runToSuccess enqueues the workflow and polls until the run is terminal.
-func runToSuccess(t *testing.T, name string, payload any) core.Execution {
+// runToSuccess enqueues the workflow with the raw form values and polls
+// until the run is terminal.
+func runToSuccess(t *testing.T, name string, values map[string]string) core.Execution {
 	t.Helper()
-	ex, err := core.Enqueue(name, payload)
+	ex, err := core.Enqueue(name, values)
 	if err != nil {
 		t.Fatalf("Enqueue %s: %v", name, err)
 	}
@@ -96,7 +98,7 @@ func assertStepNames(t *testing.T, ex core.Execution, want ...string) {
 // The hello-world run ends successful with its single step.
 func TestHelloWorldRun(t *testing.T) {
 	needCore(t)
-	ex := runToSuccess(t, "hello-world", "FlowDeck")
+	ex := runToSuccess(t, "hello-world", map[string]string{"msg": "FlowDeck"})
 	assertStepNames(t, ex, "greet")
 }
 
@@ -112,9 +114,9 @@ func TestPipelineRun(t *testing.T) {
 // forks on.
 func TestDecideRunBranches(t *testing.T) {
 	needCore(t)
-	left := runToSuccess(t, "decide", "left")
+	left := runToSuccess(t, "decide", map[string]string{"msg": "left"})
 	assertStepNames(t, left, "base", "left")
-	right := runToSuccess(t, "decide", "")
+	right := runToSuccess(t, "decide", map[string]string{"msg": ""})
 	assertStepNames(t, right, "base", "right")
 }
 
@@ -122,6 +124,6 @@ func TestDecideRunBranches(t *testing.T) {
 // subpackage is wired by the generated blank import, not by hand.
 func TestBuyRun(t *testing.T) {
 	needCore(t)
-	ex := runToSuccess(t, "buy", "order-42")
+	ex := runToSuccess(t, "buy", map[string]string{"msg": "order-42"})
 	assertStepNames(t, ex, "charge")
 }

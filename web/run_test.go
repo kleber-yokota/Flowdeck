@@ -56,7 +56,7 @@ func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
 
 // A workflow that is not in the core registry is a clean 404.
 func TestRunUnknownWorkflowIs404(t *testing.T) {
-	enqueue := func(name string, payload any) (core.Execution, error) {
+	enqueue := func(name string, values map[string]string) (core.Execution, error) {
 		return core.Execution{}, fmt.Errorf("%w: %s", core.ErrUnknownWorkflow, name)
 	}
 	d := testPort()
@@ -76,7 +76,7 @@ func TestRunUnknownWorkflowIs404(t *testing.T) {
 
 // A core failure that is not "unknown workflow" is a clean 500.
 func TestRunEnqueueFailureIs500(t *testing.T) {
-	enqueue := func(name string, payload any) (core.Execution, error) {
+	enqueue := func(name string, values map[string]string) (core.Execution, error) {
 		return core.Execution{}, errors.New("boom")
 	}
 	d := testPort()
