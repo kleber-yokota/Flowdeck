@@ -19,6 +19,11 @@ import (
 	"flowdeck/core"
 )
 
+// defaultMsg is the default value of the msg input — shared by the
+// hello-world, pipeline and decide workflows (same package, same input
+// name; phase 5, BOOT: the parser extracts the const default<NamePascal>).
+const defaultMsg = "FlowDeck"
+
 // Registers the hello-world workflow in the core DBOS context — the
 // context is up since core's init (dependency order: core before this
 // package). With no env (unit tests, tools) the context is nil and the

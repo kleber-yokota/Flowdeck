@@ -22,6 +22,10 @@ func init() {
 	}
 }
 
+// defaultMsg is the default value of the pause workflow's msg input
+// (phase 5, BOOT: the parser extracts the const default<NamePascal>).
+const defaultMsg = "FlowDeck"
+
 // pauseDuration is the fixed pause of the pause step — long enough that a
 // test can cancel the run mid-step and resume it (the resume tests).
 const pauseDuration = 5 * time.Second

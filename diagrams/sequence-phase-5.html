@@ -16,7 +16,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 960 984" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-phase-5-params-title sequence-phase-5-params-desc">
         <title id="sequence-phase-5-params-title">Phase 5 — Parameters: source, defaults and sanitized dispatch</title>
-        <desc id="sequence-phase-5-params-desc">The core parses the workflow source at boot and extracts each workflow's input and the steps' default values; the web renders them at the top of /workflows/{name}; when the user clicks, the form values are posted, sanitized against the spec in the core, enqueued as the clean input, acknowledged with the workflow_id, rendered as queued, dequeued and passed to the workflow function, which passes the values to the steps.</desc>
+        <desc id="sequence-phase-5-params-desc">The core parses the workflow source at boot and extracts each workflow's inputs — one per input parameter (the fields of the struct input), each with its default value (the const default&lt;NamePascal&gt; of the source) — and the steps' default values; the web renders one form item per input (prefilled with the default; no form when the workflow has no input) at the top of /workflows/{name}; when the user clicks, the web sanitizes the form values against the spec and forwards the clean input (the map of the struct input), acknowledged with the workflow_id, rendered as queued, dequeued and passed to the workflow function, which passes the values to the steps.</desc>
         <defs>
           <marker id="p5a-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
@@ -71,7 +71,7 @@
         <rect x="556" y="376" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
         <rect x="116" y="540" width="8" height="196" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
         <rect x="336" y="540" width="8" height="196" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
-        <rect x="556" y="572" width="8" height="156" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="604" width="8" height="124" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
         <rect x="796" y="640" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
         <rect x="556" y="768" width="8" height="46" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
         <rect x="796" y="768" width="8" height="16" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
@@ -89,9 +89,9 @@
 
         <!-- messages: execute -->
         <line x1="120" y1="540" x2="340" y2="540" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#p5a-arrow-link)"/>
-        <line x1="340" y1="572" x2="560" y2="572" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
-        <!-- self-action on CORE: sanitize the raw values against the parsed spec -->
-        <path d="M 560 604 H 596 V 618 H 560" fill="none" stroke="#ff9142" stroke-width="1.2" marker-end="url(#p5a-arrow-accent)"/>
+        <!-- self-action on WEB: sanitize the values against the spec -->
+        <path d="M 340 572 H 376 V 586 H 340" fill="none" stroke="#ff9142" stroke-width="1.2" marker-end="url(#p5a-arrow-accent)"/>
+        <line x1="340" y1="604" x2="560" y2="604" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
         <line x1="560" y1="640" x2="800" y2="640" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5a-arrow)"/>
         <line x1="800" y1="672" x2="560" y2="672" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
         <line x1="560" y1="704" x2="340" y2="704" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5a-arrow)"/>
@@ -105,7 +105,7 @@
         <text x="450" y="185" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">PARSE SOURCE (AST)</text>
 
         <rect x="518" y="216" width="120" height="12" rx="2" fill="#0b0c0e"/>
-        <text x="578" y="225" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INPUT + STEP DEFAULTS</text>
+        <text x="578" y="225" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INPUTS + STEP DEFAULTS</text>
 
         <rect x="170" y="328" width="120" height="12" rx="2" fill="#0b0c0e"/>
         <text x="230" y="337" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">GET /WORKFLOWS/{NAME}</text>
@@ -114,7 +114,7 @@
         <text x="450" y="369" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">SPEC (NAME)</text>
 
         <rect x="404" y="392" width="92" height="12" rx="2" fill="#0b0c0e"/>
-        <text x="450" y="401" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INPUT + DEFAULTS</text>
+        <text x="450" y="401" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INPUTS + DEFAULTS</text>
 
         <rect x="186" y="424" width="88" height="12" rx="2" fill="#0b0c0e"/>
         <text x="230" y="433" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · ON TOP</text>
@@ -122,11 +122,11 @@
         <rect x="138" y="524" width="184" height="12" rx="2" fill="#0b0c0e"/>
         <text x="230" y="533" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CLICK · POST /run/{name} · VALUES</text>
 
-        <rect x="419" y="556" width="62" height="12" rx="2" fill="#0b0c0e"/>
-        <text x="450" y="565" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RAW VALUES</text>
+        <rect x="312" y="556" width="92" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="358" y="565" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">SANITIZE (SPEC)</text>
 
-        <rect x="532" y="588" width="92" height="12" rx="2" fill="#0b0c0e"/>
-        <text x="578" y="597" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">SANITIZE (SPEC)</text>
+        <rect x="413" y="588" width="74" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="597" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CLEAN VALUES</text>
 
         <rect x="620" y="624" width="120" height="12" rx="2" fill="#0b0c0e"/>
         <text x="680" y="633" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ENQUEUE (CLEAN INPUT)</text>
@@ -203,7 +203,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 960 788" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-phase-5-dispatch-title sequence-phase-5-dispatch-desc">
         <title id="sequence-phase-5-dispatch-title">Phase 5 — Edit, dispatch and stored input</title>
-        <desc id="sequence-phase-5-dispatch-desc">The user edits the values and dispatches: the value is written to Postgres once at enqueue and acknowledged with the workflow_id; on a failed run, resume re-enqueues by id and re-reads the same stored input, so the input per workflow_id is immutable.</desc>
+        <desc id="sequence-phase-5-dispatch-desc">The user edits the values and dispatches: the values are written to Postgres once at enqueue and acknowledged with the workflow_id — the execution detail shows the stored input values the run used; on a failed run, resume re-enqueues by id and re-reads the same stored input, so the input per workflow_id is immutable.</desc>
         <defs>
           <marker id="p5b-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
@@ -265,7 +265,7 @@
         <line x1="340" y1="352" x2="120" y2="352" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#p5b-arrow)"/>
 
         <!-- messages: resume -->
-        <text x="84" y="436" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[after FAILED run]</text>
+        <text x="84" y="424" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">[state = failed · queued / running / success → 400]</text>
         <line x1="120" y1="448" x2="340" y2="448" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#p5b-arrow-link)"/>
         <line x1="340" y1="480" x2="560" y2="480" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5b-arrow)"/>
         <line x1="560" y1="512" x2="800" y2="512" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#p5b-arrow)"/>

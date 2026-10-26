@@ -20,7 +20,7 @@ import (
 // time (a job claimed by a process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("hello-world", map[string]string{"msg": "FlowDeck"})
+	ex, err := core.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 // completed step.
 func TestE2EResumeRestartsWithSameInput(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", map[string]string{"msg": "same-input"})
+	ex, err := core.Enqueue("pause", "same-input")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -115,7 +115,7 @@ func readStoredOutput(t *testing.T, id string, out *string) error {
 // The executed path of a branched run on Postgres (phase 4, STEP 3).
 func TestE2EStepsOfBranchedRun(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("decide", map[string]string{"msg": "left"})
+	ex, err := core.Enqueue("decide", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

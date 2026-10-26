@@ -213,8 +213,11 @@ func Greet(ctx dbos.Context, msg string) error {
 	if !ok {
 		t.Fatalf("specs: missing workflow greet: %v", specs)
 	}
-	if spec.Input.Name != "msg" || spec.Input.Type != "string" {
-		t.Fatalf("spec input: got %+v, want {msg string}", spec.Input)
+	if len(spec.Inputs) != 1 {
+		t.Fatalf("spec inputs: got %v, want 1", spec.Inputs)
+	}
+	if in := spec.Inputs[0]; in.Name != "msg" || in.Type != "string" {
+		t.Fatalf("spec input: got %+v, want {msg string}", in)
 	}
 	if len(spec.Steps) != 2 {
 		t.Fatalf("spec steps: got %v, want 2", spec.Steps)
@@ -259,8 +262,11 @@ func Count(ctx dbos.Context, n int) error {
 	if !ok {
 		t.Fatalf("specs: missing workflow count: %v", specs)
 	}
-	if spec.Input.Name != "n" || spec.Input.Type != "int" {
-		t.Fatalf("spec input: got %+v, want {n int}", spec.Input)
+	if len(spec.Inputs) != 1 {
+		t.Fatalf("spec inputs: got %v, want 1", spec.Inputs)
+	}
+	if in := spec.Inputs[0]; in.Name != "n" || in.Type != "int" {
+		t.Fatalf("spec input: got %+v, want {n int}", in)
 	}
 }
 

@@ -12,6 +12,16 @@
          wrapper is the target of the resume ACK (phase 5, RESUME). -->
     <div id="badge">{{template "badge.html" .Badge}}</div>
     <p class="first-run">first execution: {{ .CreatedAt.Format "02/01/2006 15:04" }}</p>
+    {{if .Inputs}}
+    <!-- Phase 5, DETAIL: the stored input values — the values the run
+         used (the input is written once at enqueue, immutable per
+         workflow_id). -->
+    <ul class="input-values">
+{{range .Inputs}}
+      <li><code>{{ .Name }}</code>: {{ .Value }}</li>
+{{end}}
+    </ul>
+    {{end}}
     <p class="attempts-count">retries: {{ len .Retries }}</p>
 {{if .Retries}}
     <ul class="attempts">

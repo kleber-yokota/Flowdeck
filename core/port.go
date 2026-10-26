@@ -27,11 +27,11 @@ type Port struct {
 	Executions func(name string) ([]Execution, error)
 
 	// Dispatch: start a run.
-	// Enqueue dispatches a registered workflow with the raw form values
-	// (sanitized in the core against the workflow's spec — the clean
-	// input is what goes on the DBOS queue) and returns the new execution
+	// Enqueue dispatches a registered workflow with the clean input
+	// (sanitized by the web against the workflow's spec — the clean input
+	// is what goes on the DBOS queue) and returns the new execution
 	// (id + state + created_at).
-	Enqueue func(name string, values map[string]string) (Execution, error)
+	Enqueue func(name string, payload any) (Execution, error)
 
 	// Run tracking: follow a run (the 2s polls).
 	// Status reports the state of a run (the read half of the dispatch,

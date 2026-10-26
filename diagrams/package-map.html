@@ -91,9 +91,9 @@
       <g class="node">
         <a href="#package-workflows" aria-label="workflows package"><rect x="430" y="40" width="260" height="80"></rect></a>
         <text x="560" y="64" text-anchor="middle">workflows</text>
-        <text x="560" y="80" text-anchor="middle" class="sub">workflows.go · pipeline.go · decide.go</text>
-        <text x="560" y="95" text-anchor="middle" class="fn">steps.go · buy/buy.go · zz_generated.go</text>
-        <text x="560" y="107" text-anchor="middle" class="fn">init: RegisterWorkflow(core.Ctx(), …)</text>
+        <text x="560" y="79" text-anchor="middle" class="sub">workflows.go · pipeline.go · decide.go</text>
+        <text x="560" y="92" text-anchor="middle" class="fn">schedule.go · steps.go · buy/buy.go</text>
+        <text x="560" y="105" text-anchor="middle" class="fn">pause/pause.go · zz_generated.go</text>
       </g>
       <g class="node leaf">
         <a href="#package-gen" aria-label="cmd/workflowgen package"><rect x="720" y="40" width="210" height="80"></rect></a>
@@ -246,7 +246,12 @@
           <tr>
             <td><code>web → core</code></td>
             <td><code>web.go</code> · <code>New</code> + handlers · <code>models.go</code> · <code>render.go</code></td>
-            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrInvalidInput</code> · <code>core.ErrNotResumable</code></td>
+            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code></td>
+          </tr>
+          <tr>
+            <td><code>web → core/graph</code></td>
+            <td><code>web.go</code> · <code>handleRunDispatch</code> · models.go · <code>workflowPage</code></td>
+            <td><code>graph.Spec</code> (the model) · <code>(Spec).Sanitize</code> (the dispatch sanitization)</td>
           </tr>
           <tr>
             <td><code>web → core/status</code></td>
@@ -337,7 +342,7 @@
     <section id="package-core" class="pkg">
       <a class="close" href="#graph">× CLOSE</a>
       <h2>core <span class="badge">FAN-IN 4</span></h2>
-      <p class="role">DBOS singleton: env-driven context (<code>init</code>), executor, dispatch (Enqueue with sanitized values), resume (Resume), reads (Status/Steps/Detail/Executions), spec (Spec), graph, Port. The workflow packages register on it via <code>Ctx()</code>.</p>
+      <p class="role">DBOS singleton: env-driven context (<code>init</code>), executor, dispatch (Enqueue with the clean input), resume (Resume), reads (Status/Steps/Detail/Executions), spec (Spec), graph, Port. The workflow packages register on it via <code>Ctx()</code>.</p>
       <table>
         <thead>
           <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
@@ -360,13 +365,13 @@
           </tr>
           <tr>
             <td><code>executions.go</code></td>
-            <td>Executions queries: list, detail, steps</td>
-            <td><code>Executions</code> · <code>Detail</code> · <code>Steps</code> · <code>optionName</code></td>
+            <td>Executions queries: list, detail (state, first execution date, the stored input values, error/failed step), steps</td>
+            <td><code>Executions</code> · <code>Detail</code> · <code>Steps</code> · <code>inputValues</code> · <code>optionName</code>
           </tr>
           <tr>
             <td><code>spec.go</code></td>
-            <td>Parameter spec (phase 5, BOOT): the workflow input + step defaults from the graph; dispatch sanitization (<code>values → payload</code>)</td>
-            <td><code>Spec</code> · <code>specOf</code> · <code>sanitize</code> · <code>convertInput</code> · <code>ErrInvalidInput</code></td>
+            <td>Parameter spec (phase 5, BOOT): the workflow inputs (one per parameter, with the default values) + step defaults from the graph</td>
+            <td><code>Spec</code> · <code>specOf</code></td>
           </tr>
           <tr>
             <td><code>resume.go</code></td>
@@ -392,11 +397,6 @@
             <td><code>status_test.go</code></td>
             <td><code>mapState</code> unit tests</td>
             <td><code>TestMapState*</code></td>
-          </tr>
-          <tr>
-            <td><code>sanitize_test.go</code></td>
-            <td>Phase 5 sanitization tests: spec → values → payload (string/int, unknown field, no-input)</td>
-            <td><code>TestSanitize*</code></td>
           </tr>
           <tr>
             <td><code>resume_test.go</code></td>
@@ -473,6 +473,11 @@
             <td><code>decide.go</code></td>
             <td>Workflow <code>decide</code> (step + <code>if</code>: left/right)</td>
             <td><code>Decide</code> · <code>init</code></td>
+          </tr>
+          <tr>
+            <td><code>schedule.go</code></td>
+            <td>Workflow <code>schedule</code> (1 step, struct input <code>ScheduleArgs</code>: one form item per field — the phase 5 defaults <code>const defaultName</code> · <code>defaultStartDate</code>)</td>
+            <td><code>Schedule</code> · <code>ScheduleArgs</code> · <code>init</code></td>
           </tr>
           <tr>
             <td><code>steps.go</code></td>
@@ -624,13 +629,13 @@
           </tr>
           <tr>
             <td><code>parse.go</code></td>
-            <td>AST parser: workflow → possible paths + spec (marker: <code>RegisterWorkflow</code>)</td>
-            <td><code>pathsFromSources</code> · <code>buildPaths</code> · <code>walkStmt</code></td>
+            <td>AST parser: workflow → possible paths + spec (markers: <code>RegisterWorkflow</code> + the <code>const default&lt;NamePascal&gt;</code> defaults)</td>
+            <td><code>pathsFromSources</code> · <code>buildPaths</code> · <code>walkStmt</code> · <code>collectConstants</code> · <code>collectTypes</code>
           </tr>
           <tr>
             <td><code>spec.go</code></td>
-            <td>Parameter spec (phase 5): the workflow input (<code>Param</code>) + step defaults (<code>StepSpec</code>) — parsed from the same registrations</td>
-            <td><code>Spec</code> · <code>Param</code> · <code>StepSpec</code> · <code>specsFromRegistrations</code></td>
+            <td>Parameter spec (phase 5): the workflow inputs — one per parameter/field of the struct input (<code>Param</code>, with the default value) + step defaults (<code>StepSpec</code>) — parsed from the same registrations — plus the dispatch sanitization (<code>form values → clean input</code>, the map for a struct input)</td>
+            <td><code>Spec</code> · <code>Param</code> · <code>StepSpec</code> · <code>specsFromRegistrations</code> · <code>inputsOf</code> · <code>(Spec).Sanitize</code> · <code>ErrInvalidInput</code></td>
           </tr>
         </tbody>
       </table>
@@ -643,6 +648,11 @@
             <td><a href="#package-core">core</a> ←</td>
             <td>core.go · <code>SetWorkflowsSource</code> · spec.go · port.go · <code>NewPort</code></td>
             <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>(PathGraph).Of</code> · <code>Port.Graph</code> · <code>graph.Spec</code> · <code>Port.Spec</code></td>
+          </tr>
+          <tr>
+            <td><a href="#package-web">web</a> ←</td>
+            <td>web.go · <code>handleRunDispatch</code> · models.go · <code>workflowPage</code></td>
+            <td><code>graph.Spec</code> (the model) · <code>(Spec).Sanitize</code> (the dispatch sanitization)</td>
           </tr>
         </tbody>
       </table>
@@ -723,7 +733,12 @@
           <tr>
             <td><a href="#package-core">core</a> → (domain)</td>
             <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · models.go · <code>badgeFor</code> · <code>newStepsView</code> · <code>row</code> · render.go · <code>fail</code></td>
-            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrInvalidInput</code> · <code>core.ErrNotResumable</code></td>
+            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code></td>
+          </tr>
+          <tr>
+            <td><a href="#package-graph">core/graph</a> →</td>
+            <td>web.go · <code>handleRunDispatch</code> · models.go · <code>workflowPage</code></td>
+            <td><code>graph.Spec</code> (the model) · <code>(Spec).Sanitize</code> (the dispatch sanitization)</td>
           </tr>
           <tr>
             <td><a href="#package-core">core</a> → (health)</td>

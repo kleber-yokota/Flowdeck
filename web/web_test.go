@@ -28,14 +28,14 @@ func okExecutions(name string) ([]core.Execution, error) { return nil, nil }
 
 // okSpec is the spec stub: a string input and one step with a default.
 func okSpec(name string) (graph.Spec, error) {
-	return graph.Spec{Input: graph.Param{Name: "msg", Type: "string"}}, nil
+	return graph.Spec{Inputs: []graph.Param{{Name: "msg", Type: "string"}}}, nil
 }
 
 // okReady is the ready stub: the core is up.
 func okReady() error { return nil }
 
 // The ACK execution of okEnqueuer: id + queued state + created_at.
-func okEnqueuer(name string, values map[string]string) (core.Execution, error) {
+func okEnqueuer(name string, payload any) (core.Execution, error) {
 	return core.Execution{
 		ID:        "00000000-0000-0000-0000-000000000001",
 		State:     status.Queued,

@@ -7,23 +7,23 @@
   <main class="frame wide">
     <p class="eyebrow"><a class="back" href="/">Workflows</a></p>
     <h1>{{ .Name }}</h1>
-    {{if .Spec}}
-    <!-- Phase 5, DISPLAY: the parameter form on top — the workflow's
-         input (editable) and the steps' default values (the literals of
-         the source, read-only), from the spec the core parsed at boot. -->
+    {{if .Spec.Inputs}}
+    <!-- Phase 5, DISPLAY: the parameter form on top — one item per input
+         (the fields of the struct input, or the single simple parameter),
+         each prefilled with the default value of the source (the const
+         default<NamePascal>), from the spec the core parsed at boot. -->
     <form class="params"
           hx-post="/run/{{ .Name | urlquery }}"
           hx-target="#executions"
           hx-swap="afterbegin">
+      {{range .Spec.Inputs}}
       <label>
-        {{ .Spec.Input.Name }}
-        <input type="text" name="{{ .Spec.Input.Name }}" />
+        {{ .Name }}
+        <input type="text" name="{{ .Name }}" value="{{ .Default }}" />
       </label>
+      {{end}}
       <button type="submit" class="run">Run</button>
     </form>
-    <ul class="step-defaults">
-      {{range .Spec.Steps}}{{if .Default}}<li><span class="step-name">{{ .Name }}</span> <code>{{ .Default }}</code></li>{{end}}{{end}}
-    </ul>
     {{else}}
     <button type="button"
             class="run"
@@ -32,6 +32,11 @@
             hx-swap="afterbegin">
       Run
     </button>
+    {{end}}
+    {{if .Spec}}
+    <ul class="step-defaults">
+      {{range .Spec.Steps}}{{if .Default}}<li><span class="step-name">{{ .Name }}</span> <code>{{ .Default }}</code></li>{{end}}{{end}}
+    </ul>
     {{end}}
     <div class="columns">
       <!-- Left: what was executed — the runs of this workflow, newest first

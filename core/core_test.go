@@ -97,8 +97,11 @@ func TestSpecOfRegisteredWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("core.Spec(decide): %v", err)
 	}
-	if spec.Input.Name != "msg" || spec.Input.Type != "string" {
-		t.Fatalf("decide input: got %+v, want {msg string}", spec.Input)
+	if len(spec.Inputs) != 1 {
+		t.Fatalf("decide inputs: got %v, want 1", spec.Inputs)
+	}
+	if in := spec.Inputs[0]; in.Name != "msg" || in.Type != "string" {
+		t.Fatalf("decide input: got %+v, want {msg string}", in)
 	}
 	wantSteps := map[string]string{"base": "base", "left": "left", "right": "right"}
 	if len(spec.Steps) != len(wantSteps) {
@@ -162,12 +165,12 @@ func TestEnqueueUnknownWorkflow(t *testing.T) {
 	}
 }
 
-// Phase 5, EXECUTE: the dispatch sanitizes the raw form values against
-// the spec (the core) and enqueues the clean input — the run takes the
+// Phase 5, EXECUTE: the dispatch enqueues the clean input (the web
+// sanitized the raw form values against the spec) — the run takes the
 // value (the decide workflow branches on it: base + left, no right).
 func TestEnqueueWithValuesTakesBranch(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("decide", map[string]string{"msg": "left"})
+	ex, err := core.Enqueue("decide", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -181,18 +184,50 @@ func TestEnqueueWithValuesTakesBranch(t *testing.T) {
 	}
 }
 
-// A form value that is not in the spec is rejected (the web maps
-// ErrInvalidInput to a 400).
-func TestEnqueueUnknownField(t *testing.T) {
-	needCore(t)
-	if _, err := core.Enqueue("decide", map[string]string{"msg": "x", "bogus": "y"}); !errors.Is(err, core.ErrInvalidInput) {
-		t.Fatalf("Enqueue: got %v, want ErrInvalidInput", err)
-	}
-}
-
 // A run that fails in a step reaches the failed state, and Detail shows the
 // error and the failed step (phase 3, DETAIL: on failure: error + the failed
 // step).
+// Phase 5, DETAIL: the detail shows the stored input values — the values
+// the run used (the input is written once at enqueue, immutable per
+// workflow_id).
+func TestDetailShowsInputValues(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	d, err := core.Detail(ex.ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if len(d.Inputs) != 1 || d.Inputs[0].Name != "msg" || d.Inputs[0].Value != "FlowDeck" {
+		t.Fatalf("inputs: got %+v, want [{msg FlowDeck}]", d.Inputs)
+	}
+}
+
+// A struct input shows one value per field (the map the core enqueued,
+// stored by DBOS).
+func TestDetailShowsStructInputValues(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("schedule", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	d, err := core.Detail(ex.ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	want := []core.InputValue{{Name: "Name", Value: "Ada"}, {Name: "StartDate", Value: "2026-01-01"}}
+	if len(d.Inputs) != len(want) {
+		t.Fatalf("inputs: got %+v, want %v", d.Inputs, want)
+	}
+	for i, in := range want {
+		if d.Inputs[i] != in {
+			t.Fatalf("input %d: got %+v, want %+v", i, d.Inputs[i], in)
+		}
+	}
+}
+
 func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 	needCore(t)
 	ex, err := core.Enqueue("failing-test", nil)
@@ -241,7 +276,7 @@ func mustStepNames(t *testing.T, ex core.Execution) []string {
 // filter by id — the test database may hold runs from other tests).
 func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("hello-world", map[string]string{"msg": "one"})
+	ex, err := core.Enqueue("hello-world", "one")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

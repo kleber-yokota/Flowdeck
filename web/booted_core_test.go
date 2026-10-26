@@ -69,13 +69,39 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 		t.Fatalf("pipeline graph: %d", code)
 	}
 
+	// The schedule workflow (phase 5, DISPLAY): the form has one item per
+	// input — the fields of the struct input (parsed at boot), each
+	// prefilled with the default value of the source.
+	code, schedule := get(t, srv.URL+"/workflows/schedule")
+	if code != http.StatusOK {
+		t.Fatalf("schedule page: %d", code)
+	}
+	for _, want := range []string{`name="Name"`, `name="StartDate"`, `value="FlowDeck"`, `value="2026-01-01"`} {
+		if !strings.Contains(schedule, want) {
+			t.Fatalf("schedule page does not contain %q", want)
+		}
+	}
+	// Dispatch: the struct input reaches the run (the detail shows the
+	// stored input values, phase 5 DETAIL).
+	resp, err := postForm(t, srv.URL+"/run/schedule", map[string][]string{
+		"Name":      {"Ada"},
+		"StartDate": {"2026-02-01"},
+	})
+	if err != nil {
+		t.Fatalf("dispatch schedule: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dispatch schedule: %d", resp.StatusCode)
+	}
+
 	// An unknown workflow is a clean 404 (the registry is the source).
 	if code, _ := get(t, srv.URL+"/workflows/ghost"); code != http.StatusNotFound {
 		t.Fatalf("ghost: %d, want 404", code)
 	}
 
 	// Dispatch: the ACK row is queued.
-	resp, err := post(t, srv.URL+"/run/pipeline")
+	resp, err = post(t, srv.URL+"/run/pipeline")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
@@ -97,5 +123,46 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 			t.Fatalf("no success badge: %d, %s", code, row)
 		}
 		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// Phase 5, DETAIL: the execution detail shows the stored input values —
+// the values the run used (one line per input of the struct input).
+func TestExecutionDetailShowsInputValues(t *testing.T) {
+	srv := bootedTestServer(t)
+	defer srv.Close()
+
+	resp, err := postForm(t, srv.URL+"/run/schedule", map[string][]string{
+		"Name":      {"Ada"},
+		"StartDate": {"2026-02-01"},
+	})
+	if err != nil {
+		t.Fatalf("dispatch schedule: %v", err)
+	}
+	ack := readAll(t, resp)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dispatch schedule: %d", resp.StatusCode)
+	}
+	id := executionID(t, ack)
+
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		code, row := get(t, srv.URL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no success badge: %d, %s", code, row)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	code, detail := get(t, srv.URL+"/executions/"+id)
+	if code != http.StatusOK {
+		t.Fatalf("detail: %d", code)
+	}
+	for _, want := range []string{"Name", "Ada", "StartDate", "2026-02-01"} {
+		if !strings.Contains(detail, want) {
+			t.Fatalf("detail does not contain %q", want)
+		}
 	}
 }

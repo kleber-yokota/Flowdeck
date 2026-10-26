@@ -27,7 +27,7 @@ func TestResumeUnknownExecution(t *testing.T) {
 // ErrNotResumable (the web maps it to a 400).
 func TestResumeOfNotFailedRun(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("hello-world", map[string]string{"msg": "FlowDeck"})
+	ex, err := core.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestResumeOfQueuedRun(t *testing.T) {
 // then finishes normally.
 func TestResumeOfRunningRun(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", map[string]string{"msg": "running"})
+	ex, err := core.Enqueue("pause", "running")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestResumeOfRunningRun(t *testing.T) {
 // input (the output echoes the dispatch value).
 func TestResumeRestartsFailedRunWithSameInput(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", map[string]string{"msg": "same-input"})
+	ex, err := core.Enqueue("pause", "same-input")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

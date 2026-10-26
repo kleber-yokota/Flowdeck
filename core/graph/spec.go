@@ -1,23 +1,102 @@
 package graph
 
 import (
+	"errors"
+	"fmt"
 	"go/ast"
 	"strconv"
+	"strings"
 )
 
 // Spec is the parameter spec of one workflow, parsed from its source
-// (phase 5, BOOT): the workflow's input and the steps' default values.
+// (phase 5, BOOT): the workflow's inputs (each with its default value,
+// the package constant default<NamePascal>) and the steps' default values.
 type Spec struct {
-	// Input is the workflow's input parameter (name + type).
-	Input Param
+	// Inputs is the workflow's input, in source order: the fields of the
+	// struct input, or the single simple parameter (string, int).
+	Inputs []Param
 	// Steps is the steps in source order, each with its default value.
 	Steps []StepSpec
 }
 
-// Param is one parameter of a workflow's input.
+// ErrInvalidInput is returned by Spec.Sanitize when the form values do not
+// sanitize against the spec (an unknown field, a value that does not
+// convert to the input's type). The web raises it as a 400.
+var ErrInvalidInput = errors.New("graph: invalid input")
+
+// Param is one input of a workflow.
 type Param struct {
-	Name string
-	Type string
+	Name    string
+	Type    string
+	Default string // the default value (const default<NamePascal>), "" when absent
+}
+
+// Sanitize maps the raw form values onto the spec's clean input (phase 5,
+// EXECUTE): no extra fields, each value is trimmed and converts to the
+// input's type, the missing values fall back to the inputs' zero values.
+// The payload is the bare value (a single simple input) or the map of
+// field → value (a struct input). A nil values map is the zero payload
+// (a dispatch without a form).
+func (s Spec) Sanitize(values map[string]string) (any, error) {
+	if values == nil {
+		return nil, nil
+	}
+	if len(s.Inputs) == 0 {
+		if len(values) != 0 {
+			return nil, fmt.Errorf("%w: spec has no input", ErrInvalidInput)
+		}
+		return nil, nil
+	}
+	if err := s.checkFields(values); err != nil {
+		return nil, err
+	}
+	if len(s.Inputs) == 1 {
+		// The form value is trimmed before the conversion to the type.
+		return s.Inputs[0].convert(strings.TrimSpace(values[s.Inputs[0].Name]))
+	}
+	payload := make(map[string]any, len(s.Inputs))
+	for _, in := range s.Inputs {
+		value, err := in.convert(strings.TrimSpace(values[in.Name]))
+		if err != nil {
+			return nil, err
+		}
+		payload[in.Name] = value
+	}
+	return payload, nil
+}
+
+// checkFields rejects a form field that is not one of the spec's inputs.
+func (s Spec) checkFields(values map[string]string) error {
+	known := make(map[string]struct{}, len(s.Inputs))
+	for _, in := range s.Inputs {
+		known[in.Name] = struct{}{}
+	}
+	for field := range values {
+		if _, ok := known[field]; !ok {
+			return fmt.Errorf("%w: unknown field %q", ErrInvalidInput, field)
+		}
+	}
+	return nil
+}
+
+// convert maps one form value to the input's type (the spec only
+// understands string and int).
+func (p Param) convert(value string) (any, error) {
+	switch p.Type {
+	case "string":
+		return value, nil
+	case "int":
+		if value == "" {
+			return 0, nil
+		}
+		n, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %q is not an int", ErrInvalidInput, value)
+		}
+		return n, nil
+	default:
+		return nil, fmt.Errorf("%w: unsupported input type %q", ErrInvalidInput, p.Type)
+	}
 }
 
 // StepSpec is one step: its name and its default value (the literal the
@@ -28,35 +107,67 @@ type StepSpec struct {
 	Default string
 }
 
-// specsFromRegistrations builds the map: registered name → spec (input +
+// specsFromRegistrations builds the map: registered name → spec (inputs +
 // step defaults), the same registrations the paths are built from.
-func specsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDecl) map[string]Spec {
+func specsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDecl,
+	funcPkg map[string]string, pkgConstants map[string]map[string]string,
+	pkgTypes map[string]map[string][]Param) map[string]Spec {
 	out := make(map[string]Spec, len(regs))
 	for name, fnName := range regs {
 		fd := funcs[fnName]
 		if fd == nil || fd.Body == nil {
 			continue // workflow func not defined in this package's source
 		}
-		spec := Spec{Input: inputParam(fd)}
-		spec.Steps = stepSpecs(fd.Body)
+		spec := Spec{
+			Inputs: inputsOf(fd, funcPkg[fnName], pkgConstants, pkgTypes),
+			Steps:  stepSpecs(fd.Body),
+		}
 		out[name] = spec
 	}
 	return out
 }
 
-// inputParam is the workflow's input: the first parameter that is not a
-// context (the DBOS context comes first).
-func inputParam(fd *ast.FuncDecl) Param {
+// inputsOf is the workflow's inputs: the fields of the struct input (the
+// type of the first non-context parameter, declared in the package), or
+// the single simple parameter. Each input carries its default (the
+// package constant default<NamePascal>).
+func inputsOf(fd *ast.FuncDecl, pkg string,
+	pkgConstants map[string]map[string]string,
+	pkgTypes map[string]map[string][]Param) []Param {
 	if fd.Type == nil || fd.Type.Params == nil {
-		return Param{}
+		return nil
 	}
+	consts := pkgConstants[pkg]
 	for _, f := range fd.Type.Params.List {
 		if typeName(f.Type) == "Context" {
 			continue
 		}
-		return Param{Name: paramName(f), Type: typeName(f.Type)}
+		if fields, ok := pkgTypes[pkg][typeName(f.Type)]; ok {
+			out := make([]Param, len(fields))
+			for i, field := range fields {
+				out[i] = Param{Name: field.Name, Type: field.Type,
+					Default: consts["default" + Pascal(field.Name)]}
+			}
+			return out
+		}
+		name := paramName(f)
+		return []Param{{Name: name, Type: typeName(f.Type), Default: consts["default" + Pascal(name)]}}
 	}
-	return Param{}
+	return nil
+}
+
+// Pascal maps the parameter name to the default constant's suffix: msg →
+// Msg, start_date → StartDate.
+func Pascal(s string) string {
+	parts := strings.Split(s, "_")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		out = append(out, strings.ToUpper(part[:1]) + part[1:])
+	}
+	return strings.Join(out, "")
 }
 
 func paramName(field *ast.Field) string {

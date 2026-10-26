@@ -11,6 +11,10 @@ import (
 	"flowdeck/core"
 )
 
+// defaultMsg is the default value of the buy workflow's msg input
+// (phase 5, BOOT: the parser extracts the const default<NamePascal>).
+const defaultMsg = "FlowDeck"
+
 // Registers the buy workflow in the core DBOS context — the context is up
 // since core's init (dependency order: core before this package). With no
 // env (unit tests, tools) the context is nil and the registration is

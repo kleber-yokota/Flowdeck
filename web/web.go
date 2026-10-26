@@ -108,17 +108,34 @@ func New(p core.Port, ready func() error) http.Handler {
 }
 
 // handleRunDispatch is the POST /run/{name} handler (phase 2, dispatch
-// with the form values — phase 5, EXECUTE): the core sanitizes the values
-// against the parsed spec and enqueues; the response is the execution row
-// fragment (the ACK), prepended to the executions list on the workflow
-// page.
+// with the form values — phase 5, EXECUTE): the web sanitizes the values
+// against the workflow's spec (from the core) and forwards the clean input
+// to the core, which enqueues; the response is the execution row fragment
+// (the ACK), prepended to the executions list on the workflow page.
 func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
+	name := r.PathValue("name")
 	values, err := formValues(r)
 	if err != nil {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
-	ex, err := p.Enqueue(r.PathValue("name"), values)
+	payload := any(nil)
+	if values != nil {
+		// Phase 5, EXECUTE: sanitize the values against the spec before
+		// the enqueue (the clean input is what goes on the queue) — the
+		// core trusts the caller.
+		spec, specErr := p.Spec(name)
+		if specErr != nil {
+			fail(w, "spec", specErr)
+			return
+		}
+		payload, err = spec.Sanitize(values)
+		if err != nil {
+			http.Error(w, "invalid input", http.StatusBadRequest)
+			return
+		}
+	}
+	ex, err := p.Enqueue(name, payload)
 	if err != nil {
 		fail(w, "enqueue", err)
 		return
