@@ -22,28 +22,22 @@ func init() {
 	}
 }
 
-// defaultMsg is the default value of the pause workflow's msg input
-// (phase 5, BOOT: the parser extracts the const default<NamePascal>).
-const defaultMsg = "FlowDeck"
-
 // pauseDuration is the fixed pause of the pause step — long enough that a
 // test can cancel the run mid-step and resume it (the resume tests).
-const pauseDuration = 5 * time.Second
+const pauseDuration = 10 * time.Second
 
-// PauseStep returns a step that pauses for pauseDuration and echoes the
-// given message back.
-func PauseStep(msg string) dbos.Step[string] {
-	return func(_ context.Context) (string, error) {
-		time.Sleep(pauseDuration)
-		return "paused: " + msg, nil
-	}
+// pauseStep is the no-input step: a plain named function (no lambda —
+// there is nothing to capture).
+func pauseStep(ctx context.Context) (string, error) {
+	time.Sleep(pauseDuration)
+	return "paused", nil
 }
 
-// Pause is a single-step workflow: pause for a fixed duration and echo the
-// input back — the long run the resume tests cancel and re-run with the
-// same stored input.
-func Pause(ctx dbos.Context, msg string) (string, error) {
-	out, err := dbos.RunAsStep(ctx, PauseStep(msg), dbos.WithStepName("pause"))
+// Pause is a single-step workflow: pause for a fixed duration. The Go SDK
+// requires the workflow's input parameter; the blank parameter is not an
+// input (the parser skips it, the dispatch passes nil).
+func Pause(ctx dbos.Context, _ string) (string, error) {
+	out, err := dbos.RunAsStep(ctx, pauseStep, dbos.WithStepName("pause"))
 	if err != nil {
 		return "", err
 	}

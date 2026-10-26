@@ -58,7 +58,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 // completed step.
 func TestE2EResumeRestartsWithSameInput(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", "same-input")
+	ex, err := core.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -83,14 +83,15 @@ func TestE2EResumeRestartsWithSameInput(t *testing.T) {
 		t.Fatalf("poll to success: %v", err)
 	}
 
-	// The same stored input: the restarted run's output echoes the
-	// dispatch value.
+	// The same stored input: the resume re-enqueues the stored input
+	// (the workflow has no input — it stays nil) and the restarted run's
+	// output is the step's fixed return.
 	var out string
 	if err := readStoredOutput(t, ex.ID, &out); err != nil {
 		t.Fatalf("stored output: %v", err)
 	}
-	if out != "paused: same-input" {
-		t.Fatalf("output: got %q, want %q", out, "paused: same-input")
+	if out != "paused" {
+		t.Fatalf("output: got %q, want %q", out, "paused")
 	}
 }
 

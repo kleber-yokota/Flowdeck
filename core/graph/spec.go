@@ -137,23 +137,32 @@ func inputsOf(fd *ast.FuncDecl, pkg string,
 	if fd.Type == nil || fd.Type.Params == nil {
 		return nil
 	}
-	consts := pkgConstants[pkg]
 	for _, f := range fd.Type.Params.List {
-		if typeName(f.Type) == "Context" {
-			continue
+		if in := paramInput(f, pkgConstants[pkg], pkgTypes[pkg]); in != nil {
+			return in
 		}
-		if fields, ok := pkgTypes[pkg][typeName(f.Type)]; ok {
-			out := make([]Param, len(fields))
-			for i, field := range fields {
-				out[i] = Param{Name: field.Name, Type: field.Type,
-					Default: consts["default" + Pascal(field.Name)]}
-			}
-			return out
-		}
-		name := paramName(f)
-		return []Param{{Name: name, Type: typeName(f.Type), Default: consts["default" + Pascal(name)]}}
 	}
 	return nil
+}
+
+// paramInput is the input of one parameter of the workflow: the struct's
+// fields (a struct input), or the single simple parameter. Context and the
+// blank parameter (the Go SDK's required input argument) are not inputs.
+func paramInput(f *ast.Field, consts map[string]string,
+	types map[string][]Param) []Param {
+	if typeName(f.Type) == "Context" || paramName(f) == "_" {
+		return nil
+	}
+	name := paramName(f)
+	if fields, ok := types[typeName(f.Type)]; ok {
+		out := make([]Param, len(fields))
+		for i, field := range fields {
+			out[i] = Param{Name: field.Name, Type: field.Type,
+				Default: consts["default" + Pascal(field.Name)]}
+		}
+		return out
+	}
+	return []Param{{Name: name, Type: typeName(f.Type), Default: consts["default" + Pascal(name)]}}
 }
 
 // Pascal maps the parameter name to the default constant's suffix: msg →

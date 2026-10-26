@@ -196,6 +196,34 @@ func Schedule(ctx dbos.Context, args ScheduleArgs) error {
 	}
 }
 
+// The blank parameter (the Go SDK requires the workflow's input argument;
+// blank means the workflow has no input) is not an input — the web renders
+// no form.
+func TestSpecBlankParamIsNotAnInput(t *testing.T) {
+	specs, err := parseSpecs(map[string][]byte{
+		"wf.go": []byte(`package wf
+
+func init() {
+	dbos.RegisterWorkflow(ctx, Pause, dbos.WithWorkflowName("pause"))
+}
+
+func Pause(ctx dbos.Context, _ string) error {
+	return nil
+}
+`),
+	})
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	spec, ok := specs["pause"]
+	if !ok {
+		t.Fatal("spec: workflow pause not found")
+	}
+	if len(spec.Inputs) != 0 {
+		t.Fatalf("inputs: got %v, want none", spec.Inputs)
+	}
+}
+
 // A workflow without an input parameter has no inputs (the web renders
 // no form).
 func TestSpecNoInput(t *testing.T) {

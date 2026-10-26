@@ -48,7 +48,7 @@ func TestResumeOfQueuedRun(t *testing.T) {
 	if _, err := dbos.RegisterQueue(core.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := core.Ctx().Enqueue(core.Ctx(), "frozen", "pause", "queued")
+	h, err := core.Ctx().Enqueue(core.Ctx(), "frozen", "pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestResumeOfQueuedRun(t *testing.T) {
 // then finishes normally.
 func TestResumeOfRunningRun(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", "running")
+	ex, err := core.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestResumeOfRunningRun(t *testing.T) {
 // input (the output echoes the dispatch value).
 func TestResumeRestartsFailedRunWithSameInput(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", "same-input")
+	ex, err := core.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -123,8 +123,9 @@ func TestResumeRestartsFailedRunWithSameInput(t *testing.T) {
 		t.Fatalf("poll to success: %v", err)
 	}
 
-	// The same stored input: the restarted run's output echoes the
-	// dispatch value (the resume never changes the stored input).
+	// The same stored input: the resume re-enqueues the stored input
+	// (the workflow has no input — it stays nil) and the restarted run's
+	// output is the step's fixed return.
 	statuses, err := dbos.ListWorkflows(core.Ctx(),
 		dbos.WithFilterWorkflowIDs(ex.ID),
 		dbos.WithFilterLoadInput(false),
@@ -141,7 +142,7 @@ func TestResumeRestartsFailedRunWithSameInput(t *testing.T) {
 	if err := json.Unmarshal([]byte(statuses[0].Output.(string)), &out); err != nil {
 		t.Fatalf("unmarshal output: %v", err)
 	}
-	if out != "paused: same-input" {
-		t.Fatalf("output: got %q, want %q", out, "paused: same-input")
+	if out != "paused" {
+		t.Fatalf("output: got %q, want %q", out, "paused")
 	}
 }

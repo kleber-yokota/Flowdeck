@@ -129,6 +129,35 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	}
 }
 
+// Phase 5, DISPLAY: the no-input workflow (pause — the blank parameter of
+// the Go SDK) has no form: the page has the plain Run button, and the
+// dispatch (an empty POST) enqueues with the zero payload.
+func TestPausePageHasNoFormAndDispatches(t *testing.T) {
+	srv := bootedTestServer(t)
+	defer srv.Close()
+
+	code, body := get(t, srv.URL+"/workflows/pause")
+	if code != http.StatusOK {
+		t.Fatalf("pause page: %d", code)
+	}
+	if strings.Contains(body, `<form`) {
+		t.Fatalf("pause page has a form (it has no input)")
+	}
+	if !strings.Contains(body, `hx-post="/run/pause"`) {
+		t.Fatalf("pause page without the Run button")
+	}
+
+	resp, err := post(t, srv.URL+"/run/pause")
+	if err != nil {
+		t.Fatalf("dispatch pause: %v", err)
+	}
+	defer resp.Body.Close()
+	ack := readAll(t, resp)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(ack, `class="badge queued"`) {
+		t.Fatalf("dispatch pause: %d, %s", resp.StatusCode, ack)
+	}
+}
+
 // Phase 5, DETAIL: the execution detail shows the stored input values —
 // the values the run used (one line per input of the struct input).
 func TestExecutionDetailShowsInputValues(t *testing.T) {
