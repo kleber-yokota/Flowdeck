@@ -59,6 +59,7 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 
 ## Files
 
+- `handoff-diagrams.md` (pending adjustments discussed but not yet applied — not part of the spec)
 - `css/` — one stylesheet per HTML file (`css/<name>.css`; `package-map.css` is exclusive)
 - `architecture.html`
 - `workflow-states.html`
