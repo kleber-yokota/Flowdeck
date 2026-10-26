@@ -3,6 +3,9 @@
 Style: dark metallic skin (background `#0b0c0e`, steel borders, orange highlight) with the status colors
 `queued` (light blue), `running` (orange), `success` (green) and `failed` (red).
 
+**Reading rule**: open only the HTML file(s) your task actually needs — route via the phase sections below
+or `package-map.html` (`#tasks`); do not read the other `.html` files without a reason or unless explicitly asked.
+
 ## Phase 1 — Dynamic listing
 
 - The browser requests the page; the core lists the registered workflows (registry, **zero hardcoding in the web**);
