@@ -129,11 +129,12 @@ a.name { color: inherit; text-decoration: none; }
   margin: 0 0 0.5rem;
 }
 
+/* Phase 5, DISPLAY: one form item per input, as key: value — the input
+   name is the key (its own case, no uppercase), the prefilled default
+   value is the value. */
 .params label {
   font-family: ui-monospace, "Geist Mono", monospace;
   font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--soft);
   display: flex;
   align-items: center;

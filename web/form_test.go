@@ -9,9 +9,10 @@ import (
 )
 
 // Phase 5, DISPLAY: the top of the workflow page is the parameter form —
-// the workflow's input (editable) and the steps' default values (the
-// literals of the source, read-only), from the spec the core parsed at
-// boot.
+// one item per input, as key: value (the input name is the key, the
+// default value of the source is the prefilled value), and the steps'
+// default values (the literals of the source, read-only), from the spec
+// the core parsed at boot.
 func TestWorkflowPageShowsParameters(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
@@ -24,6 +25,9 @@ func TestWorkflowPageShowsParameters(t *testing.T) {
 		`<form`,
 		`hx-post="/run/pipeline"`,
 		`name="msg"`,
+		// key: value — the input name and the prefilled default
+		`msg:`,
+		`value="FlowDeck"`,
 		// The steps' default values, read-only (the literals of the source)
 		`<code>fetch</code>`,
 		`<code>parse</code>`,

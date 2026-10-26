@@ -76,7 +76,11 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("schedule page: %d", code)
 	}
-	for _, want := range []string{`name="Name"`, `name="StartDate"`, `value="FlowDeck"`, `value="2026-01-01"`} {
+	for _, want := range []string{
+		`name="Name"`, `name="StartDate"`,
+		`Name:`, `StartDate:`,
+		`value="FlowDeck"`, `value="2026-01-01"`,
+	} {
 		if !strings.Contains(schedule, want) {
 			t.Fatalf("schedule page does not contain %q", want)
 		}

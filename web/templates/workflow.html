@@ -17,8 +17,10 @@
           hx-target="#executions"
           hx-swap="afterbegin">
       {{range .Spec.Inputs}}
+      <!-- key: value — the input name is the key, the default value of
+           the source is the prefilled value -->
       <label>
-        {{ .Name }}
+        {{ .Name }}:
         <input type="text" name="{{ .Name }}" value="{{ .Default }}" />
       </label>
       {{end}}
