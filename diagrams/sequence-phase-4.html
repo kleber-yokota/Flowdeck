@@ -6,34 +6,13 @@
 <title>FlowDeck · Sequence · Phase 4</title>
 <meta name="description" content="FlowDeck · Sequence · Phase 4 — Step 1: boot (AST parser builds the map of possible paths); Step 2: overview GET /workflows/{name} (all possible paths from the map, rendered as an SVG graph); Step 3: execution GET /executions/{id} (the executed path as an SVG graph, steps ordered by step_id, polled every 2s).">
 <meta name="keywords" content="FlowDeck, sequence diagram, Phase 4, workflow, execution, steps, step_id, possible paths, executed path, AST, go/parser, DBOS, HTMX, Postgres 18">
-<style>
-  html, body { background: #0b0c0e; margin: 0; }
-  body {
-    color: #e8e6e1;
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  :root { color-scheme: dark; }
-  .diagram-container {
-    max-width: 1240px;
-    width: 100%;
-    margin: 0 auto;
-    overflow-x: auto;
-    padding: 40px 24px;
-    box-sizing: border-box;
-  }
-  svg {
-    width: 100%;
-    min-width: 1040px;
-    display: block;
-  }
-</style>
+<link rel="stylesheet" href="css/sequence-phase-4.css">
 </head>
 <body>
   <main class="diagram-container">
-    <svg viewBox="0 0 1160 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="fase4Title fase4Desc">
-      <title id="fase4Title">FlowDeck · Sequence · Phase 4 — Step 1 boot (AST), Step 2 overview (all possible paths), Step 3 execution (executed path)</title>
-      <desc id="fase4Desc">Phase 4 shows three steps separated by lines. Step 1 (boot): the core parses its own Go source with go/parser and go/ast, extracts each workflow's RunAsStep steps and surrounding if branches, and builds an in-memory map of workflow name to possible paths. This runs once at boot. Step 2 (overview): the browser does a GET /workflows/{name}, the web calls PATHS(name) on the core, which returns the map of all possible paths without touching Postgres, and the browser renders the paths as an SVG graph. Step 3 (execution): the browser does a GET /executions/{id}, the web calls STEPS(id) on the core, which queries Postgres for the executed step rows ordered by step_id, and the browser renders the executed path as an SVG graph — the single path that ran, one node per executed step, colored by step state. The execution view is polled every 2s until terminal. The executed path comes from Postgres, separate from the AST map.</desc>
+    <svg viewBox="0 0 1160 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="phase4Title phase4Desc">
+      <title id="phase4Title">FlowDeck · Sequence · Phase 4 — Step 1 boot (AST), Step 2 overview (all possible paths), Step 3 execution (executed path)</title>
+      <desc id="phase4Desc">Phase 4 shows three steps separated by lines. Step 1 (boot): the core parses its own Go source with go/parser and go/ast, extracts each workflow's RunAsStep steps and surrounding if branches, and builds an in-memory map of workflow name to possible paths. This runs once at boot. Step 2 (overview): the browser does a GET /workflows/{name}, the web calls PATHS(name) on the core, which returns the map of all possible paths without touching Postgres, and the browser renders the paths as an SVG graph. Step 3 (execution): the browser does a GET /executions/{id}, the web calls STEPS(id) on the core, which queries Postgres for the executed step rows ordered by step_id, and the browser renders the executed path as an SVG graph — the single path that ran, one node per executed step, colored by step state. The execution view is polled every 2s until terminal. The executed path comes from Postgres, separate from the AST map.</desc>
 
       <defs>
         <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
@@ -49,23 +28,6 @@
         <marker id="mOrange" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" fill="#ff9142"/>
         </marker>
-        <style>
-          text { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
-          .step { font-size: 10px; fill: #ff9142; font-weight: 700; letter-spacing: 0.14em; }
-          .sub { font-size: 8px; fill: #b8bcc4; }
-          .label { font-size: 8px; fill: #e8e6e1; font-family: 'Geist Mono', ui-monospace, monospace; }
-          .note { font-size: 8px; fill: #e8e6e1; font-family: 'Geist Mono', ui-monospace, monospace; }
-          .actor { font-size: 11px; fill: #e8e6e1; font-weight: 600; }
-          .actor-sub { font-size: 8px; fill: #8f96a3; font-family: 'Geist Mono', ui-monospace, monospace; }
-          .actor-tab { font-size: 8px; fill: #8f96a3; font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: 0.12em; }
-          .legend { font-size: 8px; fill: #8f96a3; font-family: 'Geist Mono', ui-monospace, monospace; }
-          .sep { stroke: #b8bcc4; stroke-width: 0.9; }
-          .lifeline { stroke: #8f96a3; stroke-width: 0.9; stroke-dasharray: 4 4; }
-          .msg { stroke: #b8bcc4; stroke-width: 1.2; }
-          .msg-blue { stroke: #7cc0ff; stroke-width: 1.2; }
-          .ret { stroke: #ff9142; stroke-width: 1.1; stroke-dasharray: 5 3; }
-          .mask { fill: #101215; }
-        </style>
       </defs>
 
       <rect x="0" y="0" width="1160" height="840" fill="#0b0c0e"/>

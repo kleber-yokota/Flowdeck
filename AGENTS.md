@@ -4,7 +4,7 @@ Guidelines for code agents working in this repository.
 
 ## The project
 
-FlowDeck is a durable workflow orchestration dashboard. **A single Go service**: the web layer (HTMX, `:8080`) boots the DBOS core and exposes durable workflows on Postgres 18 (`:5432`). All design (architecture, states, sequences) is documented in `diagrams/` — read `diagrams/README.md` and the `.html` files before implementing.
+FlowDeck is a durable workflow orchestration dashboard. **A single Go service**: the web layer (HTMX, `:8080`) boots the DBOS core and exposes durable workflows on Postgres 18 (`:5432`). All design (architecture, states, sequences) is documented in `diagrams/` — read `diagrams/README.md` before implementing; open the `.html` files as needed for your task (see its reading rule).
 
 ## Stack
 
@@ -51,7 +51,7 @@ Visual theme: dark metallic background `#0b0c0e`, steel borders (`#b8bcc4`/`#8f9
 
 ## Code map (where to read before editing)
 
-- Package map (files, functions, contacts) + task→files routing: the sections of `diagrams/mapa-pacotes.html` — start with `#tasks` (where to start per task) and `#contacts` (where the modules touch: per edge, file/function + identifiers), then the package sections (`#package-main`, `#package-core`, `#package-workflows`, `#package-gen`, `#package-status`, `#package-graph`, `#package-web`, `#package-webgraph`, `#package-dbos`), each a table: file | responsibility | functions. The SVG in the same file is the human view of the same data. It is the single source for the package/file layout — do not restate it here.
+- Package map (files, functions, contacts) + task→files routing: the sections of `diagrams/package-map.html` — start with `#tasks` (where to start per task) and `#contacts` (where the modules touch: per edge, file/function + identifiers), then the package sections (`#package-main`, `#package-core`, `#package-workflows`, `#package-gen`, `#package-status`, `#package-graph`, `#package-web`, `#package-webgraph`, `#package-dbos`), each a table: file | responsibility | functions. The SVG in the same file is the human view of the same data. It is the single source for the package/file layout — do not restate it here.
 
 ## Implementation rule (always apply)
 
