@@ -35,11 +35,6 @@
       Run
     </button>
     {{end}}
-    {{if .Spec}}
-    <ul class="step-defaults">
-      {{range .Spec.Steps}}{{if .Default}}<li><span class="step-name">{{ .Name }}</span> <code>{{ .Default }}</code></li>{{end}}{{end}}
-    </ul>
-    {{end}}
     <div class="columns">
       <!-- Left: what was executed — the runs of this workflow, newest first
            (phase 3, LIST). Each row links to the execution detail; the badge

@@ -49,8 +49,7 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	if !strings.Contains(decide, `<svg`) {
 		t.Fatalf("decide page without the generated graph")
 	}
-	// The graph column only: the step-defaults list above also names the
-	// steps (phase 5, DISPLAY).
+	// The graph column only (the executions list above is out of scope).
 	graphStart := strings.Index(decide, `<div class="graph">`)
 	if graphStart < 0 {
 		t.Fatalf("decide page without the graph column")

@@ -10,9 +10,8 @@ import (
 
 // Phase 5, DISPLAY: the top of the workflow page is the parameter form —
 // one item per input, as key: value (the input name is the key, the
-// default value of the source is the prefilled value), and the steps'
-// default values (the literals of the source, read-only), from the spec
-// the core parsed at boot.
+// default value of the source is the prefilled value), from the spec the
+// core parsed at boot.
 func TestWorkflowPageShowsParameters(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
@@ -28,11 +27,6 @@ func TestWorkflowPageShowsParameters(t *testing.T) {
 		// key: value — the input name and the prefilled default
 		`msg:`,
 		`value="FlowDeck"`,
-		// The steps' default values, read-only (the literals of the source)
-		`<code>fetch</code>`,
-		`<code>parse</code>`,
-		`<code>transform</code>`,
-		`<code>store</code>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q", want)
@@ -43,6 +37,24 @@ func TestWorkflowPageShowsParameters(t *testing.T) {
 	list := strings.Index(body, `id="executions"`)
 	if form < 0 || list < 0 || form > list {
 		t.Fatalf("form not on top: form %d, list %d", form, list)
+	}
+}
+
+// Phase 5, DISPLAY: the workflow page has no step-defaults list under the
+// form — the chips duplicated the step name and the literal (the same
+// word twice: "fetch fetch" on the pipeline page).
+func TestWorkflowPageHasNoStepDefaultsList(t *testing.T) {
+	srv := bootedTestServer(t)
+	defer srv.Close()
+
+	for _, name := range []string{"pipeline", "decide"} {
+		code, body := get(t, srv.URL+"/workflows/"+name)
+		if code != http.StatusOK {
+			t.Fatalf("%s page: %d", name, code)
+		}
+		if strings.Contains(body, `class="step-defaults"`) || strings.Contains(body, `<span class="step-name">`) {
+			t.Errorf("%s page carries the step-defaults list", name)
+		}
 	}
 }
 
