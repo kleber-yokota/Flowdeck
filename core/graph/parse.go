@@ -9,35 +9,123 @@ import (
 	"strings"
 )
 
-// pathsFromSources parses the given Go source files and builds the map:
-// workflow name → all possible paths. The marker is the per-file DBOS
-// registration RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) —
-// matched by function name, so any import alias of the dbos package is
-// found. A RunAsStep call adds a step to every open path; an if forks the
-// paths (taken branch vs not-taken branch).
-func pathsFromSources(files map[string][]byte) (map[string][][]string, error) {
+// pathsFromSources parses the given Go source files and builds the maps:
+// workflow name → all possible paths, and workflow name → parameter spec
+// (input + step defaults). The marker is the per-file DBOS registration
+// RegisterWorkflow(ctx, Func, WithWorkflowName("name"), ...) — matched by
+// function name, so any import alias of the dbos package is found. A
+// RunAsStep call adds a step to every open path; an if forks the paths
+// (taken branch vs not-taken branch).
+func pathsFromSources(files map[string][]byte) (map[string][][]string, map[string]Spec, error) {
 	fset := token.NewFileSet()
 	funcs := map[string]*ast.FuncDecl{}
 	regs := map[string]string{} // registered name → workflow func name
+	funcPkg := map[string]string{}
+	pkgConstants := map[string]map[string]string{}
+	pkgTypes := map[string]map[string][]Param{}
 	for name, data := range files {
 		file, err := parser.ParseFile(fset, name, data, 0)
 		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", name, err)
+			return nil, nil, fmt.Errorf("parse %s: %w", name, err)
 		}
-		collectFuncs(file, funcs)
+		collectFuncs(file, funcs, funcPkg)
 		collectRegistrations(file, regs)
+		collectConstants(file, pkgConstants)
+		collectTypes(file, pkgTypes)
 	}
-	return pathsFromRegistrations(regs, funcs), nil
+	return pathsFromRegistrations(regs, funcs),
+		specsFromRegistrations(regs, funcs, funcPkg, pkgConstants, pkgTypes), nil
 }
 
-// collectFuncs records the file's function declarations — the workflow
-// func bodies are walked later, by possiblePaths.
-func collectFuncs(file *ast.File, funcs map[string]*ast.FuncDecl) {
+// collectFuncs records the file's function declarations (the workflow
+// func bodies are walked later, by possiblePaths) and the package each
+// func is declared in.
+func collectFuncs(file *ast.File, funcs map[string]*ast.FuncDecl, funcPkg map[string]string) {
 	for _, decl := range file.Decls {
 		if fd, ok := decl.(*ast.FuncDecl); ok {
 			funcs[fd.Name.Name] = fd
+			funcPkg[fd.Name.Name] = file.Name.Name
 		}
 	}
+}
+
+// collectConstants records the package's constant values (name → literal
+// value): the input defaults (const default<NamePascal> = "...").
+func collectConstants(file *ast.File, consts map[string]map[string]string) {
+	for _, decl := range file.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.CONST {
+			continue
+		}
+		if consts[file.Name.Name] == nil {
+			consts[file.Name.Name] = map[string]string{}
+		}
+		for _, spec := range gd.Specs {
+			addConstant(file, spec, consts)
+		}
+	}
+}
+
+// addConstant records the literal value of one const spec (a string:
+// without the quotes; a number: as written) — non-literal constants are
+// skipped.
+func addConstant(file *ast.File, spec ast.Spec, consts map[string]map[string]string) {
+	vs, ok := spec.(*ast.ValueSpec)
+	if !ok || len(vs.Names) == 0 || len(vs.Values) == 0 {
+		return
+	}
+	lit, ok := vs.Values[0].(*ast.BasicLit)
+	if !ok {
+		return
+	}
+	value := lit.Value
+	if lit.Kind == token.STRING { // a string literal: without the quotes
+		value, _ = strconv.Unquote(lit.Value)
+	}
+	for _, name := range vs.Names {
+		consts[file.Name.Name][name.Name] = value
+	}
+}
+
+// collectTypes records the package's struct types (type name → the
+// fields, in source order): the fields of a struct input are the
+// workflow's inputs.
+func collectTypes(file *ast.File, types map[string]map[string][]Param) {
+	for _, decl := range file.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			if ts, ok := spec.(*ast.TypeSpec); ok {
+				addType(file, ts, types)
+			}
+		}
+	}
+}
+
+func addType(file *ast.File, ts *ast.TypeSpec, types map[string]map[string][]Param) {
+	if types[file.Name.Name] == nil {
+		types[file.Name.Name] = map[string][]Param{}
+	}
+	types[file.Name.Name][ts.Name.Name] = structFields(ts.Type)
+}
+
+// structFields is the fields of a struct type (name + type, in source
+// order) — an embedded field has no name and is not an input; a non-struct
+// type has no fields.
+func structFields(expr ast.Expr) []Param {
+	st, ok := expr.(*ast.StructType)
+	if !ok {
+		return nil
+	}
+	var fields []Param
+	for _, f := range st.Fields.List {
+		for _, name := range f.Names {
+			fields = append(fields, Param{Name: name.Name, Type: typeName(f.Type)})
+		}
+	}
+	return fields
 }
 
 // collectRegistrations records the per-file DBOS registrations:

@@ -8,9 +8,20 @@
     <p class="eyebrow"><a class="back" href="/workflows/{{ .Name | urlquery }}">{{ .Name }}</a></p>
     <h1 class="execution-id">{{ .ID }}</h1>
     <!-- Badge state (phase 3, POLLING): polls GET /status every 2s while the
-         run is live; a terminal badge is static and the poll stops -->
-    {{template "badge.html" .Badge}}
+         run is live; a terminal badge is static and the poll stops. The badge
+         wrapper is the target of the resume ACK (phase 5, RESUME). -->
+    <div id="badge">{{template "badge.html" .Badge}}</div>
     <p class="first-run">first execution: {{ .CreatedAt.Format "02/01/2006 15:04" }}</p>
+    {{if .Inputs}}
+    <!-- Phase 5, DETAIL: the stored input values — the values the run
+         used (the input is written once at enqueue, immutable per
+         workflow_id). -->
+    <ul class="input-values">
+{{range .Inputs}}
+      <li><code>{{ .Name }}</code>: {{ .Value }}</li>
+{{end}}
+    </ul>
+    {{end}}
     <p class="attempts-count">retries: {{ len .Retries }}</p>
 {{if .Retries}}
     <ul class="attempts">
@@ -18,6 +29,18 @@
       <li class="attempt {{ .Class }}">retry {{ .Number }} → {{ .Label }}</li>
 {{end}}
     </ul>
+{{end}}
+{{if eq (printf "%s" .State) "error"}}
+    <!-- Phase 5, RESUME: a failed run can be resumed by id — the
+         re-enqueue carries the same stored input; the ACK badge replaces
+         this badge (the 2s poll takes over). -->
+    <button type="button"
+            class="run"
+            hx-post="/resume/{{ .ID }}"
+            hx-target="#badge"
+            hx-swap="innerHTML">
+      Resume
+    </button>
 {{end}}
 {{if .Error}}
     <section class="failure">

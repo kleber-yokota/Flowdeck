@@ -26,6 +26,11 @@ func emptyLister() []core.Workflow { return nil }
 
 func okExecutions(name string) ([]core.Execution, error) { return nil, nil }
 
+// okSpec is the spec stub: a string input and one step with a default.
+func okSpec(name string) (graph.Spec, error) {
+	return graph.Spec{Inputs: []graph.Param{{Name: "msg", Type: "string"}}}, nil
+}
+
 // okReady is the ready stub: the core is up.
 func okReady() error { return nil }
 
@@ -52,6 +57,11 @@ func okDetail(id string) (core.ExecutionDetail, error) {
 	return core.ExecutionDetail{}, core.ErrUnknownExecution
 }
 
+// okResumer is the resume stub: the ACK is the same id, enqueued again.
+func okResumer(id string) (core.Execution, error) {
+	return core.Execution{ID: id, State: status.Queued}, nil
+}
+
 // testPort builds the base stub port — the shared stubs above (and the
 // empty graph); each test overrides only the core operation under test.
 func testPort() core.Port {
@@ -59,10 +69,12 @@ func testPort() core.Port {
 		List:       emptyLister,
 		Graph:      &graph.PathGraph{},
 		Executions: okExecutions,
+		Spec:       okSpec,
 		Enqueue:    okEnqueuer,
 		Status:     okStatuser,
 		Steps:      okSteps,
 		Detail:     okDetail,
+		Resume:     okResumer,
 	}
 }
 

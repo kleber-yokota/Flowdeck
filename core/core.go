@@ -236,7 +236,9 @@ func List() []Workflow {
 // the new execution (id + state + created_at) — the dispatch ACK: the web
 // renders the "queued" row with it, and nothing is executed by the
 // webserver.
-// A nil payload runs the workflow with its zero payload (the SDK decodes
+// The payload is the clean input (the web sanitized it against the
+// workflow's spec before the call — the core trusts the caller); a nil
+// payload is the zero payload (a dispatch without a form — the SDK decodes
 // the stored "null" back into the zero value at run time).
 func Enqueue(name string, payload any) (Execution, error) {
 	c, err := ctxOrErr()

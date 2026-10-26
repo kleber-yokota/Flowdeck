@@ -15,6 +15,7 @@ import (
 // .env.test), this package's inits registered the workflows, and the
 // TestMain starts the executor once — the same lifecycle as production.
 func TestMain(m *testing.M) {
+	core.SetWorkflowsSource(os.DirFS("."))
 	if c := core.Ctx(); c != nil {
 		if err := core.Launch(); err != nil {
 			fmt.Fprintln(os.Stderr, "workflows_test: launch:", err)
@@ -33,7 +34,8 @@ func needCore(t *testing.T) {
 	}
 }
 
-// runToSuccess enqueues the workflow and polls until the run is terminal.
+// runToSuccess enqueues the workflow with the clean input (the values the
+// web sanitized against the spec) and polls until the run is terminal.
 func runToSuccess(t *testing.T, name string, payload any) core.Execution {
 	t.Helper()
 	ex, err := core.Enqueue(name, payload)

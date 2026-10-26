@@ -47,7 +47,7 @@ Visual theme: dark metallic background `#0b0c0e`, steel borders (`#b8bcc4`/`#8f9
 
 - **Phase 1 — dynamic listing**: HTMX `GET` → core lists the registry workflows → UI renders the list.
 - **Phase 2 — dispatch and track**: HTMX `POST` → enqueue on Postgres (ACK) → DBOS runs the job and updates the status → the 2s polling updates the badge through the four colors.
-- **Phase 3 — runs of a workflow**: `GET /workflows/{name}` lists all executions (workflow_id + badge); clicking the workflow_id → detail: status, retries, status of each retry — on failure: error + the failed step.
+- **Phase 3 — runs of a workflow**: `GET /workflows/{name}` lists all executions (workflow_id + badge); clicking the workflow_id → detail: status, retries, the stored input values, status of each retry — on failure: error + the failed step.
 
 ## Code map (where to read before editing)
 

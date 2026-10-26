@@ -7,4 +7,5 @@ package workflows
 
 import (
 	_ "flowdeck/workflows/buy"
+	_ "flowdeck/workflows/pause"
 )

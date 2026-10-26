@@ -11,14 +11,17 @@ import (
 )
 
 // fail maps a core error onto the HTTP error response: 404 for a workflow
-// or execution the core does not know, 503 while the core is not launched,
-// and a logged 500 for anything unexpected.
+// or execution the core does not know, 400 for a run the core rejects
+// (a run that cannot be resumed), 503 while the core is not launched, and
+// a logged 500 for anything unexpected.
 func fail(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, core.ErrUnknownWorkflow):
 		http.Error(w, "unknown workflow", http.StatusNotFound)
 	case errors.Is(err, core.ErrUnknownExecution):
 		http.Error(w, "unknown execution", http.StatusNotFound)
+	case errors.Is(err, core.ErrNotResumable):
+		http.Error(w, "run cannot be resumed", http.StatusBadRequest)
 	case errors.Is(err, core.ErrNotLaunched):
 		http.Error(w, "core not ready", http.StatusServiceUnavailable)
 	default:

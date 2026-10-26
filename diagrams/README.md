@@ -28,6 +28,18 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 - the `decide` page shows the generated SVG graph (overview) and, after dispatch, the SVG graph of the steps that ran (executed path);
 - no hardcoded SVG: the parser finds the workflow and generates the full graph (steps, branches, final state).
 
+## Phase 5 — Parameters, edit and stored input
+
+- The core parses the workflow source at boot (AST) and extracts each workflow's
+  input and the steps' default values — the source is the single source of truth;
+- `GET /workflows/{name}` renders the input + defaults at the **top** of the page;
+  the user edits the values and clicks dispatch (`POST /run/{name}` with the value);
+  the web forwards the raw values and the **core** sanitizes them against the
+  parsed spec (type, limits, default fallback) before the enqueue;
+- the clean value is written to Postgres **once** at enqueue (`workflow_input`); on a
+  failed run, `POST /resume/{id}` re-enqueues by id and re-reads the same stored
+  input — the input per workflow_id is immutable (editing only affects new dispatches).
+
 ## Package map (navigable)
 
 - Ranked package graph (7 nodes, 9 edges, zero cycles): `main` → `web` → `core` + `web/graph`
@@ -47,6 +59,7 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 
 ## Files
 
+- `handoff-diagrams.md` (pending adjustments discussed but not yet applied — not part of the spec)
 - `css/` — one stylesheet per HTML file (`css/<name>.css`; `package-map.css` is exclusive)
 - `architecture.html`
 - `workflow-states.html`
@@ -55,3 +68,4 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 - `sequence-phase-2.html` (dispatch, run, track)
 - `sequence-phase-3.html` (runs of a workflow)
 - `sequence-phase-4.html` (paths graph)
+- `sequence-phase-5.html` (parameters, edit, stored input)

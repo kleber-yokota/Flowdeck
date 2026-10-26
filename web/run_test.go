@@ -6,10 +6,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/graph"
 )
 
 // POST /run is the dispatch (phase 2): it enqueues in the core and returns
@@ -51,6 +53,68 @@ func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
 	}
 	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
+	}
+}
+
+// Phase 5, EXECUTE: the web sanitizes the values against the spec before
+// the enqueue — a field that is not in the spec is a clean 400.
+func TestRunUnknownFieldIs400(t *testing.T) {
+	d := testPort()
+	srv := httptest.NewServer(New(d, okReady))
+	defer srv.Close()
+
+	resp, err := postForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"x"}, "bogus": {"y"}})
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
+// Phase 5, EXECUTE: a value that does not convert to the input's type is a
+// clean 400 (the spec says int, the form posts "x").
+func TestRunBadIntIs400(t *testing.T) {
+	d := testPort()
+	d.Spec = func(name string) (graph.Spec, error) {
+		return graph.Spec{Inputs: []graph.Param{{Name: "n", Type: "int"}}}, nil
+	}
+	srv := httptest.NewServer(New(d, okReady))
+	defer srv.Close()
+
+	resp, err := postForm(t, srv.URL+"/run/wf-alpha", url.Values{"n": {"x"}})
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
+// Phase 5, EXECUTE: the web forwards the clean values to the core (the
+// sanitized input, not the raw form map) — the ACK row is rendered.
+func TestRunForwardsCleanValues(t *testing.T) {
+	var payload any
+	d := testPort()
+	d.Enqueue = func(name string, p any) (core.Execution, error) {
+		payload = p
+		return okEnqueuer(name, p)
+	}
+	srv := httptest.NewServer(New(d, okReady))
+	defer srv.Close()
+
+	resp, err := postForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"left"}})
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusOK)
+	}
+	if payload != "left" {
+		t.Fatalf("payload: got %v, want the clean value \"left\"", payload)
 	}
 }
 

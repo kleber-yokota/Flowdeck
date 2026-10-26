@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	corespec "flowdeck/core/graph"
 	"flowdeck/core/status"
 	"flowdeck/web/graph"
 )
@@ -15,12 +16,15 @@ type indexPage struct {
 	Title string
 }
 
-// workflowPage is the data for the per-workflow full page: the dispatch
-// button, the generated paths graph (phase 4, STEP 2, overview — the boot
-// map) and the runs of the workflow (phase 3, LIST), newest first.
+// workflowPage is the data for the per-workflow full page: the parameter
+// form on top (phase 5, DISPLAY — the spec the core parsed from the source
+// at boot; nil renders the plain dispatch button), the generated paths
+// graph (phase 4, STEP 2, overview — the boot map) and the runs of the
+// workflow (phase 3, LIST), newest first.
 type workflowPage struct {
 	Title      string
 	Name       string
+	Spec       *corespec.Spec
 	Graph      template.HTML
 	Executions []badge
 }

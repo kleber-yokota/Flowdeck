@@ -11,12 +11,16 @@ import (
 	"strings"
 )
 
-// PathGraph is the possible-paths graph: workflow name → paths.
+// PathGraph is the possible-paths graph: workflow name → paths, plus the
+// parameter spec of each workflow (phase 5, BOOT).
 type PathGraph struct {
 	// ByName is the built graph: workflow name → paths. Read-only after
 	// the build — the web holds the graph through the Port and only
 	// reads it via Of.
 	ByName map[string][][]string
+	// Specs is the built spec map: workflow name → parameter spec
+	// (input + step defaults). Read-only after the build.
+	Specs map[string]Spec
 }
 
 // New builds the graph from the embedded source of the workflow packages —
@@ -42,11 +46,11 @@ func New(fsys fs.FS) (*PathGraph, error) {
 	if walkErr != nil {
 		return nil, walkErr
 	}
-	byName, err := pathsFromSources(files)
+	byName, specs, err := pathsFromSources(files)
 	if err != nil {
 		return nil, err
 	}
-	return &PathGraph{ByName: byName}, nil
+	return &PathGraph{ByName: byName, Specs: specs}, nil
 }
 
 // Of returns the possible paths of the named workflow, or nil when the
