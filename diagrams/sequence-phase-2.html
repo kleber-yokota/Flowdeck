@@ -1,84 +1,21 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fase 2 — Disparar, executar e acompanhar</title>
+  <title>Phase 2 — Dispatch, run and track</title>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --color-paper:   #0b0c0e;   /* near-black */
-      --color-ink:     #e8e6e1;   /* silver-white */
-      --color-muted:   #b8bcc4;   /* steel */
-      --color-soft:    #8f96a3;
-      --color-accent:  #ff9142;   /* laranja */
-      --color-link:    #7cc0ff;   /* azul claro */
-      --font-sans:     'Geist', system-ui, sans-serif;
-      --font-serif:   'Instrument Serif', 'Noto Serif', serif;
-      --font-mono:     'Geist Mono', ui-monospace, monospace;
-    }
-
-    body {
-      font-family: var(--font-sans);
-      background: var(--color-paper);
-      color: var(--color-ink);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3rem 2rem;
-    }
-
-    .frame { max-width: 1200px; width: 100%; }
-    .diagram-container { width: 100%; overflow-x: auto; }
-
-    .eyebrow {
-      font-family: var(--font-mono);
-      font-size: 0.66rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--color-muted);
-      margin-bottom: 0.5rem;
-    }
-
-    h1 {
-      font-family: var(--font-serif);
-      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
-      font-weight: 400;
-      letter-spacing: -0.02em;
-      line-height: 1.15;
-      color: var(--color-ink);
-      margin-bottom: 1.5rem;
-    }
-
-    svg { width: 100%; min-width: 960px; display: block; }
-    @media print {
-      .diagram-container { overflow-x: visible; }
-      svg { min-width: 0; }
-    }
-
-    footer {
-      margin-top: 1.5rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid rgba(232,230,225,0.14);
-      font-family: var(--font-mono);
-      font-size: 0.56rem;
-      letter-spacing: 0.08em;
-      color: var(--color-soft);
-    }
-  </style>
+  <link rel="stylesheet" href="css/sequence-phase-2.css">
 </head>
 <body>
   <div class="frame">
-    <p class="eyebrow">Sequência · Fase 2</p>
-    <h1>Fase 2 — Disparar, executar e acompanhar</h1>
+    <p class="eyebrow">Sequence · Phase 2</p>
+    <h1>Phase 2 — Dispatch, run and track</h1>
 
     <div class="diagram-container">
-      <svg viewBox="0 0 960 944" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequencia-fase-2-title sequencia-fase-2-desc">
-        <title id="sequencia-fase-2-title">Fase 2 — Disparar, executar e acompanhar</title>
-        <desc id="sequencia-fase-2-desc">O usuario dispara o workflow: webserver faz enqueue, o core grava na fila do Postgres, recebe o retorno com o workflow_id e a web renderiza a execucao 'na fila' com o workflow_id no browser; o Postgres notifica o DBOS, que executa o workflow gravando cada step no Postgres; o polling de 2s atualiza o badge.</desc>
+      <svg viewBox="0 0 960 944" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-phase-2-title sequence-phase-2-desc">
+        <title id="sequence-phase-2-title">Phase 2 — Dispatch, run and track</title>
+        <desc id="sequence-phase-2-desc">The user dispatches a workflow: the webserver enqueues, the core writes to the Postgres queue, receives the return with the workflow_id, and the web renders the run as "queued" with the workflow_id in the browser; Postgres notifies DBOS, which executes the workflow writing each step to Postgres; the 2s polling updates the badge.</desc>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
@@ -105,16 +42,16 @@
 
         <rect width="100%" height="100%" fill="#0b0c0e"/>
 
-        <!-- frame: executar workflow -->
+        <!-- frame: execute workflow -->
         <rect x="72" y="144" width="816" height="208" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
         <rect x="72" y="144" width="64" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
-        <text x="104" y="155" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">EXECUTAR</text>
+        <text x="104" y="155" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">EXECUTE</text>
 
-        <!-- par frame: execucao + polling -->
+        <!-- par frame: execution + polling -->
         <rect x="72" y="384" width="816" height="416" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
         <rect x="72" y="384" width="40" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
         <text x="92" y="395" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">PAR</text>
-        <text x="84" y="416" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[execucao · dbos]</text>
+        <text x="84" y="416" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[execution · dbos]</text>
         <line x1="72" y1="568" x2="888" y2="568" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
         <text x="84" y="592" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[polling · hx 2s]</text>
 
@@ -135,7 +72,7 @@
         <rect x="116" y="624" width="8" height="160" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
         <rect x="336" y="624" width="8" height="160" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
 
-        <!-- messages: executar -->
+        <!-- messages: execute -->
         <line x1="120" y1="176" x2="340" y2="176" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#arrow-link)"/>
         <line x1="340" y1="208" x2="560" y2="208" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
         <line x1="560" y1="240" x2="800" y2="240" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
@@ -143,7 +80,7 @@
         <line x1="560" y1="304" x2="340" y2="304" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
         <line x1="340" y1="336" x2="120" y2="336" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
 
-        <!-- messages: execucao -->
+        <!-- messages: execution -->
         <line x1="800" y1="448" x2="560" y2="448" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-open)"/>
         <!-- self-action on CORE: the DBOS executor runs the workflow -->
         <path d="M 560 476 H 596 V 490 H 560" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
@@ -165,14 +102,14 @@
         <rect x="428" y="188" width="44" height="12" rx="2" fill="#0b0c0e"/>
         <text x="450" y="197" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ENQUEUE</text>
 
-        <rect x="650" y="220" width="60" height="12" rx="2" fill="#0b0c0e"/>
-        <text x="680" y="229" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INSERT FILA</text>
+        <rect x="646" y="220" width="68" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="229" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">INSERT QUEUE</text>
 
         <rect x="668" y="252" width="24" height="12" rx="2" fill="#0b0c0e"/>
         <text x="680" y="261" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK</text>
 
         <rect x="394" y="284" width="112" height="12" rx="2" fill="#0b0c0e"/>
-        <text x="450" y="293" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">NA FILA · workflow_id</text>
+        <text x="450" y="293" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">QUEUED · workflow_id</text>
 
         <rect x="177" y="316" width="106" height="12" rx="2" fill="#0b0c0e"/>
         <text x="230" y="325" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · workflow_id</text>
@@ -238,19 +175,19 @@
 
         <!-- legend strip -->
         <line x1="30" y1="848" x2="930" y2="848" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
-        <text x="30" y="881" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGENDA</text>
+        <text x="30" y="881" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
 
         <line x1="130" y1="880" x2="174" y2="880" stroke="#7cc0ff" stroke-width="1.2"/>
-        <text x="182" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">REQUISICAO HTMX</text>
+        <text x="182" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HTMX REQUEST</text>
 
         <line x1="300" y1="880" x2="344" y2="880" stroke="#b8bcc4" stroke-width="1.2"/>
-        <text x="352" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CHAMADA</text>
+        <text x="352" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CALL</text>
 
         <line x1="430" y1="880" x2="474" y2="880" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
-        <text x="482" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETORNO</text>
+        <text x="482" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETURN</text>
 
         <line x1="560" y1="880" x2="604" y2="880" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
-        <text x="612" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">NOTIFICACAO</text>
+        <text x="612" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">NOTIFICATION</text>
 
         <line x1="740" y1="880" x2="784" y2="880" stroke="#ff9142" stroke-width="1.2" stroke-dasharray="5,4"/>
         <text x="792" y="883" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE</text>

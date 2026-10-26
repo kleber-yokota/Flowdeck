@@ -44,10 +44,11 @@ Style: dark metallic skin (background `#0b0c0e`, steel borders, orange highlight
 
 ## Files
 
-- `arquitetura.html`
-- `estados-workflow.html`
-- `mapa-pacotes.html`
-- `sequencia-fase-1.html` (listing)
-- `sequencia-fase-2.html` (dispatch, run, track)
-- `sequencia-fase-3.html` (runs of a workflow)
-- `sequencia-fase-4.html` (paths graph)
+- `css/` — one stylesheet per HTML file (`css/<name>.css`; `package-map.css` is exclusive)
+- `architecture.html`
+- `workflow-states.html`
+- `package-map.html`
+- `sequence-phase-1.html` (listing)
+- `sequence-phase-2.html` (dispatch, run, track)
+- `sequence-phase-3.html` (runs of a workflow)
+- `sequence-phase-4.html` (paths graph)

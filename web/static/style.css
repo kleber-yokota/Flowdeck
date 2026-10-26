@@ -226,7 +226,7 @@ a.name { color: inherit; text-decoration: none; }
 .attempt.success { color: var(--success); }
 .attempt.error { color: var(--error); }
 
-/* Failure: error + the step that failed (diagram sequencia-fase-3) */
+/* Failure: error + the step that failed (diagram sequence-phase-3) */
 .failure {
   background: rgba(255, 84, 80, 0.08);
   border: 1px solid rgba(255, 84, 80, 0.55);

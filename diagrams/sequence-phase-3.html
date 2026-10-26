@@ -5,70 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phase 3 — Executions of a workflow</title>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --color-paper:   #0b0c0e;   /* near-black */
-      --color-ink:     #e8e6e1;   /* silver-white */
-      --color-muted:   #b8bcc4;   /* steel */
-      --color-soft:    #8f96a3;
-      --color-accent:  #ff9142;   /* orange */
-      --color-link:    #7cc0ff;   /* light blue */
-      --font-sans:     'Geist', system-ui, sans-serif;
-      --font-serif:   'Instrument Serif', 'Noto Serif', serif;
-      --font-mono:     'Geist Mono', ui-monospace, monospace;
-    }
-
-    body {
-      font-family: var(--font-sans);
-      background: var(--color-paper);
-      color: var(--color-ink);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3rem 2rem;
-    }
-
-    .frame { max-width: 1200px; width: 100%; }
-    .diagram-container { width: 100%; overflow-x: auto; }
-
-    .eyebrow {
-      font-family: var(--font-mono);
-      font-size: 0.66rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--color-muted);
-      margin-bottom: 0.5rem;
-    }
-
-    h1 {
-      font-family: var(--font-serif);
-      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
-      font-weight: 400;
-      letter-spacing: -0.02em;
-      line-height: 1.15;
-      color: var(--color-ink);
-      margin-bottom: 1.5rem;
-    }
-
-    svg { width: 100%; min-width: 960px; display: block; }
-    @media print {
-      .diagram-container { overflow-x: visible; }
-      svg { min-width: 0; }
-    }
-
-    footer {
-      margin-top: 1.5rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid rgba(232,230,225,0.14);
-      font-family: var(--font-mono);
-      font-size: 0.56rem;
-      letter-spacing: 0.08em;
-      color: var(--color-soft);
-    }
-  </style>
+  <link rel="stylesheet" href="css/sequence-phase-3.css">
 </head>
 <body>
   <div class="frame">
@@ -76,9 +13,9 @@
     <h1>Phase 3 — Executions of a workflow</h1>
 
     <div class="diagram-container">
-      <svg viewBox="0 0 960 1220" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequencia-fase-3-title sequencia-fase-3-desc">
-        <title id="sequencia-fase-3-title">Phase 3 — Executions of a workflow</title>
-        <desc id="sequencia-fase-3-desc">The user opens /workflows/{name} and the web lists all executions of the workflow — one row per execution (badge + workflow_id + first run date), newest first; clicking a workflow_id, the web asks the core for the detail (status badge, first run date, retries = attempts − 1 — a clean run shows 0, and on failure the error + failed step); the 2s polling only updates badges that are queued or running — success or failure badges are static (no hx) and the polling stops, so the browser stops making requests. Each block carries the rules of what the front end must show.</desc>
+      <svg viewBox="0 0 960 1220" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sequence-phase-3-title sequence-phase-3-desc">
+        <title id="sequence-phase-3-title">Phase 3 — Executions of a workflow</title>
+        <desc id="sequence-phase-3-desc">The user opens /workflows/{name} and the web lists all executions of the workflow — one row per execution (badge + workflow_id + first run date), newest first; clicking a workflow_id, the web asks the core for the detail (status badge, first run date, retries = attempts − 1 — a clean run shows 0, and on failure the error + failed step); the 2s polling only updates badges that are queued or running — success or failure badges are static (no hx) and the polling stops, so the browser stops making requests. Each block carries the rules of what the front end must show.</desc>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
