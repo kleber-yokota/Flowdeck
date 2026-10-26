@@ -158,11 +158,11 @@ func paramInput(f *ast.Field, consts map[string]string,
 		out := make([]Param, len(fields))
 		for i, field := range fields {
 			out[i] = Param{Name: field.Name, Type: field.Type,
-				Default: consts["default" + Pascal(field.Name)]}
+				Default: consts["default"+Pascal(field.Name)]}
 		}
 		return out
 	}
-	return []Param{{Name: name, Type: typeName(f.Type), Default: consts["default" + Pascal(name)]}}
+	return []Param{{Name: name, Type: typeName(f.Type), Default: consts["default"+Pascal(name)]}}
 }
 
 // Pascal maps the parameter name to the default constant's suffix: msg →
@@ -174,7 +174,7 @@ func Pascal(s string) string {
 		if part == "" {
 			continue
 		}
-		out = append(out, strings.ToUpper(part[:1]) + part[1:])
+		out = append(out, strings.ToUpper(part[:1])+part[1:])
 	}
 	return strings.Join(out, "")
 }
