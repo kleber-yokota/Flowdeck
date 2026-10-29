@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>possiblePaths — walk · fork · dedupe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/possible-paths.css">
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · FlowDeck · core/graph</p>
+    <h1>possiblePaths — walk · fork · dedupe</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 1210" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="possible-paths-title possible-paths-desc">
+        <title id="possible-paths-title">possiblePaths — walk · fork · dedupe</title>
+        <desc id="possible-paths-desc">possiblePaths walks the workflow function body over a list of open paths, starting with one empty path. Each RunAsStep statement appends its step name to every open path; a block statement recurses with the same open paths; an if forks every open path into the taken (if-body) and not-taken (else-body, or nothing) sequences, and nested if and else-if fork again, cartesian. Empty and duplicate sequences are dropped at the end. Example: the decide workflow yields base→left and base→right.</desc>
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(232,230,225,0.10)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/></marker>
+        </defs>
+
+        <rect width="1000" height="1210" fill="#0b0c0e"/>
+        <rect width="1000" height="1210" fill="url(#dots)" opacity="0.55"/>
+
+        <!-- Arrows (drawn first, behind nodes) -->
+        <!-- possiblePaths → next stmt -->
+        <line x1="430" y1="102" x2="430" y2="130" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- next stmt → stmt kind? -->
+        <line x1="430" y1="182" x2="430" y2="214" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- stmt kind? block → walk block's stmts -->
+        <path d="M 330 262 H 130 V 350" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- stmt kind? if → fork -->
+        <path d="M 530 262 H 790 V 344" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- stmt kind? other → stepsIn -->
+        <line x1="430" y1="310" x2="430" y2="350" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- walk block's stmts → more stmts? -->
+        <path d="M 130 414 V 660 H 410 V 682" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- fork → more stmts? -->
+        <path d="M 790 420 V 660 H 450 V 682" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- stepsIn → steps > 0? -->
+        <line x1="430" y1="414" x2="430" y2="452" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- steps > 0? YES → addStepToAll -->
+        <line x1="430" y1="536" x2="430" y2="580" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- steps > 0? NO → more stmts? -->
+        <path d="M 340 494 H 280 V 730 H 330" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- addStepToAll → more stmts? -->
+        <line x1="430" y1="632" x2="430" y2="682" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- more stmts? YES → loop back to next stmt -->
+        <path d="M 530 730 H 940 V 156 H 510" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- more stmts? NO → dedupePaths -->
+        <line x1="430" y1="778" x2="430" y2="830" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- dedupePaths → paths -->
+        <line x1="430" y1="882" x2="430" y2="920" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Arrow label chips -->
+        <rect x="210" y="255" width="40" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="264" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">block</text>
+
+        <rect x="648" y="255" width="24" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="660" y="264" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">if</text>
+
+        <rect x="440" y="325" width="32" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="456" y="334" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">other</text>
+
+        <rect x="440" y="548" width="24" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="452" y="557" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">yes</text>
+
+        <rect x="272" y="487" width="20" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="282" y="496" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">no</text>
+
+        <rect x="556" y="723" width="24" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="568" y="732" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">yes</text>
+
+        <rect x="440" y="790" width="20" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="799" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">no</text>
+
+        <!-- Start: possiblePaths -->
+        <ellipse cx="430" cy="72" rx="120" ry="30" fill="rgba(232,230,225,0.03)" stroke="rgba(232,230,225,0.30)" stroke-width="1"/>
+        <text x="430" y="68" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">possiblePaths(body)</text>
+        <text x="430" y="86" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">open paths = [ [] ]</text>
+
+        <!-- Rectangle: next stmt -->
+        <rect x="350" y="130" width="160" height="52" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="152" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">next stmt</text>
+        <text x="430" y="168" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">walkStmts · body.List</text>
+
+        <!-- Diamond: stmt kind? -->
+        <polygon points="430,214 530,262 430,310 330,262" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="266" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">stmt kind?</text>
+
+        <!-- Rectangle: walk block's stmts -->
+        <rect x="40" y="350" width="180" height="64" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="130" y="376" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">walk block's stmts</text>
+        <text x="130" y="392" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">same open paths · recurse</text>
+
+        <!-- Rectangle: fork (focal — the if forks the open paths) -->
+        <rect x="680" y="344" width="220" height="76" rx="6" fill="rgba(255,145,66,0.12)" stroke="#ff9142" stroke-width="1"/>
+        <text x="790" y="368" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">fork (if)</text>
+        <text x="790" y="384" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">t = walk if-body · n = walk else</text>
+        <text x="790" y="400" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">p → {p+t} ∪ {p+n} · cartesian</text>
+
+        <!-- Rectangle: stepsIn -->
+        <rect x="330" y="350" width="200" height="64" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="374" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">stepsIn(stmt)</text>
+        <text x="430" y="390" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">RunAsStep · src order · no FuncLit</text>
+        <text x="430" y="406" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">name = WithStepName | arg[1]</text>
+
+        <!-- Diamond: steps > 0? -->
+        <polygon points="430,452 520,494 430,536 340,494" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="498" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">steps &gt; 0?</text>
+
+        <!-- Rectangle: addStepToAll -->
+        <rect x="330" y="580" width="200" height="52" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="602" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">addStepToAll</text>
+        <text x="430" y="618" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">each open p → p + steps</text>
+
+        <!-- Diamond: more stmts? -->
+        <polygon points="430,682 530,730 430,778 330,730" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="734" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">more stmts?</text>
+
+        <!-- Rectangle: dedupePaths -->
+        <rect x="330" y="830" width="200" height="52" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="430" y="852" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">dedupePaths</text>
+        <text x="430" y="868" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">drop empty · drop dups</text>
+
+        <!-- End: paths -->
+        <ellipse cx="430" cy="950" rx="110" ry="30" fill="rgba(232,230,225,0.03)" stroke="rgba(232,230,225,0.30)" stroke-width="1"/>
+        <text x="430" y="946" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">paths</text>
+        <text x="430" y="964" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">[][]string · all sequences</text>
+
+        <!-- Example: the decide workflow trace -->
+        <rect x="40" y="1010" width="920" height="120" rx="8" fill="rgba(255,145,66,0.04)" stroke="rgba(255,145,66,0.30)" stroke-width="1"/>
+        <text x="60" y="1034" fill="#ff9142" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.12em">EXAMPLE · decide — RunAsStep("base") · if{ left } else{ right }</text>
+        <text x="60" y="1062" font-size="9.5" font-family="'Geist Mono', monospace"><tspan fill="#8f96a3">1 · RunAsStep("base") → addStepToAll</tspan><tspan fill="#e8e6e1">      [ [] ] → [ base ]</tspan></text>
+        <text x="60" y="1084" font-size="9.5" font-family="'Geist Mono', monospace"><tspan fill="#8f96a3">2 · if: t = [ left ] · n = [ right ]</tspan><tspan fill="#e8e6e1">      [ base ] → [ base,left ] · [ base,right ]</tspan></text>
+        <text x="60" y="1106" font-size="9.5" font-family="'Geist Mono', monospace"><tspan fill="#8f96a3">3 · dedupePaths: no empty · no dups</tspan><tspan fill="#e8e6e1">      → 2 possible paths</tspan></text>
+
+        <!-- Legend -->
+        <line x1="40" y1="1146" x2="960" y2="1146" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="40" y="1162" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+
+        <rect x="40" y="1170" width="24" height="12" rx="6" fill="rgba(232,230,225,0.03)" stroke="rgba(232,230,225,0.30)" stroke-width="1"/>
+        <text x="72" y="1179" fill="#b8bcc4" font-size="8.5" font-family="'Geist', sans-serif">start / end (ellipse)</text>
+
+        <rect x="230" y="1170" width="24" height="12" rx="2" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="262" y="1179" fill="#b8bcc4" font-size="8.5" font-family="'Geist', sans-serif">handler (rectangle)</text>
+
+        <polygon points="420,1176 432,1170 444,1176 432,1182" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.35)" stroke-width="1"/>
+        <text x="452" y="1179" fill="#b8bcc4" font-size="8.5" font-family="'Geist', sans-serif">decision (diamond)</text>
+
+        <rect x="610" y="1170" width="24" height="12" rx="2" fill="rgba(255,145,66,0.12)" stroke="#ff9142" stroke-width="1"/>
+        <text x="642" y="1179" fill="#b8bcc4" font-size="8.5" font-family="'Geist', sans-serif">the fork (focal)</text>
+
+        <line x1="790" y1="1176" x2="818" y2="1176" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <text x="826" y="1179" fill="#b8bcc4" font-size="8.5" font-family="'Geist', sans-serif">loop · next stmt</text>
+      </svg>
+    </div>
+
+    <footer>FlowDeck · diagram-design · 2026-07-09</footer>
+  </div>
+</body>
+</html>
