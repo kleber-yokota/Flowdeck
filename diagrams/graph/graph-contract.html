@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The graph path — core/graph → Port → web/graph</title>
+  <title>The path-diagram pipelines — possible-paths (boot) + executed path (runtime)</title>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/graph-contract.css">
 </head>
 <body>
   <div class="frame">
-    <p class="eyebrow">Data flow · FlowDeck · graph path</p>
-    <h1>The graph path — core/graph → Port → web/graph</h1>
+    <p class="eyebrow">Data flow · FlowDeck · path generation</p>
+    <h1>The path-diagram pipelines — possible-paths (boot) + executed path (runtime)</h1>
 
     <div class="diagram-container">
-      <svg viewBox="0 0 1000 690" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="graph-path-title graph-path-desc">
-        <title id="graph-path-title">The graph path — core/graph → Port → web/graph</title>
-        <desc id="graph-path-desc">The possible-paths graph path, reflecting the current code. core/graph builds PathGraph{ByName, Specs} at boot via New(fsys); the Port (the single contact) captures the *graph.PathGraph (never nil). The web handler handleWorkflowPage (GET /workflows/{name}) calls Graph.Of(name) to get a plain [][]string and passes it to web/graph.PathsToSVG, which renders the SVG into the page. web/graph is a pure renderer: it imports only flowdeck/core (not core/graph) and receives plain types, and the SVG is one-way (template.HTML). The executed path (ExecutedPathToSVG) is a separate runtime path fed by core.Step, out of scope here.</desc>
+      <svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pp-title pp-desc">
+        <title id="pp-title">The path-diagram pipelines — possible-paths (boot) + executed path (runtime)</title>
+        <desc id="pp-desc">Everything that generates the two path diagrams in FlowDeck. LEFT (possible-paths map, boot · AST): core/graph.New(fsys) walks the embedded Go source and builds PathGraph{ByName, Specs}, captured into Port.Graph (never nil). handleWorkflowPage (GET /workflows/{name}) calls p.Graph.Of(name) to get a plain [][]string and passes it to web/graph.PathsToSVG, which renders the SVG into the workflow page. RIGHT (executed path, runtime · Postgres): core.Steps reads the run's step rows from Postgres (step_id asc, the branch the run took), wired into Port.Steps. handleExecutionSteps (GET /executions/{id}/steps, polled every 2s) and handleExecutionDetail (GET /executions/{id}) call p.Steps(id) to get []core.Step and pass it through newStepsView to web/graph.ExecutedPathToSVG, which renders the SVG into the steps fragment (steps.html, 2s poll). Both renderers share the same drawing code (newGraphLayout + svg() + pathNode) — the focal shared generator. web/graph is a pure renderer: it imports only flowdeck/core and receives plain types; the SVG is one-way (template.HTML).</desc>
+
         <defs>
           <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
             <circle cx="11" cy="11" r="0.8" fill="rgba(232,230,225,0.10)"/>
@@ -24,101 +25,122 @@
           <marker id="arr-accent" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#ff9142"/></marker>
         </defs>
 
-        <rect width="1000" height="690" fill="#0b0c0e"/>
-        <rect width="1000" height="690" fill="url(#dots)"/>
-        <rect x="0" y="156" width="1000" height="100" fill="rgba(255,145,66,0.025)"/>
+        <rect width="1000" height="700" fill="#0b0c0e"/>
+        <rect width="1000" height="700" fill="url(#dots)"/>
+        <rect x="0" y="150" width="1000" height="110" fill="rgba(255,145,66,0.025)"/>
 
         <!-- Band structure -->
         <line x1="0" y1="40" x2="1000" y2="40" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
-        <line x1="0" y1="156" x2="1000" y2="156" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
-        <line x1="0" y1="256" x2="1000" y2="256" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
-        <line x1="0" y1="356" x2="1000" y2="356" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
-        <line x1="0" y1="500" x2="1000" y2="500" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
+        <line x1="0" y1="150" x2="1000" y2="150" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
+        <line x1="0" y1="260" x2="1000" y2="260" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
+        <line x1="0" y1="380" x2="1000" y2="380" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
+        <line x1="0" y1="540" x2="1000" y2="540" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
+        <line x1="0" y1="690" x2="1000" y2="690" stroke="rgba(232,230,225,0.12)" stroke-width="0.8"/>
 
         <!-- Band gutter labels -->
-        <text x="20" y="84" class="lane-num">01</text>
-        <text x="20" y="98" class="lane-label">CORE · GRAPH</text>
-        <text x="20" y="112" class="lane-num">boot · AST</text>
+        <text x="20" y="81" class="lane-num">01</text>
+        <text x="20" y="95" class="lane-label">SOURCE</text>
+        <text x="20" y="109" class="lane-num">boot · runtime</text>
 
-        <text x="20" y="192" class="lane-num">02</text>
-        <text x="20" y="206" class="lane-label">PORT</text>
-        <text x="20" y="220" class="lane-num">single contact</text>
+        <text x="20" y="191" class="lane-num">02</text>
+        <text x="20" y="205" class="lane-label">PORT</text>
+        <text x="20" y="219" class="lane-num">single contact</text>
 
-        <text x="20" y="292" class="lane-num">03</text>
-        <text x="20" y="306" class="lane-label">WEB · HANDLER</text>
-        <text x="20" y="320" class="lane-num">fetch · wire</text>
+        <text x="20" y="306" class="lane-num">03</text>
+        <text x="20" y="320" class="lane-label">WEB · HANDLER</text>
+        <text x="20" y="334" class="lane-num">fetch · wire</text>
 
-        <text x="20" y="414" class="lane-num">04</text>
-        <text x="20" y="428" class="lane-label">WEB · GRAPH</text>
-        <text x="20" y="442" class="lane-num">render · svg</text>
+        <text x="20" y="446" class="lane-num">04</text>
+        <text x="20" y="460" class="lane-label">WEB · GRAPH</text>
+        <text x="20" y="474" class="lane-num">render · svg</text>
+
+        <text x="20" y="601" class="lane-num">05</text>
+        <text x="20" y="615" class="lane-label">OUTPUT · SVG</text>
+        <text x="20" y="629" class="lane-num">page · fragment</text>
 
         <!-- Legend: flow -->
-        <text x="580" y="74" class="legend-label">FLOW</text>
-        <line x1="580" y1="88" x2="604" y2="88" stroke="#b8bcc4" marker-end="url(#arr-muted)"/><text x="612" y="92" class="legend-text">hand-off</text>
-        <line x1="580" y1="104" x2="604" y2="104" stroke="#ff9142" stroke-width="1.2" marker-end="url(#arr-accent)"/><text x="612" y="108" class="legend-text">graph hand-off (focal)</text>
+        <text x="380" y="74" class="legend-label">FLOW</text>
+        <line x1="380" y1="88" x2="404" y2="88" stroke="#b8bcc4" marker-end="url(#arr-muted)"/><text x="412" y="92" class="legend-text">data hand-off</text>
+        <line x1="380" y1="104" x2="404" y2="104" stroke="#ff9142" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr-accent)"/><text x="412" y="108" class="legend-text">shared drawing (focal)</text>
 
-        <!-- Connectors first -->
-        <!-- New(fsys) → PathGraph -->
-        <line x1="300" y1="102" x2="358" y2="102" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
-        <!-- PathGraph → Port -->
-        <line x1="460" y1="134" x2="460" y2="170" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
-        <text x="468" y="154" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">captured at NewPort · never nil</text>
-        <!-- Port → handleWorkflowPage (focal: the graph hand-off) -->
-        <line x1="460" y1="240" x2="460" y2="272" stroke="#ff9142" stroke-width="1.2" marker-end="url(#arr-accent)"/>
-        <text x="468" y="260" fill="#ff9142" font-size="8" font-family="'Geist Mono', monospace">Of(name) → [][]string</text>
-        <!-- handleWorkflowPage → PathsToSVG -->
-        <line x1="460" y1="356" x2="460" y2="372" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
-        <text x="468" y="366" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', monospace">paths [][]string</text>
+        <!-- Connectors (data hand-offs, muted) -->
+        <line x1="205" y1="114" x2="205" y2="176" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="795" y1="114" x2="795" y2="176" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="205" y1="236" x2="205" y2="288" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="795" y1="236" x2="795" y2="288" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="205" y1="352" x2="205" y2="406" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="795" y1="352" x2="795" y2="406" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="205" y1="466" x2="205" y2="556" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
+        <line x1="795" y1="466" x2="795" y2="556" stroke="#b8bcc4" marker-end="url(#arr-muted)"/>
 
-        <!-- 01 · core/graph · New(fsys) -->
-        <rect x="150" y="70" width="150" height="64" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="225" y="93" class="node-title">New(fsys)</text>
-        <text x="225" y="105" class="node-sub">walk · ParseFile · collect</text>
-        <text x="225" y="117" class="node-tool">core/graph · boot</text>
+        <!-- Shared drawing connectors (focal, dashed) -->
+        <line x1="310" y1="438" x2="358" y2="438" stroke="#ff9142" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <line x1="690" y1="438" x2="642" y2="438" stroke="#ff9142" stroke-width="1.2" stroke-dasharray="4 3"/>
 
-        <!-- 01 · core/graph · PathGraph (the artifact) -->
-        <rect x="360" y="70" width="200" height="64" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="460" y="93" class="node-title">PathGraph</text>
-        <text x="460" y="105" class="node-sub">{ ByName · Specs }</text>
-        <text x="460" y="117" class="node-tool">artifact · read-only</text>
+        <!-- Hand-off labels -->
+        <text x="213" y="150" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">built at boot</text>
+        <text x="803" y="150" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">wired into Port</text>
+        <text x="213" y="266" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">Of(name) → [][]string</text>
+        <text x="803" y="266" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">Steps(id) → []core.Step</text>
+        <text x="213" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">paths [][]string</text>
+        <text x="803" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">steps []core.Step</text>
+        <text x="213" y="514" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">SVG (workflow page)</text>
+        <text x="803" y="514" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">SVG (steps fragment)</text>
 
-        <!-- 02 · Port (focal: the single contact) -->
-        <rect x="360" y="176" width="200" height="64" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
-        <text x="460" y="199" class="node-title">Port · single contact</text>
-        <text x="460" y="211" class="node-sub">Graph *graph.PathGraph</text>
-        <text x="460" y="223" class="node-sub">never nil · empty before Boot</text>
+        <!-- 01 · SOURCE · left (possible-paths, boot · AST) -->
+        <rect x="100" y="58" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="205" y="78" class="node-title">core/graph · New(fsys)</text>
+        <text x="205" y="92" class="node-sub">boot · AST · walk · ParseFile · collect</text>
 
-        <!-- 03 · web · handleWorkflowPage -->
-        <rect x="360" y="276" width="200" height="80" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="460" y="299" class="node-title">handleWorkflowPage</text>
-        <text x="460" y="313" class="node-sub">GET /workflows/{name}</text>
-        <text x="460" y="327" class="node-sub">p.Graph.Of(name)</text>
+        <!-- 01 · SOURCE · right (executed path, runtime · Postgres) -->
+        <rect x="690" y="58" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="795" y="78" class="node-title">core.Steps</text>
+        <text x="795" y="92" class="node-sub">Postgres step rows · step_id asc</text>
 
-        <!-- 04 · web/graph · PathsToSVG (the renderer) -->
-        <rect x="360" y="376" width="200" height="72" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="460" y="399" class="node-title">PathsToSVG</text>
-        <text x="460" y="415" class="node-sub">paths [][]string → SVG</text>
-        <text x="460" y="429" class="node-tool">layout · measure · place · one-way</text>
+        <!-- 02 · PORT · left -->
+        <rect x="100" y="180" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="205" y="200" class="node-title">Port.Graph *graph.PathGraph</text>
+        <text x="205" y="214" class="node-sub">never nil · empty before Boot</text>
 
-        <!-- Out of scope: the executed path is a separate runtime path -->
-        <rect x="580" y="376" width="380" height="72" rx="6" fill="none" stroke="rgba(143,150,163,0.50)" stroke-dasharray="4 3"/>
-        <text x="600" y="399" fill="#8f96a3" font-size="9" font-weight="600" font-family="'Geist', sans-serif">out of scope here</text>
-        <text x="600" y="415" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">ExecutedPathToSVG — the executed path</text>
-        <text x="600" y="430" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">is fed by core.Step (runtime), not core/graph</text>
+        <!-- 02 · PORT · right -->
+        <rect x="690" y="180" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="795" y="200" class="node-title">Port.Steps(id) → []core.Step</text>
+        <text x="795" y="214" class="node-sub">wired from core.Steps</text>
 
-        <!-- Expectations: core/graph -->
-        <rect x="40" y="508" width="455" height="150" rx="8" fill="rgba(232,230,225,0.03)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="60" y="530" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', sans-serif">core/graph EXPECTS (from the embedded source)</text>
-        <text x="60" y="556" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace">· RegisterWorkflow(ctx, F, WithWorkflowName("name"))</text>
-        <text x="60" y="578" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace">· RunAsStep(ctx, fn, WithStepName("s")) — name = opt | arg[1]</text>
-        <text x="60" y="600" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace">· parse error → boot fails loud (no partial map)</text>
+        <!-- 03 · WEB · HANDLER · left -->
+        <rect x="100" y="292" width="210" height="60" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="205" y="314" class="node-title">handleWorkflowPage</text>
+        <text x="205" y="328" class="node-sub">GET /workflows/{name}</text>
+        <text x="205" y="342" class="node-sub">p.Graph.Of(name) → [][]string</text>
 
-        <!-- Expectations: web/graph -->
-        <rect x="510" y="508" width="450" height="150" rx="8" fill="rgba(232,230,225,0.03)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="530" y="530" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', sans-serif">web/graph EXPECTS (from the handler)</text>
-        <text x="530" y="556" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace">· paths [][]string (plain) — empty = empty canvas</text>
-        <text x="530" y="578" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace">· one-way — renders to template.HTML, no return data</text>
-        <text x="530" y="600" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', monospace">· imports only flowdeck/core — not core/graph</text>
+        <!-- 03 · WEB · HANDLER · right -->
+        <rect x="690" y="292" width="210" height="60" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="795" y="314" class="node-title">handleExecutionSteps</text>
+        <text x="795" y="328" class="node-sub">GET /executions/{id}/steps · 2s poll</text>
+        <text x="795" y="342" class="node-sub">p.Steps(id) → []core.Step</text>
+        <text x="795" y="362" fill="#8f96a3" font-size="7" font-family="'Geist Mono', monospace">+ handleExecutionDetail (GET /executions/{id})</text>
+
+        <!-- 04 · WEB · GRAPH · renderers + shared drawing (focal) -->
+        <rect x="100" y="410" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="205" y="430" class="node-title">PathsToSVG</text>
+        <text x="205" y="444" class="node-sub">paths [][]string → tree (if-forks)</text>
+
+        <rect x="360" y="410" width="280" height="56" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="500" y="430" fill="#ff9142" font-size="10" font-weight="600" font-family="'Geist', sans-serif">shared drawing</text>
+        <text x="500" y="444" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">newGraphLayout · svg() · pathNode</text>
+
+        <rect x="690" y="410" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="795" y="430" class="node-title">ExecutedPathToSVG</text>
+        <text x="795" y="444" class="node-sub">steps []core.Step → linear chain</text>
+
+        <!-- 05 · OUTPUT · SVG -->
+        <rect x="100" y="560" width="210" height="52" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="205" y="580" class="node-title">workflow page</text>
+        <text x="205" y="594" class="node-sub">GET /workflows/{name} · SVG</text>
+
+        <rect x="690" y="560" width="210" height="52" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
+        <text x="795" y="580" class="node-title">steps fragment</text>
+        <text x="795" y="594" class="node-sub">steps.html · every 2s poll</text>
       </svg>
     </div>
 
