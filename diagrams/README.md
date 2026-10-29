@@ -68,9 +68,11 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 - `graph/possible-paths.html` — detailed flowchart of the `possiblePaths` walk: the open
   paths list (starts with one empty path), `RunAsStep` appending to every open path, `if`
   forking taken/not-taken (cartesian), dedupe at the end — with the `decide` workflow trace;
-- `graph/graph-contract.html` — data flow of the `core/graph` ⇄ `web/graph` contract: the
-  Port serving `Of(name)` / `Spec(name)` / `Steps(id)` into the handlers and into
-  `PathsToSVG` / `ExecutedPathToSVG`, plus what each side expects to receive.
+- `graph/graph-contract.html` — the graph path, reflecting the current code:
+  `core/graph.New(fsys)` → `PathGraph{ByName, Specs}` → `Port` (holds `*graph.PathGraph`)
+  → `handleWorkflowPage` (`p.Graph.Of(name)`) → `web/graph.PathsToSVG` (a pure renderer that
+  imports only `core`). The executed path (`ExecutedPathToSVG`) is a separate runtime path
+  (`core.Step`), out of scope here.
 
 ## Files
 
@@ -88,4 +90,4 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   - `graph/graph-flow.html` (dependency and flow)
   - `graph/core-graph-extraction.html` (how `core/graph` extracts)
   - `graph/possible-paths.html` (the `possiblePaths` walk, step by step)
-  - `graph/graph-contract.html` (the `core/graph` ⇄ `web/graph` contract)
+  - `graph/graph-contract.html` (the graph path: `core/graph` → `Port` → `web/graph`)
