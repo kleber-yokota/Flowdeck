@@ -81,7 +81,12 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   `Sleep`, `Recv`, `Enqueue`, `Send`/`SetEvent`), each with its path effect (sequence / fork
   / loop) and the node type it produces (step / child workflow / async / wait / off-path),
   plus today's `possiblePaths` coverage (handled / flattened / invisible) — the reference
-  for extending the AST extraction beyond `RunAsStep` + `if`.
+  for extending the AST extraction beyond `RunAsStep` + `if`;
+- `graph/paths-block-levels.html` — the possible-paths structure as a **tree of blocks by level**: every
+  block has a level (depth — root = L0, larger = more internal), a type (sequence · loop · if) and
+  ordered children; independent blocks share a level (siblings — two sequential loops are both L1);
+  the tree is stored and read back, not recomputed; the example is a workflow with two sequential
+  loops + steps, with the flattened execution order.
 
 ## Files
 
@@ -101,3 +106,4 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   - `graph/possible-paths.html` (the `possiblePaths` walk, step by step)
   - `graph/graph-contract.html` (the two path-diagram pipelines: possible-paths + executed path)
   - `graph/paths-blocks.html` (Go blocks × DBOS constructs — what's inside what)
+  - `graph/paths-block-levels.html` (possible paths as a tree of blocks by level)
