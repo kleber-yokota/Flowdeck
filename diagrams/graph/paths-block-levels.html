@@ -9,19 +9,21 @@
 <body>
 <p class="eyebrow">Possible paths · block levels · core/graph (target model)</p>
 <h1>Possible paths — blocks by level, stored as a tree</h1>
-<p class="sublabel">A possible-path is a <code>tree of blocks</code>, not a flat list of steps. Every block has a <span style="color:var(--ink)">level</span> (depth — the root is <code>L0</code>, a larger level is more internal), a <span style="color:var(--ink)">type</span> (<code>sequence</code> · <code>loop</code> · <code>if</code>), and <span style="color:var(--ink)">ordered children</span>. Independent blocks share a level (siblings) and run in order. The tree is <span style="color:var(--ink)">stored</span>, not recomputed. A simple workflow (only steps) is a single <code>L0</code> block; the example below adds two sequential loops.</p>
+<p class="sublabel">A possible-path is a <code>tree of blocks</code>, not a flat list of steps. Every block has a <span style="color:var(--ink)">level</span> (depth — the root is <code>L0</code>, a larger level is more internal), a <span style="color:var(--ink)">type</span> (<code>sequence</code> · <code>loop</code> · <code>if</code>), and <span style="color:var(--ink)">ordered children</span>. A block can hold <span style="color:var(--ink)">blocks and steps</span> — a loop can contain an <code>if</code>, a step, or another loop — the nesting goes to <span style="color:var(--ink)">n</span> levels (unbounded). Independent blocks share a level (siblings) and run in order. The tree is <span style="color:var(--ink)">stored</span>, not recomputed. The example below is a workflow with two sequential loops, and an <code>if</code> nested inside one of them.</p>
 <figure>
-<svg viewBox="0 0 1000 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="blvl-title blvl-desc">
+<svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="blvl-title blvl-desc">
   <title id="blvl-title">Possible paths — blocks by level, stored as a tree</title>
-  <desc id="blvl-desc">Left: a workflow body as nested blocks. The root is Block 0 at level L0, type sequence. Its ordered children are step A (position 1), Block 1 (position 2), Block 2 (position 3), and step F (position 4). Block 1 and Block 2 are both level L1, type loop, and are independent siblings that run in order. Block 1 holds step B then step C; Block 2 holds step D then step E. Right: the same structure stored as a tree — each row is a block (id, level, type) with its ordered children, plus the flattened execution order. A simple workflow with only steps is a single L0 block.</desc>
+  <desc id="blvl-desc">Left: a workflow body as nested blocks. The root is Block 0 at level L0, type sequence. Its ordered children are step A (1), Block 1 (2), Block 2 (3), and step F (4). Block 1 and Block 2 are both level L1, type loop, and are independent siblings. Block 1 (the loop) contains step B (1), Block 3 (2), and step C (3) — a block inside a block. Block 3 is level L2, type if, and holds step X. Block 2 holds step D then step E. Right: the same structure stored as a tree — each row is a block (id, level, type) with its ordered children, plus the steps (leaves) and the flattened execution order. A simple workflow with only steps is a single L0 block.</desc>
   <style>
     .sec { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; fill: #b8bcc4; }
     .blk { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
     .blk.loop { stroke: #ff9142; }
+    .blk.if { stroke: #7cc0ff; }
     .lvl { fill: rgba(184,188,196,0.10); stroke: #8f96a3; stroke-width: 1; }
     .lvl-t { font: 600 9px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
     .bname { font: 500 10px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
     .bname.loop { fill: #ff9142; }
+    .bname.if { fill: #7cc0ff; }
     .seq { fill: #0b0c0e; stroke: #3a3e45; stroke-width: 1; }
     .seq-t { font: 500 8px "Geist Mono", ui-monospace, monospace; fill: #b8bcc4; }
     .step { fill: rgba(184,188,196,0.05); stroke: #46d19a; stroke-width: 1; }
@@ -36,87 +38,103 @@
   <text class="sec" x="20" y="26">The blocks — nested by level</text>
 
   <!-- Root block (L0, sequence) -->
-  <rect class="blk" x="20" y="38" width="540" height="360" rx="8"/>
+  <rect class="blk" x="20" y="38" width="540" height="410" rx="8"/>
   <rect class="lvl" x="36" y="52" width="30" height="18" rx="4"/>
   <text class="lvl-t" x="51" y="65" text-anchor="middle">L0</text>
   <text class="bname" x="78" y="65">Block 0 · sequence (root)</text>
 
   <!-- child 1: step A -->
-  <circle class="seq" cx="42" cy="92" r="9"/>
-  <text class="seq-t" x="42" y="95" text-anchor="middle">1</text>
-  <rect class="step" x="58" y="80" width="130" height="24" rx="5"/>
-  <text class="step-t" x="70" y="96">step A</text>
+  <circle class="seq" cx="42" cy="94" r="9"/>
+  <text class="seq-t" x="42" y="97" text-anchor="middle">1</text>
+  <rect class="step" x="58" y="83" width="130" height="22" rx="5"/>
+  <text class="step-t" x="70" y="99">step A</text>
 
-  <!-- child 2: Block 1 (loop, L1) -->
-  <circle class="seq" cx="42" cy="134" r="9"/>
-  <text class="seq-t" x="42" y="137" text-anchor="middle">2</text>
-  <rect class="blk loop" x="58" y="120" width="488" height="104" rx="8"/>
-  <rect class="lvl" x="74" y="134" width="30" height="18" rx="4"/>
-  <text class="lvl-t" x="89" y="147" text-anchor="middle">L1</text>
-  <text class="bname loop" x="112" y="147">Block 1 · loop</text>
-  <circle class="seq" cx="80" cy="172" r="8"/>
-  <text class="seq-t" x="80" y="175" text-anchor="middle">1</text>
-  <rect class="step" x="94" y="160" width="130" height="24" rx="5"/>
-  <text class="step-t" x="106" y="176">step B</text>
-  <circle class="seq" cx="80" cy="202" r="8"/>
-  <text class="seq-t" x="80" y="205" text-anchor="middle">2</text>
-  <rect class="step" x="94" y="190" width="130" height="24" rx="5"/>
-  <text class="step-t" x="106" y="206">step C</text>
+  <!-- child 2: Block 1 (loop, L1) — holds a step, a block, and a step -->
+  <circle class="seq" cx="42" cy="139" r="9"/>
+  <text class="seq-t" x="42" y="142" text-anchor="middle">2</text>
+  <rect class="blk loop" x="58" y="116" width="488" height="185" rx="8"/>
+  <rect class="lvl" x="74" y="130" width="30" height="18" rx="4"/>
+  <text class="lvl-t" x="89" y="143" text-anchor="middle">L1</text>
+  <text class="bname loop" x="112" y="143">Block 1 · loop</text>
+  <!-- Block 1 child 1: step B -->
+  <circle class="seq" cx="80" cy="168" r="8"/>
+  <text class="seq-t" x="80" y="171" text-anchor="middle">1</text>
+  <rect class="step" x="94" y="157" width="130" height="22" rx="5"/>
+  <text class="step-t" x="106" y="173">step B</text>
+  <!-- Block 1 child 2: Block 3 (if, L2) — a block inside a block -->
+  <circle class="seq" cx="80" cy="215" r="8"/>
+  <text class="seq-t" x="80" y="218" text-anchor="middle">2</text>
+  <rect class="blk if" x="94" y="192" width="440" height="71" rx="8"/>
+  <rect class="lvl" x="110" y="206" width="30" height="18" rx="4"/>
+  <text class="lvl-t" x="125" y="219" text-anchor="middle">L2</text>
+  <text class="bname if" x="148" y="219">Block 3 · if</text>
+  <circle class="seq" cx="114" cy="244" r="8"/>
+  <text class="seq-t" x="114" y="247" text-anchor="middle">1</text>
+  <rect class="step" x="128" y="233" width="130" height="22" rx="5"/>
+  <text class="step-t" x="140" y="249">step X</text>
+  <!-- Block 1 child 3: step C -->
+  <circle class="seq" cx="80" cy="282" r="8"/>
+  <text class="seq-t" x="80" y="285" text-anchor="middle">3</text>
+  <rect class="step" x="94" y="271" width="130" height="22" rx="5"/>
+  <text class="step-t" x="106" y="287">step C</text>
 
   <!-- child 3: Block 2 (loop, L1) — same level as Block 1, runs after -->
-  <circle class="seq" cx="42" cy="254" r="9"/>
-  <text class="seq-t" x="42" y="257" text-anchor="middle">3</text>
-  <rect class="blk loop" x="58" y="240" width="488" height="104" rx="8"/>
-  <rect class="lvl" x="74" y="254" width="30" height="18" rx="4"/>
-  <text class="lvl-t" x="89" y="267" text-anchor="middle">L1</text>
-  <text class="bname loop" x="112" y="267">Block 2 · loop</text>
-  <circle class="seq" cx="80" cy="292" r="8"/>
-  <text class="seq-t" x="80" y="295" text-anchor="middle">1</text>
-  <rect class="step" x="94" y="280" width="130" height="24" rx="5"/>
-  <text class="step-t" x="106" y="296">step D</text>
-  <circle class="seq" cx="80" cy="322" r="8"/>
-  <text class="seq-t" x="80" y="325" text-anchor="middle">2</text>
-  <rect class="step" x="94" y="310" width="130" height="24" rx="5"/>
-  <text class="step-t" x="106" y="326">step E</text>
+  <circle class="seq" cx="42" cy="332" r="9"/>
+  <text class="seq-t" x="42" y="335" text-anchor="middle">3</text>
+  <rect class="blk loop" x="58" y="309" width="488" height="101" rx="8"/>
+  <rect class="lvl" x="74" y="323" width="30" height="18" rx="4"/>
+  <text class="lvl-t" x="89" y="336" text-anchor="middle">L1</text>
+  <text class="bname loop" x="112" y="336">Block 2 · loop</text>
+  <circle class="seq" cx="80" cy="361" r="8"/>
+  <text class="seq-t" x="80" y="364" text-anchor="middle">1</text>
+  <rect class="step" x="94" y="350" width="130" height="22" rx="5"/>
+  <text class="step-t" x="106" y="366">step D</text>
+  <circle class="seq" cx="80" cy="391" r="8"/>
+  <text class="seq-t" x="80" y="394" text-anchor="middle">2</text>
+  <rect class="step" x="94" y="380" width="130" height="22" rx="5"/>
+  <text class="step-t" x="106" y="396">step E</text>
 
   <!-- child 4: step F -->
-  <circle class="seq" cx="42" cy="374" r="9"/>
-  <text class="seq-t" x="42" y="377" text-anchor="middle">4</text>
-  <rect class="step" x="58" y="362" width="130" height="24" rx="5"/>
-  <text class="step-t" x="70" y="378">step F</text>
+  <circle class="seq" cx="42" cy="429" r="9"/>
+  <text class="seq-t" x="42" y="432" text-anchor="middle">4</text>
+  <rect class="step" x="58" y="418" width="130" height="22" rx="5"/>
+  <text class="step-t" x="70" y="434">step F</text>
 
   <!-- RIGHT: stored tree -->
   <text class="sec" x="590" y="26">The stored tree</text>
-  <rect class="panel" x="590" y="38" width="390" height="176" rx="8"/>
+  <rect class="panel" x="590" y="38" width="390" height="184" rx="8"/>
   <text class="mono-h" x="604" y="64">stored blocks (id · level · type)</text>
   <text class="mono" x="604" y="86">b0  L0  sequence   children (order): A · b1 · b2 · F</text>
-  <text class="mono" x="604" y="104">b1  L1  loop       children (order): B · C</text>
+  <text class="mono" x="604" y="104">b1  L1  loop       children (order): B · b3 · C</text>
   <text class="mono" x="604" y="122">b2  L1  loop       children (order): D · E</text>
-  <text class="mono" x="604" y="150">steps (leaves):  A · B · C · D · E · F</text>
-  <text class="mono" x="604" y="168">execution order:  A → (B → C) → (D → E) → F</text>
+  <text class="mono" x="604" y="140">b3  L2  if         children (order): X</text>
+  <text class="mono" x="604" y="166">steps (leaves):  A · B · C · D · E · F · X</text>
+  <text class="mono" x="604" y="184">execution order:  A → (B → X → C) → (D → E) → F</text>
 
-  <!-- BOTTOM: how to read -->
-  <text class="sec" x="20" y="424">How to read</text>
-  <text class="rule" x="20" y="450">· level = depth — the root is L0; a larger level is more internal. a simple workflow (only steps) is one L0 block.</text>
-  <text class="rule" x="20" y="470">· a block has a type (sequence · loop · if · ...) and ordered children — the number is the position within the parent.</text>
-  <text class="rule" x="20" y="490">· independent blocks share a level — b1 and b2 are both L1, and they run in order (finish b1, then b2).</text>
-  <text class="rule" x="20" y="510">· blocks nest indefinitely — a block can hold blocks and steps; the stored tree is read back, not recomputed.</text>
+  <!-- BOTTOM-LEFT: how to read -->
+  <text class="sec" x="20" y="470">How to read</text>
+  <text class="rule" x="20" y="496">· level = depth — the root is L0; nesting goes to n levels (L0 … Ln), a larger level is more internal. a simple workflow is one L0 block.</text>
+  <text class="rule" x="20" y="516">· a block has a type (sequence · loop · if · ...) and ordered children — the number is the position within the parent.</text>
+  <text class="rule" x="20" y="536">· a block can hold BLOCKS and steps — the loop b1 contains the if b3, a step, and another step.</text>
+  <text class="rule" x="20" y="556">· independent blocks share a level — b1 and b2 are both L1; the stored tree is read back, not recomputed.</text>
 
   <!-- BOTTOM-RIGHT: the level scale -->
-  <text class="sec" x="620" y="424">The level scale</text>
-  <rect class="blk" x="650" y="436" width="310" height="104" rx="8"/>
-  <text class="bname" x="664" y="456">L0 · root</text>
-  <rect class="blk" x="705" y="450" width="200" height="76" rx="6"/>
-  <text class="bname" x="719" y="468">L1 · inside</text>
-  <rect class="blk" x="775" y="464" width="60" height="48" rx="5"/>
-  <text class="bname" x="805" y="491" text-anchor="middle">L2</text>
-  <text class="rule" x="650" y="558">larger level = more internal</text>
+  <text class="sec" x="620" y="470">The level scale</text>
+  <rect class="blk" x="650" y="484" width="310" height="90" rx="8"/>
+  <text class="bname" x="664" y="504">L0 · root</text>
+  <rect class="blk" x="705" y="496" width="200" height="66" rx="6"/>
+  <text class="bname" x="719" y="514">L1 · inside</text>
+  <rect class="blk" x="775" y="508" width="60" height="42" rx="5"/>
+  <text class="bname" x="805" y="531" text-anchor="middle">L2</text>
+  <text class="bname" x="664" y="584">… Ln</text>
+  <text class="rule" x="650" y="604">levels are unbounded — larger level = more internal</text>
 </svg>
 </figure>
 <div class="legend">
   <span><i class="dot d-coral"></i>loop block (a container)</span>
+  <span><i class="dot d-blue"></i>if block (a fork)</span>
   <span><i class="dot d-green"></i>step (a leaf)</span>
-  <span><i class="dot d-soft"></i>level badge (L0 / L1 / ...)</span>
+  <span><i class="dot d-soft"></i>level badge (L0 / L1 / L2)</span>
 </div>
 </body>
 </html>
