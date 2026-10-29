@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>web/graph — how it receives and treats the block model</title>
+<link rel="stylesheet" href="css/webgraph-block-treatment.css">
+</head>
+<body>
+  <p class="eyebrow">web/graph · block treatment · flow (target model)</p>
+  <h1>web/graph — how it receives and treats the block model</h1>
+  <p class="sublabel">
+    <code>core/graph</code> produces the block model at boot (blocks · dependencies · levels · types). <code>web/graph</code>
+    receives it, then treats it to build the graphic: <span style="color:var(--ink)">1</span> receive,
+    <span style="color:var(--ink)">2</span> assign the 7-color rotation to each block's outline,
+    <span style="color:var(--ink)">3</span> represent each block type (async · if · loop · sequence),
+    <span style="color:var(--ink)">4</span> compute the layout (positions · arrows · symbols · nesting by level),
+    <span style="color:var(--ink)">5</span> emit the SVG. The 7 colors cycle, so any number of blocks, levels and types stays visually clear.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 1000 470" role="img" aria-labelledby="bt-title bt-desc">
+      <title id="bt-title">web/graph — how it receives and treats the block model</title>
+      <desc id="bt-desc">
+        core/graph produces the block model (blocks, dependencies, levels, types) from the AST at boot. web/graph receives
+        the model, then treats it in five steps: receive, color (7-color rotation to each block outline), represent (per
+        block type), layout (positions, arrows, symbols, nesting by level), and emit the SVG. The 7 block-outline colors
+        (blue, orange, green, red, ink, muted, soft) cycle, so more blocks, levels and types repeat the rotation and stay
+        visually clear. The output is the SVG graphic of blocks with colored outlines, arrows and symbols.
+      </desc>
+      <defs>
+        <marker id="bt-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#b8bcc4"></path>
+        </marker>
+      </defs>
+
+      <!-- LEFT: core/graph — the block model -->
+      <text class="sec" x="20" y="34">core/graph — the block model</text>
+      <rect class="panel" x="20" y="44" width="290" height="286" rx="8"/>
+      <text class="mono" x="36" y="70">blocks:</text>
+      <text class="txt"  x="100" y="70">id · level · type · children</text>
+      <text class="mono" x="36" y="94">deps:</text>
+      <text class="txt"  x="100" y="94">block → step/block (edges)</text>
+      <text class="mono" x="36" y="118">levels:</text>
+      <text class="txt"  x="100" y="118">L0 … Ln (depth)</text>
+      <text class="mono" x="36" y="142">types:</text>
+      <text class="txt"  x="100" y="142">sequence · loop · if</text>
+      <text class="txt"  x="100" y="160">async · child · wait</text>
+      <line x1="36" y1="182" x2="294" y2="182" stroke="#3a3e45"></line>
+      <text class="txt"  x="36" y="204">from the AST, at boot</text>
+      <text class="txt"  x="36" y="222">(embedded source files)</text>
+      <!-- the payload chips -->
+      <rect x="36" y="244" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
+      <text class="chip" x="91" y="260" text-anchor="middle">BLOCKS</text>
+      <rect x="154" y="244" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
+      <text class="chip" x="209" y="260" text-anchor="middle">DEPS</text>
+      <rect x="36" y="274" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
+      <text class="chip" x="91" y="290" text-anchor="middle">LEVELS</text>
+      <rect x="154" y="274" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
+      <text class="chip" x="209" y="290" text-anchor="middle">TYPES</text>
+
+      <!-- arrow core/graph -> web/graph -->
+      <line x1="310" y1="187" x2="336" y2="187" stroke="#b8bcc4" marker-end="url(#bt-arr)"></line>
+
+      <!-- MIDDLE: web/graph — treat the model -->
+      <text class="sec" x="340" y="34">web/graph — treat the model</text>
+
+      <rect class="step" x="340" y="54" width="330" height="44" rx="6"/>
+      <text class="stepno" x="354" y="72">1 · RECEIVE</text>
+      <text class="txt"    x="354" y="90">the block model (blocks · deps · levels · types)</text>
+
+      <text class="arrow" x="505" y="108" text-anchor="middle">↓</text>
+
+      <rect class="step focal" x="340" y="112" width="330" height="44" rx="6"/>
+      <text class="stepno focal" x="354" y="130">2 · COLOR</text>
+      <text class="txt"    x="354" y="148">7-color rotation → each block's outline</text>
+
+      <text class="arrow" x="505" y="166" text-anchor="middle">↓</text>
+
+      <rect class="step" x="340" y="170" width="330" height="44" rx="6"/>
+      <text class="stepno" x="354" y="188">3 · REPRESENT</text>
+      <text class="txt"    x="354" y="206">per type: async · if · loop · sequence</text>
+
+      <text class="arrow" x="505" y="224" text-anchor="middle">↓</text>
+
+      <rect class="step" x="340" y="228" width="330" height="44" rx="6"/>
+      <text class="stepno" x="354" y="246">4 · LAYOUT</text>
+      <text class="txt"    x="354" y="264">positions · arrows · symbols · nesting by level</text>
+
+      <text class="arrow" x="505" y="282" text-anchor="middle">↓</text>
+
+      <rect class="step" x="340" y="286" width="330" height="44" rx="6"/>
+      <text class="stepno" x="354" y="304">5 · EMIT</text>
+      <text class="txt"    x="354" y="322">build the SVG</text>
+
+      <!-- arrow web/graph -> graphic -->
+      <line x1="670" y1="187" x2="696" y2="187" stroke="#b8bcc4" marker-end="url(#bt-arr)"></line>
+
+      <!-- RIGHT: the graphic (SVG) -->
+      <text class="sec" x="700" y="34">the graphic (SVG)</text>
+      <rect class="panel" x="700" y="44" width="280" height="286" rx="8"/>
+      <text class="txt" x="716" y="68">blocks with colored outlines</text>
+
+      <rect x="716" y="80" width="248" height="34" rx="6" fill="none" stroke="#7cc0ff" stroke-width="1.5"/>
+      <text class="txt" x="732" y="102">sequence · in order</text>
+
+      <rect x="716" y="122" width="248" height="34" rx="6" fill="none" stroke="#ff9142" stroke-width="1.5"/>
+      <text class="txt" x="732" y="144">async · stacked</text>
+
+      <rect x="716" y="164" width="248" height="34" rx="6" fill="none" stroke="#46d19a" stroke-width="1.5"/>
+      <text class="txt" x="732" y="186">if · stack + arrows</text>
+
+      <rect x="716" y="206" width="248" height="34" rx="6" fill="none" stroke="#ff5450" stroke-width="1.5"/>
+      <text class="txt" x="732" y="228">loop · repeat symbol</text>
+      <text class="txt" x="952" y="228" text-anchor="end" font-size="13">⟳</text>
+
+      <line x1="716" y1="258" x2="964" y2="258" stroke="#3a3e45"></line>
+      <text class="txt" x="716" y="280">outlines = 7-color rotation</text>
+      <text class="txt" x="716" y="298">layout = type representation</text>
+
+      <!-- BOTTOM: the 7-color strip -->
+      <text class="sec" x="20" y="380">the 7 block-outline colors (rotation)</text>
+
+      <rect x="20"  y="392" width="34" height="30" rx="5" fill="#7cc0ff"/>
+      <text x="37"  y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C1</text>
+      <text x="37"  y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#7cc0ff</text>
+
+      <rect x="66"  y="392" width="34" height="30" rx="5" fill="#ff9142"/>
+      <text x="83"  y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C2</text>
+      <text x="83"  y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#ff9142</text>
+
+      <rect x="112" y="392" width="34" height="30" rx="5" fill="#46d19a"/>
+      <text x="129" y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C3</text>
+      <text x="129" y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#46d19a</text>
+
+      <rect x="158" y="392" width="34" height="30" rx="5" fill="#ff5450"/>
+      <text x="175" y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C4</text>
+      <text x="175" y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#ff5450</text>
+
+      <rect x="204" y="392" width="34" height="30" rx="5" fill="#e8e6e1"/>
+      <text x="221" y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C5</text>
+      <text x="221" y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#e8e6e1</text>
+
+      <rect x="250" y="392" width="34" height="30" rx="5" fill="#b8bcc4"/>
+      <text x="267" y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C6</text>
+      <text x="267" y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#b8bcc4</text>
+
+      <rect x="296" y="392" width="34" height="30" rx="5" fill="#8f96a3"/>
+      <text x="313" y="412" text-anchor="middle" font-size="10" fill="#0b0c0e" font-weight="600">C7</text>
+      <text x="313" y="436" text-anchor="middle" font-size="9" fill="#8f96a3" font-family="Geist Mono, monospace">#8f96a3</text>
+
+      <text class="txt" x="352" y="408">rule: block <tspan font-family="Geist Mono, monospace" font-size="10">i</tspan> → outline color <tspan font-family="Geist Mono, monospace" font-size="10">(i mod 7)</tspan></text>
+      <text class="txt" x="352" y="426">more blocks / levels / types → the 7 repeat (rotation)</text>
+    </svg>
+
+    <figcaption class="legend">
+      <span><span class="dot" style="background:#ff9142"></span> 7-color rotation (C1–C7)</span>
+      <span><span class="dot" style="background:#b8bcc4"></span> treatment step</span>
+      <span>target model — web/graph block rendering (design)</span>
+    </figcaption>
+  </figure>
+
+  <style>
+    .panel { fill: rgba(184, 188, 196, 0.04); stroke: #3a3e45; stroke-width: 1; }
+    .step { fill: rgba(184, 188, 196, 0.06); stroke: #3a3e45; stroke-width: 1; }
+    .step.focal { stroke: #ff9142; }
+    .sec { font: 11px "Geist Mono", monospace; fill: #8f96a3; letter-spacing: 0.08em; text-transform: uppercase; }
+    .mono { font: 12px "Geist Mono", monospace; fill: #b8bcc4; }
+    .txt { font: 12px "Geist", system-ui, sans-serif; fill: #e8e6e1; }
+    .stepno { font: 12px "Geist Mono", monospace; fill: #8f96a3; font-weight: 600; }
+    .stepno.focal { fill: #ff9142; }
+    .chip { font: 9px "Geist Mono", monospace; fill: #b8bcc4; letter-spacing: 0.06em; }
+    .arrow { font: 13px "Geist Mono", monospace; fill: #8f96a3; }
+  </style>
+</body>
+</html>
