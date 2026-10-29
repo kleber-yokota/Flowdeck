@@ -11,12 +11,12 @@
   <h1>web/graph — how it receives and treats the block model</h1>
   <p class="sublabel">
     <code>core/graph</code> produces the block model at boot (blocks · dependencies · levels · types). <code>web/graph</code>
-    receives it, then treats it to build the graphic: <span style="color:var(--ink)">1</span> receive,
-    <span style="color:var(--ink)">2</span> assign the <span style="color:var(--ink)">block level</span> (L0/L1/L2) to each block's outline,
-    <span style="color:var(--ink)">3</span> represent each block type (async · if · loop · sequence),
+    receives it, then treats it (top → bottom): <span style="color:var(--ink)">1</span> receive,
+    <span style="color:var(--ink)">2</span> assign the <span style="color:var(--ink)">block level</span> (violet ramp L0/L1/L2) to
+    each block's outline, <span style="color:var(--ink)">3</span> represent each block type (async · if · loop · sequence),
     <span style="color:var(--ink)">4</span> compute the layout (positions · arrows · symbols · nesting by level),
-    <span style="color:var(--ink)">5</span> emit the SVG. The outline color is the <span style="color:var(--ink)">level</span> — never the
-    status, which keeps its own 4 colors. Steps flow <span style="color:var(--ink)">top → bottom</span>.
+    <span style="color:var(--ink)">5</span> emit the SVG. The outline color is the <span style="color:var(--ink)">level</span> —
+    never the status, which keeps its own 4 colors.
   </p>
 
   <figure>
@@ -24,15 +24,19 @@
       <title id="bt-title">web/graph — how it receives and treats the block model</title>
       <desc id="bt-desc">
         core/graph produces the block model (blocks, dependencies, levels, types) from the AST at boot. web/graph receives
-        the model, then treats it in five top-to-bottom steps: 1 receive, 2 color by block level (L0 ink, L1 soft, L2 dark) to each
-        block's outline, 3 represent per block type, 4 layout (positions, arrows, symbols, nesting by level), 5 emit the SVG. The
-        outline color is the block level, separate from the 4 status colors (queued, running, success, failed). The output is the
-        SVG graphic of blocks with level-colored outlines, arrows and symbols.
+        the model, then treats it in five top-to-bottom steps: 1 receive, 2 color by block level (a violet ramp L0 light, L1
+        mid, L2 deep) to each block's outline, 3 represent per block type (sequence top-to-bottom, async and if side by side,
+        loop with a loop symbol), 4 layout (positions, arrows, symbols, nesting by level), 5 emit the SVG. The outline color is
+        the block level, separate from the 4 status colors (queued, running, success, failed).
       </desc>
       <defs>
         <marker id="bt-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#8f96a3"></path>
         </marker>
+        <symbol id="bt-loop" viewBox="0 0 32 32">
+          <path d="M13,6A9,9,0,0,0,5.52,20l1.66-1.11A7,7,0,1,1,13,22H2v2H13A9,9,0,0,0,13,6Z" fill="#e8e6e1"/>
+          <polygon points="23.59 19.41 26 22 21 22 21 24 26 24 23.59 26.59 25 28 30 23 25 18 23.59 19.41" fill="#e8e6e1"/>
+        </symbol>
       </defs>
 
       <!-- LEFT: core/graph — the block model -->
@@ -74,7 +78,7 @@
 
       <rect class="step" x="340" y="112" width="330" height="44" rx="6"/>
       <text class="stepno" x="354" y="130">2 · COLOR</text>
-      <text class="txt"    x="354" y="148">block level (L0/L1/L2) → each outline</text>
+      <text class="txt"    x="354" y="148">block level (violet ramp L0/L1/L2) → outline</text>
 
       <text class="arrow" x="505" y="166" text-anchor="middle">↓</text>
 
@@ -102,18 +106,18 @@
       <rect class="panel" x="700" y="44" width="280" height="286" rx="8"/>
       <text class="txt" x="716" y="68">blocks with level outlines</text>
 
-      <rect x="716" y="80" width="248" height="34" rx="6" fill="none" stroke="#e8e6e1" stroke-width="1.5"/>
-      <text class="txt" x="732" y="102">sequence · in order</text>
+      <rect x="716" y="80" width="248" height="34" rx="6" fill="none" stroke="#ddd6fe" stroke-width="1.5"/>
+      <text class="txt" x="732" y="102">sequence · top → bottom</text>
 
-      <rect x="716" y="122" width="248" height="34" rx="6" fill="none" stroke="#8f96a3" stroke-width="1.5"/>
-      <text class="txt" x="732" y="144">async · stacked</text>
+      <rect x="716" y="122" width="248" height="34" rx="6" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="txt" x="732" y="144">async · side by side</text>
 
-      <rect x="716" y="164" width="248" height="34" rx="6" fill="none" stroke="#8f96a3" stroke-width="1.5"/>
-      <text class="txt" x="732" y="186">if · stack + arrows</text>
+      <rect x="716" y="164" width="248" height="34" rx="6" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="txt" x="732" y="186">if · side by side (↓)</text>
 
-      <rect x="716" y="206" width="248" height="34" rx="6" fill="none" stroke="#5a6169" stroke-width="1.5"/>
-      <text class="txt" x="732" y="228">loop · repeat symbol</text>
-      <text class="txt" x="952" y="228" text-anchor="end" font-size="13">⟳</text>
+      <rect x="716" y="206" width="248" height="34" rx="6" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+      <text class="txt" x="732" y="228">loop · loop symbol</text>
+      <use href="#bt-loop" x="938" y="213" width="14" height="14"/>
 
       <line x1="716" y1="258" x2="964" y2="258" stroke="#3a3e45"></line>
       <text class="txt" x="716" y="280">outlines = level (L0/L1/L2)</text>
@@ -131,17 +135,17 @@
       <text class="txt" x="346" y="409">failed</text>
 
       <text class="sec" x="470" y="380">block level (outlines)</text>
-      <rect x="470" y="392" width="30" height="24" rx="4" fill="none" stroke="#e8e6e1" stroke-width="2"/>
+      <rect x="470" y="392" width="30" height="24" rx="4" fill="none" stroke="#ddd6fe" stroke-width="2"/>
       <text class="txt" x="506" y="409">L0</text>
-      <rect x="550" y="392" width="30" height="24" rx="4" fill="none" stroke="#8f96a3" stroke-width="2"/>
+      <rect x="550" y="392" width="30" height="24" rx="4" fill="none" stroke="#a78bfa" stroke-width="2"/>
       <text class="txt" x="586" y="409">L1</text>
-      <rect x="630" y="392" width="30" height="24" rx="4" fill="none" stroke="#5a6169" stroke-width="2"/>
+      <rect x="630" y="392" width="30" height="24" rx="4" fill="none" stroke="#7c3aed" stroke-width="2"/>
       <text class="txt" x="666" y="409">L2</text>
       <text class="txt" x="720" y="409">L3+ reuses L2 + badge</text>
     </svg>
 
     <figcaption class="legend">
-      <span><span class="dot" style="background:#8f96a3"></span> outline color = block level (L0/L1/L2)</span>
+      <span><span class="dot" style="background:#a78bfa"></span> outline color = block level (violet ramp L0/L1/L2)</span>
       <span>status keeps its own 4 colors · target model (design)</span>
     </figcaption>
   </figure>
