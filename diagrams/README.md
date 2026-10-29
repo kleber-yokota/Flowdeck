@@ -73,7 +73,15 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   `handleWorkflowPage` → `PathsToSVG` → workflow page) and the executed path (runtime ·
   Postgres: `core.Steps` → `Port.Steps` → `handleExecutionSteps` (2s poll) /
   `handleExecutionDetail` → `ExecutedPathToSVG` → steps fragment), both sharing the same
-  drawing code (`newGraphLayout` · `svg()` · `pathNode`).
+  drawing code (`newGraphLayout` · `svg()` · `pathNode`);
+- `graph/paths-blocks.html` — taxonomy of "what's inside what": the Go syntax blocks a
+  workflow body can use (the containers: block, if/else-if/else, switch, type switch, for,
+  for range, select, go, defer/return) × the DBOS constructs that can be put inside any of
+  them (the contents: `RunAsStep`, `RunAsTransaction`, `RunWorkflow`, `Go`, `Select`,
+  `Sleep`, `Recv`, `Enqueue`, `Send`/`SetEvent`), each with its path effect (sequence / fork
+  / loop) and the node type it produces (step / child workflow / async / wait / off-path),
+  plus today's `possiblePaths` coverage (handled / flattened / invisible) — the reference
+  for extending the AST extraction beyond `RunAsStep` + `if`.
 
 ## Files
 
@@ -92,3 +100,4 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   - `graph/core-graph-extraction.html` (how `core/graph` extracts)
   - `graph/possible-paths.html` (the `possiblePaths` walk, step by step)
   - `graph/graph-contract.html` (the two path-diagram pipelines: possible-paths + executed path)
+  - `graph/paths-blocks.html` (Go blocks × DBOS constructs — what's inside what)
