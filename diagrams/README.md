@@ -42,10 +42,10 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 
 ## Package map (navigable)
 
-- Ranked package graph (7 nodes, 9 edges, zero cycles): `main` → `web` → `core` + `web/graph`
+- Ranked package graph (9 nodes, 13 edges, zero cycles): `main` → `web` → `core` + `web/graph`
   → `core/status` + `core/graph` + `dbos` (third); edge labels = the functions that
   contact across modules;
-- `core` is the convergence point (fan-in 3: `main`, `web`, `web/graph`); the `web`↔`core`
+- `core` is the convergence point (fan-in 4: `main`, `web`, `web/graph`, `workflows`); the `web`↔`core`
   contact is the single `Port`; `core/status` and `core/graph` are pure;
 - **Clickable nodes**: clicking a package shows its files, functions and contacts
   — navigate without reading the code;
