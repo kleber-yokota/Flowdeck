@@ -64,7 +64,13 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   render, durable steps from Postgres feeding the executed path);
 - `graph/core-graph-extraction.html` — flowchart of how `core/graph` extracts
   (ParseFile · collect → `possiblePaths` → `specs` → `PathGraph`); the spec for improving
-  the AST extraction.
+  the AST extraction;
+- `graph/possible-paths.html` — detailed flowchart of the `possiblePaths` walk: the open
+  paths list (starts with one empty path), `RunAsStep` appending to every open path, `if`
+  forking taken/not-taken (cartesian), dedupe at the end — with the `decide` workflow trace;
+- `graph/graph-contract.html` — data flow of the `core/graph` ⇄ `web/graph` contract: the
+  Port serving `Of(name)` / `Spec(name)` / `Steps(id)` into the handlers and into
+  `PathsToSVG` / `ExecutedPathToSVG`, plus what each side expects to receive.
 
 ## Files
 
@@ -81,3 +87,5 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 - `graph/` — graph subsystem deep dive (own `graph/css/`, one stylesheet per HTML file)
   - `graph/graph-flow.html` (dependency and flow)
   - `graph/core-graph-extraction.html` (how `core/graph` extracts)
+  - `graph/possible-paths.html` (the `possiblePaths` walk, step by step)
+  - `graph/graph-contract.html` (the `core/graph` ⇄ `web/graph` contract)
