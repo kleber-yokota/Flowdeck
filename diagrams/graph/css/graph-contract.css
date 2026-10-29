@@ -55,10 +55,6 @@ svg { width: 100%; min-width: 1000px; display: block; }
 .node-sub   { font-family: var(--font-mono); font-size: 7px; font-weight: 400; fill: var(--color-muted); text-anchor: middle; letter-spacing: 0.02em; }
 .node-tool  { font-family: var(--font-mono); font-size: 7px; font-weight: 400; fill: var(--color-soft); text-anchor: middle; letter-spacing: 0.02em; }
 
-.chip-text   { font-family: var(--font-mono); font-size: 5px; font-weight: 600; fill: #fff; text-anchor: middle; }
-.chip-label  { font-family: var(--font-mono); font-size: 8px; font-weight: 500; fill: var(--color-muted); text-anchor: middle; letter-spacing: 0.05em; }
-.focal-text  { fill: var(--color-accent); }
-
 .lane-num    { font-family: var(--font-mono); font-size: 7px; font-weight: 400; fill: var(--color-soft); letter-spacing: 0.1em; }
 .lane-label  { font-family: var(--font-mono); font-size: 8px; font-weight: 500; fill: var(--color-muted); letter-spacing: 0.14em; }
 
