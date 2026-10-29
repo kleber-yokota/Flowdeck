@@ -89,14 +89,15 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   loops + steps, with the flattened execution order.
 - `graph/webgraph-block-treatment.html` — the target-model flow of how `web/graph` receives and
   treats the block model: `core/graph` produces the block model (blocks · dependencies · levels ·
-  types) at boot; `web/graph` receives it, then treats it — (1) receive, (2) assign the 7-color
-  rotation to each block's outline, (3) represent each block type (async · if · loop · sequence),
-  (4) layout (positions · arrows · symbols · nesting by level), (5) emit the SVG;
+  types) at boot; `web/graph` receives it, then treats it (top → bottom) — (1) receive, (2) assign
+  the block level (L0/L1/L2) to each block's outline, (3) represent each block type (async · if ·
+  loop · sequence), (4) layout (positions · arrows · symbols · nesting by level), (5) emit the SVG;
 - `graph/webgraph-block-representation.html` — the block representation key: how each block type
   is drawn (sequence = boxes in order, async = each box one below the last, if/else-if/else = a
   stack whose branches arrow to the next dependency, loop = a repeat symbol, child workflow and
-  wait = distinct box styles), plus the 7 block-outline colors (C1–C7) and the rotation rule
-  (block i → outline color i mod 7).
+  wait = distinct box symbols). Two distinct palettes: status (badges: queued/running/success/
+  failed) and block level (outlines: L0 ink, L1 soft, L2 dark; L3+ reuses L2 + badge); sequence
+  flows top → bottom.
 
 ## Files
 
@@ -118,4 +119,4 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   - `graph/paths-blocks.html` (Go blocks × DBOS constructs — what's inside what)
   - `graph/paths-block-levels.html` (possible paths as a tree of blocks by level)
   - `graph/webgraph-block-treatment.html` (how `web/graph` receives and treats the block model)
-  - `graph/webgraph-block-representation.html` (how each block type is represented + the 7-color rotation)
+  - `graph/webgraph-block-representation.html` (how each block type is represented + the two palettes: status and block level)
