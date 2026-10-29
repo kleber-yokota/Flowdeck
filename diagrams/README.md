@@ -57,6 +57,15 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
   machine-readable map (AGENTS.md points to them); the SVG is the human view of the same
   data. No separate map exists — if you update it, it is here.
 
+## Graph subsystem (deep dive)
+
+- `graph/graph-flow.html` — data flow: who owns what in the graph subsystem and how the
+  data moves (embedded source → `core/graph` parse → `PathGraph` → `Port` → `web/graph`
+  render, durable steps from Postgres feeding the executed path);
+- `graph/core-graph-extraction.html` — flowchart of how `core/graph` extracts
+  (ParseFile · collect → `possiblePaths` → `specs` → `PathGraph`); the spec for improving
+  the AST extraction.
+
 ## Files
 
 - `handoff-diagrams.md` (pending adjustments discussed but not yet applied — not part of the spec)
@@ -69,3 +78,6 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 - `sequence-phase-3.html` (runs of a workflow)
 - `sequence-phase-4.html` (paths graph)
 - `sequence-phase-5.html` (parameters, edit, stored input)
+- `graph/` — graph subsystem deep dive (own `graph/css/`, one stylesheet per HTML file)
+  - `graph/graph-flow.html` (dependency and flow)
+  - `graph/core-graph-extraction.html` (how `core/graph` extracts)
