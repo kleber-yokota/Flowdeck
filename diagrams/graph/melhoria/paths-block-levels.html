@@ -9,11 +9,11 @@
 <body>
 <p class="eyebrow">Possible paths · block levels · core/graph (target model)</p>
 <h1>Possible paths — blocks by level, stored as a tree</h1>
-<p class="sublabel">A possible-path is a <code>tree of blocks</code>, not a flat list of steps. Every block has a <span style="color:var(--ink)">level</span> (depth — the root is <code>L0</code>, a larger level is more internal), a <span style="color:var(--ink)">type</span> (<code>sequence</code> · <code>loop</code> · <code>if</code>), and <span style="color:var(--ink)">ordered children</span>. A block can hold <span style="color:var(--ink)">blocks and steps</span> — a loop can contain an <code>if</code>, a step, or another loop — the nesting goes to <span style="color:var(--ink)">n</span> levels (unbounded). Independent blocks share a level (siblings) and run in order. The tree is <span style="color:var(--ink)">stored</span>, not recomputed. The example below is a workflow with two sequential loops, and an <code>if</code> nested inside one of them.</p>
+<p class="sublabel">A possible-path is a <code>tree of blocks</code>, not a flat list of steps. Every block has a <span style="color:var(--ink)">level</span> (depth — the root is <code>L0</code>, a larger level is more internal; an <code>if</code> keeps the level of the block it appears in), a <span style="color:var(--ink)">type</span> (<code>sequence</code> · <code>loop</code> · <code>if</code>), and <span style="color:var(--ink)">ordered children</span>. A block can hold <span style="color:var(--ink)">blocks and steps</span> — a loop can contain an <code>if</code>, a step, or another loop — the nesting goes to <span style="color:var(--ink)">n</span> levels (unbounded). Independent blocks share a level (siblings) and run in order. The tree is <span style="color:var(--ink)">stored</span>, not recomputed. The example below is a workflow with two sequential loops, and an <code>if</code> nested inside one of them.</p>
 <figure>
 <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="blvl-title blvl-desc">
   <title id="blvl-title">Possible paths — blocks by level, stored as a tree</title>
-  <desc id="blvl-desc">Left: a workflow body as nested blocks. The root is Block 0 at level L0, type sequence. Its ordered children are step A (1), Block 1 (2), Block 2 (3), and step F (4). Block 1 and Block 2 are both level L1, type loop, and are independent siblings. Block 1 (the loop) contains step B (1), Block 3 (2), and step C (3) — a block inside a block. Block 3 is level L2, type if, and holds step X. Block 2 holds step D then step E. Right: the same structure stored as a tree — each row is a block (id, level, type) with its ordered children, plus the steps (leaves) and the flattened execution order. A simple workflow with only steps is a single L0 block.</desc>
+  <desc id="blvl-desc">Left: a workflow body as nested blocks. The root is Block 0 at level L0, type sequence. Its ordered children are step A (1), Block 1 (2), Block 2 (3), and step F (4). Block 1 and Block 2 are both level L1, type loop, and are independent siblings. Block 1 (the loop) contains step B (1), Block 3 (2), and step C (3) — a block inside a block. Block 3 is level L1 (an if keeps the level of the block it appears in), type if, and holds step X. Block 2 holds step D then step E. Right: the same structure stored as a tree — each row is a block (id, level, type) with its ordered children, plus the steps (leaves) and the flattened execution order. A simple workflow with only steps is a single L0 block.</desc>
   <style>
     .sec { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; fill: #b8bcc4; }
     .blk { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
@@ -61,12 +61,12 @@
   <text class="seq-t" x="80" y="171" text-anchor="middle">1</text>
   <rect class="step" x="94" y="157" width="130" height="22" rx="5"/>
   <text class="step-t" x="106" y="173">step B</text>
-  <!-- Block 1 child 2: Block 3 (if, L2) — a block inside a block -->
+  <!-- Block 1 child 2: Block 3 (if, L1) — a block inside a block -->
   <circle class="seq" cx="80" cy="215" r="8"/>
   <text class="seq-t" x="80" y="218" text-anchor="middle">2</text>
   <rect class="blk if" x="94" y="192" width="440" height="71" rx="8"/>
   <rect class="lvl" x="110" y="206" width="30" height="18" rx="4"/>
-  <text class="lvl-t" x="125" y="219" text-anchor="middle">L2</text>
+  <text class="lvl-t" x="125" y="219" text-anchor="middle">L1</text>
   <text class="bname if" x="148" y="219">Block 3 · if</text>
   <circle class="seq" cx="114" cy="244" r="8"/>
   <text class="seq-t" x="114" y="247" text-anchor="middle">1</text>
@@ -107,7 +107,7 @@
   <text class="mono" x="604" y="86">b0  L0  sequence   children (order): A · b1 · b2 · F</text>
   <text class="mono" x="604" y="104">b1  L1  loop       children (order): B · b3 · C</text>
   <text class="mono" x="604" y="122">b2  L1  loop       children (order): D · E</text>
-  <text class="mono" x="604" y="140">b3  L2  if         children (order): X</text>
+  <text class="mono" x="604" y="140">b3  L1  if         children (order): X</text>
   <text class="mono" x="604" y="166">steps (leaves):  A · B · C · D · E · F · X</text>
   <text class="mono" x="604" y="184">execution order:  A → (B → X → C) → (D → E) → F</text>
 
@@ -116,7 +116,8 @@
   <text class="rule" x="20" y="496">· level = depth — the root is L0; nesting goes to n levels (L0 … Ln), a larger level is more internal. a simple workflow is one L0 block.</text>
   <text class="rule" x="20" y="516">· a block has a type (sequence · loop · if · ...) and ordered children — the number is the position within the parent.</text>
   <text class="rule" x="20" y="536">· a block can hold BLOCKS and steps — the loop b1 contains the if b3, a step, and another step.</text>
-  <text class="rule" x="20" y="556">· independent blocks share a level — b1 and b2 are both L1; the stored tree is read back, not recomputed.</text>
+  <text class="rule" x="20" y="556">· independent blocks share a level — b1, b2 and b3 are all L1; the stored tree is read back, not recomputed.</text>
+  <text class="rule" x="20" y="576">· an if keeps the level of the block it appears in — b3 is L1, inside the loop b1 (it does not add a level).</text>
 
   <!-- BOTTOM-RIGHT: the level scale -->
   <text class="sec" x="620" y="470">The level scale</text>

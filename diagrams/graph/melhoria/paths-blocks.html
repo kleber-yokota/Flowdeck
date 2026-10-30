@@ -9,16 +9,17 @@
 <body>
 <p class="eyebrow">Paths · Go blocks × DBOS constructs · core/graph (possiblePaths)</p>
 <h1>What's inside what — the blocks and the constructs</h1>
-<p class="sublabel">Every <code>DBOS</code> construct can nest inside any <code>Go</code> block: the block shapes the path (fork / loop / sequence), the construct becomes a node (step / child / async / wait). The left column is the Go syntax a workflow body can use; the right column is what <code>dbos</code> offers to put inside. <span style="color:var(--ink)">Status</span> = how <code>possiblePaths</code> (core/graph) handles each today.</p>
+<p class="sublabel">Every <code>DBOS</code> construct can nest inside any <code>Go</code> block: the block shapes the path (fork / loop / sequence), the construct becomes a node (step / child / async / wait). The left column is the Go syntax a workflow body can use; the right column is what <code>dbos</code> offers to put inside. The <code>same block</code> column makes the rule explicit: <span style="color:var(--ink)">no</span> = the item creates a new block, <span style="color:var(--ink)">yes</span> = it stays in the current block (no new block). <span style="color:var(--ink)">Status</span> = how <code>possiblePaths</code> (core/graph) handles each today.</p>
 <figure>
-<svg viewBox="0 0 1000 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pb-title pb-desc">
+<svg viewBox="0 0 1080 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pb-title pb-desc">
   <title id="pb-title">The paths — Go blocks × DBOS constructs</title>
-  <desc id="pb-desc">Left: the Go syntax blocks a workflow body can use (block, if, else if, switch, type switch, for, for range, select, go, defer/return), each with its path effect (sequence, fork, loop) and today's possiblePaths status. Right: the DBOS constructs that can be put inside any block (RunAsStep, RunAsTransaction, RunWorkflow, Go, Select, Sleep, Recv, Enqueue, Send/SetEvent), each with the node type it produces (step, child workflow, async, wait, off-path) and today's status. Bottom: an example nesting — a for loop holding an async Go step and a RunWorkflow child, plus an if/else-if/else and a switch that dispatch to different steps.</desc>
+  <desc id="pb-desc">Left: the Go syntax blocks a workflow body can use (block, if, else if, switch, type switch, for, for range, select, go, defer/return), each with its path effect (sequence, fork, loop), a same-block flag (yes = stays in the current block, no = creates a new block), and today's possiblePaths status. Right: the DBOS constructs that can be put inside any block (RunAsStep, RunAsTransaction, RunWorkflow, Go, Select, Sleep, Recv, Enqueue, Send/SetEvent), each with the node type it produces (step, child workflow, async, wait, off-path), a same-block flag, and today's status. Bottom: an example nesting — a for loop holding an async Go step and a RunWorkflow child, plus an if/else-if/else and a switch that dispatch to different steps.</desc>
   <style>
     .lbl { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; fill: #b8bcc4; }
     .name { font: 500 10px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
     .eff { font: 400 8.5px "Geist", system-ui, sans-serif; fill: #8f96a3; }
     .typ { font: 400 8.5px "Geist", system-ui, sans-serif; }
+    .sb { font: 500 9px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
     .box { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
     .chip { fill: rgba(184,188,196,0.05); stroke-width: 1; }
     .cl { font: 500 9px "Geist Mono", ui-monospace, monospace; }
@@ -28,106 +29,127 @@
 
   <!-- LEFT: Go blocks (containers) -->
   <text class="lbl" x="40" y="74">Go blocks (the containers)</text>
+  <text class="lbl" x="480" y="74" text-anchor="end">Same block</text>
 
   <!-- 1 block -->
-  <rect class="box" x="40" y="88" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="88" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="111">block { }</text>
-  <text class="eff" x="340" y="111">sequence</text>
-  <circle cx="464" cy="106" r="4.5" fill="#46d19a"/>
+  <text class="eff" x="290" y="111">sequence</text>
+  <text class="sb" x="480" y="111" text-anchor="end">no</text>
+  <circle cx="505" cy="106" r="4.5" fill="#46d19a"/>
   <!-- 2 if -->
-  <rect class="box" x="40" y="134" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="134" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="157">if</text>
-  <text class="eff" x="340" y="157">fork ×2</text>
-  <circle cx="464" cy="152" r="4.5" fill="#46d19a"/>
+  <text class="eff" x="290" y="157">fork ×2</text>
+  <text class="sb" x="480" y="157" text-anchor="end">no</text>
+  <circle cx="505" cy="152" r="4.5" fill="#46d19a"/>
   <!-- 3 else if / else -->
-  <rect class="box" x="40" y="180" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="180" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="203">else if / else</text>
-  <text class="eff" x="340" y="203">fork chain</text>
-  <circle cx="464" cy="198" r="4.5" fill="#46d19a"/>
+  <text class="eff" x="290" y="203">fork chain</text>
+  <text class="sb" x="480" y="203" text-anchor="end">yes</text>
+  <circle cx="505" cy="198" r="4.5" fill="#46d19a"/>
   <!-- 4 switch -->
-  <rect class="box" x="40" y="226" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="226" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="249">switch</text>
-  <text class="eff" x="340" y="249">fork ×n (case)</text>
-  <circle cx="464" cy="244" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="249">fork ×n (case)</text>
+  <text class="sb" x="480" y="249" text-anchor="end">no</text>
+  <circle cx="505" cy="244" r="4.5" fill="#ff9142"/>
   <!-- 5 type switch -->
-  <rect class="box" x="40" y="272" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="272" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="295">type switch</text>
-  <text class="eff" x="340" y="295">fork ×n (case)</text>
-  <circle cx="464" cy="290" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="295">fork ×n (case)</text>
+  <text class="sb" x="480" y="295" text-anchor="end">no</text>
+  <circle cx="505" cy="290" r="4.5" fill="#ff9142"/>
   <!-- 6 for -->
-  <rect class="box" x="40" y="318" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="318" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="341">for</text>
-  <text class="eff" x="340" y="341">loop (repeats)</text>
-  <circle cx="464" cy="336" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="341">loop (repeats)</text>
+  <text class="sb" x="480" y="341" text-anchor="end">no</text>
+  <circle cx="505" cy="336" r="4.5" fill="#ff9142"/>
   <!-- 7 for range -->
-  <rect class="box" x="40" y="364" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="364" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="387">for range</text>
-  <text class="eff" x="340" y="387">loop ×item</text>
-  <circle cx="464" cy="382" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="387">loop ×item</text>
+  <text class="sb" x="480" y="387" text-anchor="end">no</text>
+  <circle cx="505" cy="382" r="4.5" fill="#ff9142"/>
   <!-- 8 select -->
-  <rect class="box" x="40" y="410" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="410" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="433">select</text>
-  <text class="eff" x="340" y="433">fork ×chan</text>
-  <circle cx="464" cy="428" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="433">fork ×chan</text>
+  <text class="sb" x="480" y="433" text-anchor="end">no</text>
+  <circle cx="505" cy="428" r="4.5" fill="#ff9142"/>
   <!-- 9 go -->
-  <rect class="box" x="40" y="456" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="456" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="479">go fn()</text>
-  <text class="eff" x="340" y="479">goroutine (async)</text>
-  <circle cx="464" cy="474" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="479">goroutine (async)</text>
+  <text class="sb" x="480" y="479" text-anchor="end">no</text>
+  <circle cx="505" cy="474" r="4.5" fill="#ff9142"/>
   <!-- 10 defer / return -->
-  <rect class="box" x="40" y="502" width="440" height="36" rx="6"/>
+  <rect class="box" x="40" y="502" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="525">defer / return</text>
-  <text class="eff" x="340" y="525">ordering / exit</text>
-  <circle cx="464" cy="520" r="4.5" fill="#ff9142"/>
+  <text class="eff" x="290" y="525">ordering / exit</text>
+  <text class="sb" x="480" y="525" text-anchor="end">yes</text>
+  <circle cx="505" cy="520" r="4.5" fill="#ff9142"/>
 
   <!-- RIGHT: DBOS constructs (contents) -->
-  <text class="lbl" x="520" y="74">DBOS constructs (the contents)</text>
+  <text class="lbl" x="560" y="74">DBOS constructs (the contents)</text>
+  <text class="lbl" x="1000" y="74" text-anchor="end">Same block</text>
 
   <!-- 1 RunAsStep -->
-  <rect class="box" x="520" y="88" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="111">RunAsStep</text>
-  <text class="typ" x="790" y="111" fill="#46d19a">step</text>
-  <circle cx="944" cy="106" r="4.5" fill="#46d19a"/>
+  <rect class="box" x="560" y="88" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="111">RunAsStep</text>
+  <text class="typ" x="810" y="111" fill="#46d19a">step</text>
+  <text class="sb" x="1000" y="111" text-anchor="end">yes</text>
+  <circle cx="1025" cy="106" r="4.5" fill="#46d19a"/>
   <!-- 2 RunAsTransaction -->
-  <rect class="box" x="520" y="134" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="157">RunAsTransaction</text>
-  <text class="typ" x="790" y="157" fill="#46d19a">step (txn)</text>
-  <circle cx="944" cy="152" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="134" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="157">RunAsTransaction</text>
+  <text class="typ" x="810" y="157" fill="#46d19a">step (txn)</text>
+  <text class="sb" x="1000" y="157" text-anchor="end">yes</text>
+  <circle cx="1025" cy="152" r="4.5" fill="#ff5450"/>
   <!-- 3 RunWorkflow -->
-  <rect class="box" x="520" y="180" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="203">RunWorkflow</text>
-  <text class="typ" x="790" y="203" fill="#ff9142">child workflow</text>
-  <circle cx="944" cy="198" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="180" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="203">RunWorkflow</text>
+  <text class="typ" x="810" y="203" fill="#ff9142">child workflow</text>
+  <text class="sb" x="1000" y="203" text-anchor="end">no</text>
+  <circle cx="1025" cy="198" r="4.5" fill="#ff5450"/>
   <!-- 4 Go -->
-  <rect class="box" x="520" y="226" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="249">Go</text>
-  <text class="typ" x="790" y="249" fill="#7cc0ff">async step (→ chan)</text>
-  <circle cx="944" cy="244" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="226" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="249">Go</text>
+  <text class="typ" x="810" y="249" fill="#7cc0ff">async step (→ chan)</text>
+  <text class="sb" x="1000" y="249" text-anchor="end">no</text>
+  <circle cx="1025" cy="244" r="4.5" fill="#ff5450"/>
   <!-- 5 Select -->
-  <rect class="box" x="520" y="272" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="295">Select (chans)</text>
-  <text class="typ" x="790" y="295" fill="#8f96a3">join</text>
-  <circle cx="944" cy="290" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="272" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="295">Select (chans)</text>
+  <text class="typ" x="810" y="295" fill="#8f96a3">join (drawn as a wait)</text>
+  <text class="sb" x="1000" y="295" text-anchor="end">no</text>
+  <circle cx="1025" cy="290" r="4.5" fill="#ff5450"/>
   <!-- 6 Sleep -->
-  <rect class="box" x="520" y="318" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="341">Sleep</text>
-  <text class="typ" x="790" y="341" fill="#8f96a3">wait</text>
-  <circle cx="944" cy="336" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="318" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="341">Sleep</text>
+  <text class="typ" x="810" y="341" fill="#8f96a3">wait</text>
+  <text class="sb" x="1000" y="341" text-anchor="end">no</text>
+  <circle cx="1025" cy="336" r="4.5" fill="#ff5450"/>
   <!-- 7 Recv -->
-  <rect class="box" x="520" y="364" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="387">Recv (topic)</text>
-  <text class="typ" x="790" y="387" fill="#8f96a3">wait (message)</text>
-  <circle cx="944" cy="382" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="364" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="387">Recv (topic)</text>
+  <text class="typ" x="810" y="387" fill="#8f96a3">wait (message)</text>
+  <text class="sb" x="1000" y="387" text-anchor="end">no</text>
+  <circle cx="1025" cy="382" r="4.5" fill="#ff5450"/>
   <!-- 8 Enqueue -->
-  <rect class="box" x="520" y="410" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="433">Enqueue (queue)</text>
-  <text class="typ" x="790" y="433" fill="#b8bcc4">off-path dispatch</text>
-  <circle cx="944" cy="428" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="410" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="433">Enqueue (queue)</text>
+  <text class="typ" x="810" y="433" fill="#b8bcc4">off-path dispatch</text>
+  <text class="sb" x="1000" y="433" text-anchor="end">yes</text>
+  <circle cx="1025" cy="428" r="4.5" fill="#ff5450"/>
   <!-- 9 Send / SetEvent -->
-  <rect class="box" x="520" y="456" width="440" height="36" rx="6"/>
-  <text class="name" x="532" y="479">Send / SetEvent</text>
-  <text class="typ" x="790" y="479" fill="#b8bcc4">off-path message</text>
-  <circle cx="944" cy="474" r="4.5" fill="#ff5450"/>
+  <rect class="box" x="560" y="456" width="490" height="36" rx="6"/>
+  <text class="name" x="572" y="479">Send / SetEvent</text>
+  <text class="typ" x="810" y="479" fill="#b8bcc4">off-path message</text>
+  <text class="sb" x="1000" y="479" text-anchor="end">yes</text>
+  <circle cx="1025" cy="474" r="4.5" fill="#ff5450"/>
 
   <!-- EXAMPLE -->
   <text class="sec" x="40" y="566">Example — the loop + the dispatch, nested</text>
@@ -159,8 +181,8 @@
   <text class="cl" x="634" y="660" fill="#46d19a">case y → Step E</text>
 
   <!-- paths result -->
-  <rect class="box" x="40" y="722" width="920" height="30" rx="6"/>
-  <text class="res" x="500" y="741" text-anchor="middle">the nesting is the paths: the if forks to A · B · C, the switch forks to D · E, and the loop repeats its async things (Go step, child workflow)</text>
+  <rect class="box" x="40" y="722" width="1010" height="30" rx="6"/>
+  <text class="res" x="545" y="741" text-anchor="middle">the nesting is the paths: the if forks to A · B · C, the switch forks to D · E, and the loop repeats its async things (Go step, child workflow)</text>
 </svg>
 </figure>
 <div class="legend">
@@ -168,6 +190,7 @@
   <span><i class="dot d-coral"></i>✗ flattened (stepsIn picks the steps, shape is wrong)</span>
   <span><i class="dot d-red"></i>✗ invisible (not recognized)</span>
   <span><i class="dot d-blue"></i>async (channel)</span>
+  <span>same block: <b>no</b> = creates a new block · <b>yes</b> = stays in the current block</span>
 </div>
 </body>
 </html>
