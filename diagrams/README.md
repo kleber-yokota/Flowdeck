@@ -114,18 +114,20 @@ stored at boot; `web/graph` renders it):
 Second folder — `graph/improve/` = proposed improvements over the current flow (NEW/CHANGED
 markers against the `current/` base; DBOS v1.7.0 facts: `operation_outputs` rows are written
 when a step completes — no step-level running state, running is the workflow-level `PENDING`
-badge — and each row already carries `child_workflow_id` + `started_at`/`completed_at`, and
-`workflow_status` carries the child's `name`, `status`, `attempts` via
-`WithFilterParentWorkflowID`):
+badge — and each row already carries `child_workflow_id` + `started_at`/`completed_at` and its
+SDK-internal name (`DBOS.enqueue` · `getResult` · `select` · `recv` · `sleep` — stable across
+app versions, unlike the boot AST, which is only valid for the current
+`application_version`); `workflow_status` carries the child's `name`, `status`, `attempts`,
+`queue` via `WithFilterParentWorkflowID`):
 
 - `graph/improve/executed-path-dependencies.html` — the improved executed-path dependency
-generation: the Postgres read also fetches the child workflows (`workflow_status` by
-`parent_workflow_id`); `core.Steps` keeps the fields it drops today (`ChildWorkflowID`,
-`StartedAt`, `CompletedAt`); the new decision `ChildWorkflowID != ''?` splits the rows into
-child steps (fetch name · status · attempts from `workflow_status`) and plain steps (marked
-with their kind — async · wait — by joining the boot-time AST graph on the step name); the
-wiring, single root and shared layout are unchanged; the SVG shows state · child name · kind
-per step.
+generation (Postgres only, app-version safe): the read also fetches the child workflows
+(`workflow_status` by `parent_workflow_id`); `core.Steps` keeps the fields it drops today
+(`ChildWorkflowID`, `StartedAt`, `CompletedAt`) and marks the kind from the row name; the new
+decision `ChildWorkflowID != ''?` splits child steps (child name + badge shown on the step)
+from plain steps; async Go steps have no Postgres flag (only the boot AST could mark them,
+and only when the execution's `application_version` matches); the wiring, single root and
+shared layout are unchanged; the SVG shows state · child name per step.
 
 ## Files
 
@@ -151,4 +153,4 @@ per step.
     - `graph/current/executed-path-flow.html` (executed path — flow and fetch: page + 2s poll → handlers → Port → Postgres step rows → `ExecutedPathToSVG` → steps fragment)
     - `graph/current/executed-path-dependencies.html` (executed path — dependency generation: step rows → Step mapping → chain wiring → single root → layout → SVG)
   - `graph/improve/` — the proposed improvements
-    - `graph/improve/executed-path-dependencies.html` (executed path (improve) — dependency generation: + child workflows by `parent_workflow_id`, + kept row fields, + kind marking via the boot AST)
+    - `graph/improve/executed-path-dependencies.html` (executed path (improve) — dependency generation, Postgres-only and app-version safe: + child workflows by `parent_workflow_id`, + kept row fields, kind from the SDK-internal row name)
