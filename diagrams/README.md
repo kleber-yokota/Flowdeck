@@ -141,6 +141,8 @@ shared layout are unchanged; the SVG shows state · child name per step.
 - `sequence-phase-3.html` (runs of a workflow)
 - `sequence-phase-4.html` (paths graph)
 - `sequence-phase-5.html` (parameters, edit, stored input)
+- `improve/` — proposed improvements over the current flow (NEW/CHANGED against the current base)
+  - `improve/sequence-cancel.html` (improve — cancel a run: POST /cancel/{id} → `dbos.CancelWorkflow` → CANCELLED row → the new fifth badge (cancelled · steel `#8f96a3`) via the 2s poll; mapState + CANCELLED → cancelled)
 - `graph/` — graph subsystem deep dive (own `graph/css/`, one stylesheet per HTML file)
   - `graph/current/` — the code today (as-is)
   - `graph/improve/` — proposed improvements over the current flow (NEW/CHANGED against the current base)
