@@ -5,18 +5,20 @@ files (`tasks/*.md`) that the task executor (`agent-task.md`) runs. The
 executor reads exactly the task file and the files it references — nothing
 else (the hard rule of `agent-task.md`). The author puts everything the
 executor needs into the file: the spec, the whole commit, the green state,
-the ownership.
+the ownership, and the verified facts the task depends on.
 
 ## Inputs (three, in order)
 
 1. **Spec** — the design HTMLs of the feature (under `diagrams/`). They say
    *what to build*.
 2. **Contacts** — `diagrams/package-map.html`. They say *how it works*:
-   which file, function and class touches which identifier. The author
-   reads this file for every task set, always.
+   which file, function and class touches which identifier — and they hold
+   the **verified facts** (`#facts`) of runtime behavior (SDK internals,
+   Postgres rows, queue behavior), each with its evidence. The author reads
+   this file for every task set, always.
 3. **Code** — the call sites and the test files. The map is a guide; the
-   code is the source of truth. The author greps every symbol a step
-   changes.
+   code is the source of truth for **names and shapes**. The author greps
+   only the symbols a step changes.
 
 The diagrams show "today" and "target". They do not show the intermediate
 states, and they do not name the tests. The green state of each step comes
@@ -32,6 +34,7 @@ machine-readable map of the same data.
 | `#tasks` | the "Task → Read first" table | Where does a common task start? |
 | `#contacts` | "Edge · Where (file · function) · What (identifiers)" | Which file · function touches which identifier, per package edge? |
 | `#package-*` | "File · Responsibility · Functions" + the contact rows | Which files, functions and test files live in the package? |
+| `#facts` | "Fact · Evidence · Validated" | What runtime behavior is already validated (and by what proof)? |
 
 The package sections are: `main · core · workflows · gen · status · graph ·
 web · webgraph · dbos`. The contact rows read `X →` (this package touches
@@ -46,6 +49,26 @@ For every step and every symbol it changes, the map + the grep answer:
 When the map and the code disagree, the code wins for the current state.
 The author flags the stale row and updates the map together with the code
 (the diagrams are updated together with the code).
+
+## Trust (anti-reread — the rules that keep the authoring short)
+
+- **Facts are trusted.** A fact row (`#facts`: Fact · Evidence · Validated)
+  is used as-is — no re-reading the SDK source, no re-running the spike —
+  except when its diff-check fails: the files the evidence names changed
+  since the validated date, or the SDK version in `go.mod` moved. Then
+  re-validate **that fact only** (one targeted grep or spike) and note the
+  refresh.
+- **Reads are scoped.** Read the map sections the task touches, then the
+  code files they name. Do not inventory the package: the contacts rows are
+  the impact analysis. Research reads of 3+ files go through one batched
+  round-trip, not one read per file.
+- **Spikes are bounded.** One spike per unknown, and only for a runtime
+  value no code shows (row shapes, status transitions, queue behavior): a
+  temporary test file, deleted before the commit, the result recorded under
+  "Notes" as a fact (value · evidence · how verified).
+- **Decide once.** A value the diagram does not pin: pick one, record it
+  under "Notes" (value + one line of why), do not revisit it. A new value
+  belongs in the diagram — not the task.
 
 ## The green state (the rule that makes a task runnable)
 
@@ -99,9 +122,11 @@ N. Make the tests pass (green).
 
 - `core/graph/parse.go` — the flat walk is replaced in STEP 02.
 
-## Notes (optional — decisions already validated)
+## Notes (decisions and verified facts)
 
 - <Decision>: <the reason, one line>.
+- Fact: <runtime value> — <evidence (spike name / source line)> · <how
+  verified>.
 ````
 
 Rules of the fields:
@@ -116,6 +141,9 @@ Rules of the fields:
   (the reading rule of `diagrams/README.md`).
 - `Out of scope` names the file and the owning step. The executor does not
   read the other task files to learn the ownership.
+- `Notes` carries the runtime facts the task depends on: copied from
+  `#facts` (with their Evidence · Validated) or verified by the bounded
+  spike. A fact without evidence is a guess.
 
 ## ASD-STE100 (as applied to the task files)
 
@@ -149,3 +177,4 @@ The README holds, once for the whole set:
 - It does not create a step that is not green on its own.
 - It does not put two steps in one file, or one step in two files.
 - It does not cite a diagram part it did not open.
+- It does not re-verify a fact that passes its diff-check (the Trust rule).

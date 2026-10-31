@@ -18,9 +18,32 @@ The surface of the execution is exactly:
 - the task file(s)
 - the files referenced inside them (the diagram HTMLs under "Source", the
   code files under "Files")
+- `diagrams/package-map.html` — the source of truth for the contacts and
+  the verified facts
 
 Nothing else is read, nothing outside is changed. No refactors, no new
 abstractions, no drive-by fixes.
+
+## Trust (anti-reread — the rules that keep the run short)
+
+- **Facts are trusted.** A fact row in the map (Fact · Evidence · Validated)
+  is used as-is — no re-reading the SDK source, no re-running the spike —
+  except when its diff-check fails: the files the evidence names changed
+  since the validated date, or the SDK version in `go.mod` moved. Then
+  re-validate **that fact only** (one targeted grep/spike) and refresh the
+  row.
+- **Reads are scoped.** The map's contacts rows are the impact analysis —
+  do not inventory the package. Read the task, then the files it names;
+  research reads of 3+ files go through one batched round-trip, not one
+  read per file.
+- **Spikes are bounded.** One spike per unknown, and only for runtime values
+  the code cannot show (row shapes, status transitions, queue behavior): a
+  temporary test file, deleted before the commit, the result recorded under
+  "Notes" in the task file (fact · evidence · how verified).
+- **Decide once.** A value the task or the diagram does not pin: pick one,
+  record it under "Notes" (value + one line of why), do not revisit it. A
+  new *shape* (a route, a state, a badge the task does not name) is out of
+  scope — stop and report.
 
 ## Method — the simplest and easiest
 
@@ -55,8 +78,28 @@ go test -tags e2e -run TestE2E -p 1 ./...       # e2e
 
 If something broke, it shows here. Green = done.
 
+## Green — promote the facts (last step of every task)
+
+The map is the source of truth the next task runs from; it must not lag the
+code. After the step is green, before the report:
+
+1. The task file's "Notes" now holds the facts discovered during the run
+   (and the ones the author seeded).
+2. **Promote them into `diagrams/package-map.html`** — the facts table
+   (`#facts`), one row per fact: Fact · Evidence (the spike name / the
+   source line) · Validated (the task file · date · sdk version). A fact is
+   a verified *runtime behavior* — not a code shape (that is the contact
+   rows) and not a decision (that is the task Notes).
+3. **Refresh the contact rows the step touched** (a new route, a new Port
+   member, a new function) and the test rows that now assert it.
+4. The map update goes into **the task's commit** — one task, one commit:
+   code + tests + map together.
+
+New fact ⇒ the diagram is updated, in the same commit.
+
 ## Report (per task)
 
 - the files touched, and why
 - the call sites checked (the one level up)
+- the facts promoted to the map (one line each)
 - the test results (which suites, red/green)
