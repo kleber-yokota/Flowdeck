@@ -111,6 +111,22 @@ stored at boot; `web/graph` renders it):
   palettes: status (badges: queued/running/success/failed) and block level (outlines: L0
   `#ddd6fe`, L1 `#a78bfa`, L2 `#7c3aed`; L3+ reuses L2); sequence flows top → bottom.
 
+Second folder — `graph/improve/` = proposed improvements over the current flow (NEW/CHANGED
+markers against the `current/` base; DBOS v1.7.0 facts: `operation_outputs` rows are written
+when a step completes — no step-level running state, running is the workflow-level `PENDING`
+badge — and each row already carries `child_workflow_id` + `started_at`/`completed_at`, and
+`workflow_status` carries the child's `name`, `status`, `attempts` via
+`WithFilterParentWorkflowID`):
+
+- `graph/improve/executed-path-dependencies.html` — the improved executed-path dependency
+generation: the Postgres read also fetches the child workflows (`workflow_status` by
+`parent_workflow_id`); `core.Steps` keeps the fields it drops today (`ChildWorkflowID`,
+`StartedAt`, `CompletedAt`); the new decision `ChildWorkflowID != ''?` splits the rows into
+child steps (fetch name · status · attempts from `workflow_status`) and plain steps (marked
+with their kind — async · wait — by joining the boot-time AST graph on the step name); the
+wiring, single root and shared layout are unchanged; the SVG shows state · child name · kind
+per step.
+
 ## Files
 
 - `handoff-diagrams.md` (pending adjustments discussed but not yet applied — not part of the spec)
@@ -125,6 +141,7 @@ stored at boot; `web/graph` renders it):
 - `sequence-phase-5.html` (parameters, edit, stored input)
 - `graph/` — graph subsystem deep dive (own `graph/css/`, one stylesheet per HTML file)
   - `graph/current/` — the code today (as-is)
+  - `graph/improve/` — proposed improvements over the current flow (NEW/CHANGED against the current base)
     - `graph/current/graph-flow.html` (dependency and flow)
     - `graph/current/graph-contract.html` (the two path-diagram pipelines: block model + executed path)
     - `graph/current/paths-blocks.html` (Go blocks × DBOS constructs — what's inside what)
@@ -133,3 +150,5 @@ stored at boot; `web/graph` renders it):
     - `graph/current/webgraph-block-representation.html` (how each block type is represented + the two palettes: status and block level)
     - `graph/current/executed-path-flow.html` (executed path — flow and fetch: page + 2s poll → handlers → Port → Postgres step rows → `ExecutedPathToSVG` → steps fragment)
     - `graph/current/executed-path-dependencies.html` (executed path — dependency generation: step rows → Step mapping → chain wiring → single root → layout → SVG)
+  - `graph/improve/` — the proposed improvements
+    - `graph/improve/executed-path-dependencies.html` (executed path (improve) — dependency generation: + child workflows by `parent_workflow_id`, + kept row fields, + kind marking via the boot AST)
