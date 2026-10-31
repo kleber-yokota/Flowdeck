@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>web/graph — how each block type is represented</title>
+<link rel="stylesheet" href="../css/webgraph-block-representation.css">
+</head>
+<body>
+  <p class="eyebrow">web/graph · block representation · key (current)</p>
+  <h1>web/graph — how each block type is represented</h1>
+  <p class="sublabel">
+    Each block <span style="color:var(--ink)">type</span> has its own shape. <code>sequence</code> draws boxes
+    <span style="color:var(--ink)">top → bottom</span>; <code>async</code> draws boxes side by side with the ∥ mark — a run of
+    asyncs right before a channel wait (<code>select</code> · <code>recv</code>) is grouped into a <code>join</code> block (one
+    level deeper); <code>if / else if / else</code> are side by side, each with a <span style="color:var(--ink)">fork arrow</span>
+    to the next dependency; <code>loop</code> marks the outline with the open-arc loop symbol; <code>child</code> (◉) and
+    <code>wait</code> (… Sleep · Recv · Select) use distinct symbols.
+    The outline <span style="color:var(--ink)">color is the block level</span> (a violet ramp L0→L2) — never the status, which
+    keeps its own 4 colors.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 1000 620" role="img" aria-labelledby="br-title br-desc">
+      <title id="br-title">web/graph — how each block type is represented</title>
+      <desc id="br-desc">
+        Each block type has its own shape. sequence draws boxes top to bottom, each connecting to the next. async draws boxes
+        side by side with the ∥ mark; a run of asyncs right before a select/recv wait is grouped into a join block (one level
+        deeper). if / else if / else are side by side, each with a fork arrow to the next dependency. loop marks the outline
+        with the open-arc + arrowhead loop symbol. child workflow (◉) and wait (… — Sleep, Recv, Select) use distinct
+        symbols. The outline color is the block level (a violet ramp: L0 light, L1 mid, L2 deep), separate from the 4 status
+        colors (queued, running, success, failed).
+      </desc>
+      <defs>
+        <marker id="br-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8f96a3"></path>
+        </marker>
+        <!-- loop symbol: open 300° arc + arrowhead (the same geometry the renderer emits) -->
+        <symbol id="br-loop" viewBox="0 0 14 14">
+          <g transform="translate(7,7) scale(0.9)">
+            <path d="M5.5,0 A5.5,5.5 0 1 1 2.75,-4.76" fill="none" stroke="#e8e6e1" stroke-width="2"/>
+            <polygon points="6.65,-2.51 4.25,-7.36 1.25,-2.16" fill="#e8e6e1"/>
+          </g>
+        </symbol>
+      </defs>
+
+      <!-- ============ CARD 1: sequence (top → bottom) ============ -->
+      <rect class="card" x="20" y="50" width="470" height="140" rx="8"/>
+      <text class="lbl" x="36" y="72">sequence — block {}</text>
+      <rect class="box" x="220" y="84" width="70" height="26" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="255" y="101" text-anchor="middle">S1</text>
+      <line x1="255" y1="110" x2="255" y2="120" stroke="#8f96a3" marker-end="url(#br-arr)"></line>
+      <rect class="box" x="220" y="120" width="70" height="26" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="255" y="137" text-anchor="middle">S2</text>
+      <text class="note" x="36" y="178">boxes top → bottom — each connects to the next</text>
+
+      <!-- ============ CARD 2: async (side by side) ============ -->
+      <rect class="card" x="510" y="50" width="470" height="140" rx="8"/>
+      <text class="lbl" x="526" y="72">async — Go</text>
+      <rect class="box" x="615" y="100" width="90" height="28" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="660" y="118" text-anchor="middle">A1</text>
+      <text class="sym" x="740" y="119">∥</text>
+      <rect class="box" x="775" y="100" width="90" height="28" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="820" y="118" text-anchor="middle">A2</text>
+      <text class="note" x="526" y="175">boxes side by side (∥) — a run right before a select/recv wait is a join block</text>
+
+      <!-- ============ CARD 3: if / else if / else (side by side, arrows down) ============ -->
+      <rect class="card" x="20" y="200" width="470" height="140" rx="8"/>
+      <text class="lbl" x="36" y="222">if · else if · else — fork</text>
+      <rect class="box" x="60" y="236" width="84" height="24" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="102" y="252" text-anchor="middle">if</text>
+      <rect class="box" x="156" y="236" width="96" height="24" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="204" y="252" text-anchor="middle">else if</text>
+      <rect class="box" x="264" y="236" width="84" height="24" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="306" y="252" text-anchor="middle">else</text>
+      <line x1="102" y1="260" x2="102" y2="290" stroke="#8f96a3" marker-end="url(#br-arr)"></line>
+      <line x1="204" y1="260" x2="204" y2="290" stroke="#8f96a3" marker-end="url(#br-arr)"></line>
+      <line x1="306" y1="260" x2="306" y2="290" stroke="#8f96a3" marker-end="url(#br-arr)"></line>
+      <rect class="box" x="102" y="290" width="204" height="24" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="204" y="306" text-anchor="middle">next dep</text>
+      <text class="note" x="36" y="330">side by side; each branch arrow ↓ to the next dependency</text>
+
+      <!-- ============ CARD 4: loop ============ -->
+      <rect class="card" x="510" y="200" width="470" height="140" rx="8"/>
+      <text class="lbl" x="526" y="222">loop — for / range</text>
+      <rect class="box" x="700" y="240" width="90" height="42" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="720" y="266">loop</text>
+      <use href="#br-loop" x="754" y="249" width="24" height="24"/>
+      <text class="note" x="526" y="330">the open-arc + arrowhead loop symbol marks the repeat</text>
+
+      <!-- ============ CARD 5: child workflow ============ -->
+      <rect class="card" x="20" y="350" width="470" height="140" rx="8"/>
+      <text class="lbl" x="36" y="372">child workflow — RunWorkflow</text>
+      <rect class="box" x="195" y="386" width="120" height="42" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="220" y="412">child</text>
+      <text class="sym" x="290" y="414">◉</text>
+      <text class="note" x="36" y="478">a distinct symbol (◉) marks a child workflow</text>
+
+      <!-- ============ CARD 6: wait ============ -->
+      <rect class="card" x="510" y="350" width="470" height="140" rx="8"/>
+      <text class="lbl" x="526" y="372">wait — Sleep / Recv / Select</text>
+      <rect class="box" x="700" y="386" width="90" height="42" rx="5" stroke="#a78bfa" stroke-width="1.5"/>
+      <text class="btxt" x="720" y="412">wait</text>
+      <text class="sym" x="775" y="414">…</text>
+      <text class="note" x="526" y="478">a distinct symbol (…) marks a wait</text>
+
+      <!-- ============ BOTTOM: two palettes (status × level) ============ -->
+      <text class="sec" x="20" y="540">status (badges)</text>
+      <rect x="20" y="552" width="30" height="24" rx="4" fill="#7cc0ff"/>
+      <text class="btxt" x="56" y="569">queued</text>
+      <rect x="110" y="552" width="30" height="24" rx="4" fill="#ff9142"/>
+      <text class="btxt" x="146" y="569">running</text>
+      <rect x="210" y="552" width="30" height="24" rx="4" fill="#46d19a"/>
+      <text class="btxt" x="246" y="569">success</text>
+      <rect x="310" y="552" width="30" height="24" rx="4" fill="#ff5450"/>
+      <text class="btxt" x="346" y="569">failed</text>
+
+      <text class="sec" x="470" y="540">block level (outlines)</text>
+      <rect x="470" y="552" width="30" height="24" rx="4" fill="none" stroke="#ddd6fe" stroke-width="2"/>
+      <text class="btxt" x="506" y="569">L0</text>
+      <rect x="550" y="552" width="30" height="24" rx="4" fill="none" stroke="#a78bfa" stroke-width="2"/>
+      <text class="btxt" x="586" y="569">L1</text>
+      <rect x="630" y="552" width="30" height="24" rx="4" fill="none" stroke="#7c3aed" stroke-width="2"/>
+      <text class="btxt" x="666" y="569">L2</text>
+      <text class="note" x="470" y="592">L3+ reuses L2 · sequence = top → bottom</text>
+    </svg>
+
+    <figcaption class="legend">
+      <span><span class="dot" style="background:#a78bfa"></span> type = shape · outline color = block level (violet ramp L0/L1/L2)</span>
+      <span>status keeps its own 4 colors</span>
+    </figcaption>
+  </figure>
+
+</body>
+</html>

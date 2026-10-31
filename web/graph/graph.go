@@ -26,64 +26,6 @@ type pathNode struct {
 	State    string
 }
 
-// pathsGraph builds the tree of a workflow's possible paths: the common
-// prefix is drawn once and the if forks the branches (not one row per
-// path).
-func pathsGraph(paths [][]string) []pathNode {
-	groups := map[string][][]string{}
-	order := []string{}
-	for _, p := range paths {
-		if len(p) == 0 {
-			continue
-		}
-		f := p[0]
-		if _, ok := groups[f]; !ok {
-			order = append(order, f)
-		}
-		groups[f] = append(groups[f], p)
-	}
-	roots := make([]pathNode, 0, len(order))
-	for _, f := range order {
-		roots = append(roots, nodeFromPaths(groups[f]))
-	}
-	return roots
-}
-
-func nodeFromPaths(paths [][]string) pathNode {
-	node := pathNode{Step: paths[0][0]}
-	rest := make([][]string, 0, len(paths))
-	for _, p := range paths {
-		if len(p) == 1 {
-			node.Terminal = true
-		} else {
-			rest = append(rest, p[1:])
-		}
-	}
-	groups := map[string][][]string{}
-	order := []string{}
-	for _, r := range rest {
-		f := r[0]
-		if _, ok := groups[f]; !ok {
-			order = append(order, f)
-		}
-		groups[f] = append(groups[f], r)
-	}
-	node.Children = make([]pathNode, 0, len(order))
-	for _, f := range order {
-		node.Children = append(node.Children, nodeFromPaths(groups[f]))
-	}
-	return node
-}
-
-// PathsToSVG renders the paths graph (phase 4, STEP 2) as a static SVG:
-// the steps are nodes, each continuation is an arrow, and the if forks the
-// branches — the common prefix is drawn once.
-func PathsToSVG(paths [][]string) template.HTML {
-	g := newGraphLayout(pathsGraph(paths))
-	g.label = "possible paths"
-	return template.HTML(g.svg())
-}
-
 // graphLayout is the measured paths graph: one rect per step and one
 // arrow per continuation. The leaves stack rows and each node centers on
 // its children — a linear chain runs in one row and the if forks the rows.
@@ -105,12 +47,16 @@ type graphNode struct {
 
 // The graph metrics (px): 14px monospace text, ~0.6x the font per char.
 const (
-	graphCharW  = 8.4
-	graphPadX   = 14.0
-	graphNodeH  = 36.0
-	graphColGap = 44.0
-	graphRowGap = 24.0
-	graphMargin = 12.0
+	graphCharW     = 8.4
+	graphPadX      = 14.0 // the inner block outline padding
+	graphRootPad   = 20.0 // the root (L0) outline padding: it clears the inner outlines
+	graphNodeH     = 36.0
+	graphColGap    = 44.0
+	graphRowGap    = 24.0
+	graphMargin    = 12.0
+	graphCanvasPad = 2.0  // room for the outline stroke beyond the L0 outline
+	graphScale     = 1.25 // the svg is emitted 1.25× the content canvas (readability)
+	graphSymW      = 20.0 // the child/wait symbol zone on the box's right
 )
 
 func newGraphLayout(roots []pathNode) *graphLayout {
@@ -209,9 +155,10 @@ func (g *graphLayout) collect(placed []graphNode) {
 // svg emits the static SVG: edges under the nodes, one rect + label per
 // step. The colors come from the stylesheet (g-node/g-edge/g-text/g-arrow).
 func (g *graphLayout) svg() string {
-	w, h := int(math.Round(g.width)), int(math.Round(g.height))
+	w, h := int(math.Round(g.width*graphScale)), int(math.Round(g.height*graphScale))
 	var b strings.Builder
-	fmt.Fprintf(&b, `<svg class="paths-graph" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s">`, w, h, w, h, g.label)
+	fmt.Fprintf(&b, `<svg class="paths-graph" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s"><g transform="scale(%s)">`,
+		w, h, w, h, g.label, strconv.FormatFloat(graphScale, 'f', -1, 64))
 	b.WriteString(`<defs><marker id="flowdeck-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path class="g-arrow" d="M0,0 L10,5 L0,10 Z"/></marker></defs>`)
 	for _, e := range g.edges {
 		fmt.Fprintf(&b, `<line class="g-edge" x1="%s" y1="%s" x2="%s" y2="%s" marker-end="url(#flowdeck-arrow)"/>`,
@@ -227,7 +174,7 @@ func (g *graphLayout) svg() string {
 		fmt.Fprintf(&b, `<text class="g-text" x="%s" y="%s" text-anchor="middle">%s</text>`,
 			num(n.x), num(n.y+5), template.HTMLEscapeString(n.step))
 	}
-	b.WriteString(`</svg>`)
+	b.WriteString(`</g></svg>`)
 	return b.String()
 }
 

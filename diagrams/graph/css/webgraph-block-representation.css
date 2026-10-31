@@ -1,0 +1,94 @@
+:root {
+  --paper: #0b0c0e;
+  --panel: rgba(184, 188, 196, 0.04);
+  --stroke: #3a3e45;
+  --ink: #e8e6e1;
+  --muted: #b8bcc4;
+  --soft: #8f96a3;
+  --accent: #ff9142;
+  --green: #46d19a;
+  --blue: #7cc0ff;
+  --red: #ff5450;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+  padding: 40px 32px 56px;
+  min-height: 100vh;
+}
+
+.eyebrow {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.sublabel {
+  font-size: 13px;
+  color: var(--soft);
+  max-width: 900px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.sublabel code {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+figure {
+  margin: 0;
+  background: var(--paper);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--soft);
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* SVG-scoped classes (moved from the inline <style> in webgraph-block-representation.html) */
+.card { fill: rgba(184, 188, 196, 0.03); stroke: #3a3e45; stroke-width: 1; }
+.box { fill: none; }
+.lbl { font: 12px "Geist Mono", monospace; fill: #e8e6e1; font-weight: 600; }
+.btxt { font: 11px "Geist Mono", monospace; fill: #e8e6e1; }
+.note { font: 11px "Geist", system-ui, sans-serif; fill: #8f96a3; }
+.sec { font: 11px "Geist Mono", monospace; fill: #8f96a3; letter-spacing: 0.08em; text-transform: uppercase; }
+.sym { font: 14px "Geist Mono", monospace; fill: #e8e6e1; }

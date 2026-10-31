@@ -64,6 +64,7 @@ Implement what `diagrams/` says, **simply and directly**: the diagram is the spe
 - Do not introduce a frontend framework, bundler, npm, or a database other than Postgres without an explicit decision.
 - Postgres is always **18** in the compose (DBOS compatibility).
 - The diagrams in `diagrams/` are the source of truth for design: if the code diverges from a diagram, the diagram wins — update the diagram together with the code.
+- `docs/` is **not** a source of truth. Do not read `docs/` unless explicitly asked.
 
 ## Commands
 
