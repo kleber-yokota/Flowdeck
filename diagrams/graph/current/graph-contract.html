@@ -15,7 +15,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pp-title pp-desc">
         <title id="pp-title">The path-diagram pipelines — possible-paths (boot) + executed path (runtime)</title>
-        <desc id="pp-desc">Everything that generates the two path diagrams in FlowDeck. LEFT (possible-paths map, boot · AST): core/graph.New(fsys) walks the embedded Go source and builds PathGraph{ByName, Specs}, captured into Port.Graph (never nil). handleWorkflowPage (GET /workflows/{name}) calls p.Graph.Of(name) to get a plain [][]string and passes it to web/graph.PathsToSVG, which renders the SVG into the workflow page. RIGHT (executed path, runtime · Postgres): core.Steps reads the run's step rows from Postgres (step_id asc, the branch the run took), wired into Port.Steps. handleExecutionSteps (GET /executions/{id}/steps, polled every 2s) and handleExecutionDetail (GET /executions/{id}) call p.Steps(id) to get []core.Step and pass it through newStepsView to web/graph.ExecutedPathToSVG, which renders the SVG into the steps fragment (steps.html, 2s poll). Both renderers share the same drawing code (newGraphLayout + svg() + pathNode) — the focal shared generator. web/graph is a pure renderer: it imports only flowdeck/core and receives plain types; the SVG is one-way (template.HTML).</desc>
+        <desc id="pp-desc">Everything that generates the two path diagrams in FlowDeck. LEFT (possible-paths map, boot · AST): core/graph.New(fsys) walks the embedded Go source and builds PathGraph{ByName, Specs}, captured into Port.Graph (never nil). handleWorkflowPage (GET /workflows/{name}) calls p.Graph.Of(name) to get the stored *graph.WorkflowGraph (block tree + read-back paths) and passes it to web/graph.BlockToSVG, which renders the block-DAG SVG into the workflow page. RIGHT (executed path, runtime · Postgres): core.Steps reads the run's step rows from Postgres (step_id asc, the branch the run took), wired into Port.Steps. handleExecutionSteps (GET /executions/{id}/steps, polled every 2s) and handleExecutionDetail (GET /executions/{id}) call p.Steps(id) to get []core.Step and pass it through newStepsView to web/graph.ExecutedPathToSVG, which renders the SVG into the steps fragment (steps.html, 2s poll). Both renderers emit the SVG through the shared emission machinery (the 1.25× scale · num · the marker defs) — the focal shared generator. web/graph is a pure renderer: it imports only flowdeck/core and flowdeck/core/graph and receives plain types; the SVG is one-way (template.HTML).</desc>
 
         <defs>
           <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
@@ -80,9 +80,9 @@
         <!-- Hand-off labels -->
         <text x="213" y="150" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">built at boot</text>
         <text x="803" y="150" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">wired into Port</text>
-        <text x="213" y="266" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">Of(name) → [][]string</text>
+        <text x="213" y="266" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">Of(name) → *WorkflowGraph</text>
         <text x="803" y="266" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">Steps(id) → []core.Step</text>
-        <text x="213" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">paths [][]string</text>
+        <text x="213" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">*graph.WorkflowGraph</text>
         <text x="803" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">steps []core.Step</text>
         <text x="213" y="514" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">SVG (workflow page)</text>
         <text x="803" y="514" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">SVG (steps fragment)</text>
@@ -90,7 +90,7 @@
         <!-- 01 · SOURCE · left (possible-paths, boot · AST) -->
         <rect x="100" y="58" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
         <text x="205" y="78" class="node-title">core/graph · New(fsys)</text>
-        <text x="205" y="92" class="node-sub">boot · AST · walk · ParseFile · collect</text>
+        <text x="205" y="92" class="node-sub">boot · AST · parse · build the block tree</text>
 
         <!-- 01 · SOURCE · right (executed path, runtime · Postgres) -->
         <rect x="690" y="58" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
@@ -111,7 +111,7 @@
         <rect x="100" y="292" width="210" height="60" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
         <text x="205" y="314" class="node-title">handleWorkflowPage</text>
         <text x="205" y="328" class="node-sub">GET /workflows/{name}</text>
-        <text x="205" y="342" class="node-sub">p.Graph.Of(name) → [][]string</text>
+        <text x="205" y="342" class="node-sub">p.Graph.Of(name) → *WorkflowGraph</text>
 
         <!-- 03 · WEB · HANDLER · right -->
         <rect x="690" y="292" width="210" height="60" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
@@ -122,12 +122,12 @@
 
         <!-- 04 · WEB · GRAPH · renderers + shared drawing (focal) -->
         <rect x="100" y="410" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
-        <text x="205" y="430" class="node-title">PathsToSVG</text>
-        <text x="205" y="444" class="node-sub">paths [][]string → tree (if-forks)</text>
+        <text x="205" y="430" class="node-title">BlockToSVG</text>
+        <text x="205" y="444" class="node-sub">*WorkflowGraph → block-DAG (outlines · symbols)</text>
 
         <rect x="360" y="410" width="280" height="56" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
         <text x="500" y="430" fill="#ff9142" font-size="10" font-weight="600" font-family="'Geist', sans-serif">shared drawing</text>
-        <text x="500" y="444" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">newGraphLayout · svg() · pathNode</text>
+        <text x="500" y="444" fill="#8f96a3" font-size="8" font-family="'Geist Mono', monospace">blockLayout · graphLayout · scale(1.25)</text>
 
         <rect x="690" y="410" width="210" height="56" rx="6" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.20)"/>
         <text x="795" y="430" class="node-title">ExecutedPathToSVG</text>

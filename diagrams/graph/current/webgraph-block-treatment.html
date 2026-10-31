@@ -7,15 +7,15 @@
 <link rel="stylesheet" href="../css/webgraph-block-treatment.css">
 </head>
 <body>
-  <p class="eyebrow">web/graph · block treatment · flow (target model)</p>
+  <p class="eyebrow">web/graph · block treatment · flow (current)</p>
   <h1>web/graph — how it receives and treats the block model</h1>
   <p class="sublabel">
-    <code>core/graph</code> produces the block model at boot (blocks · dependencies · levels · types). <code>web/graph</code>
+    <code>core/graph</code> produces the block model at boot (blocks · levels · types · nodes). <code>web/graph</code>
     receives it, then treats it (top → bottom): <span style="color:var(--ink)">1</span> receive,
     <span style="color:var(--ink)">2</span> assign the <span style="color:var(--ink)">block level</span> (violet ramp L0/L1/L2) to
-    each block's outline, <span style="color:var(--ink)">3</span> represent each block type (async · if · loop · sequence),
+    each block's outline, <span style="color:var(--ink)">3</span> represent each block type (sequence · join · if · loop) and node kind (async · child · wait),
     <span style="color:var(--ink)">4</span> compute the layout (positions · arrows · symbols · nesting by level),
-    <span style="color:var(--ink)">5</span> emit the SVG. The outline color is the <span style="color:var(--ink)">level</span> —
+    <span style="color:var(--ink)">5</span> emit the SVG (scale 1.25). The outline color is the <span style="color:var(--ink)">level</span> —
     never the status, which keeps its own 4 colors.
   </p>
 
@@ -23,19 +23,22 @@
     <svg viewBox="0 0 1000 470" role="img" aria-labelledby="bt-title bt-desc">
       <title id="bt-title">web/graph — how it receives and treats the block model</title>
       <desc id="bt-desc">
-        core/graph produces the block model (blocks, dependencies, levels, types) from the AST at boot. web/graph receives
+        core/graph produces the block model (blocks, levels, types, nodes) from the AST at boot. web/graph receives
         the model, then treats it in five top-to-bottom steps: 1 receive, 2 color by block level (a violet ramp L0 light, L1
-        mid, L2 deep) to each block's outline, 3 represent per block type (sequence top-to-bottom, async and if side by side,
-        loop with a loop symbol), 4 layout (positions, arrows, symbols, nesting by level), 5 emit the SVG. The outline color is
-        the block level, separate from the 4 status colors (queued, running, success, failed).
+        mid, L2 deep) to each block's outline, 3 represent per block type (sequence top-to-bottom, async side by side with the
+        ∥ mark, if as a fork, join as the async run plus its wait, loop with the open-arc loop symbol), 4 layout (positions,
+        arrows, symbols, nesting by level), 5 emit the SVG at scale 1.25. The outline color is the block level, separate
+        from the 4 status colors (queued, running, success, failed).
       </desc>
       <defs>
         <marker id="bt-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#8f96a3"></path>
         </marker>
-        <symbol id="bt-loop" viewBox="0 0 32 32">
-          <path d="M13,6A9,9,0,0,0,5.52,20l1.66-1.11A7,7,0,1,1,13,22H2v2H13A9,9,0,0,0,13,6Z" fill="#e8e6e1"/>
-          <polygon points="23.59 19.41 26 22 21 22 21 24 26 24 23.59 26.59 25 28 30 23 25 18 23.59 19.41" fill="#e8e6e1"/>
+        <symbol id="bt-loop" viewBox="0 0 14 14">
+          <g transform="translate(7,7) scale(0.9)">
+            <path d="M5.5,0 A5.5,5.5 0 1 1 2.75,-4.76" fill="none" stroke="#e8e6e1" stroke-width="2"/>
+            <polygon points="6.65,-2.51 4.25,-7.36 1.25,-2.16" fill="#e8e6e1"/>
+          </g>
         </symbol>
       </defs>
 
@@ -44,12 +47,12 @@
       <rect class="panel" x="20" y="44" width="290" height="286" rx="8"/>
       <text class="mono" x="36" y="70">blocks:</text>
       <text class="txt"  x="100" y="70">id · level · type · children</text>
-      <text class="mono" x="36" y="94">deps:</text>
-      <text class="txt"  x="100" y="94">block → step/block (edges)</text>
+      <text class="mono" x="36" y="94">paths:</text>
+      <text class="txt"  x="100" y="94">read back (steps · forks)</text>
       <text class="mono" x="36" y="118">levels:</text>
       <text class="txt"  x="100" y="118">L0 … Ln (depth)</text>
       <text class="mono" x="36" y="142">types:</text>
-      <text class="txt"  x="100" y="142">sequence · loop · if</text>
+      <text class="txt"  x="100" y="142">sequence · join · if · loop</text>
       <text class="txt"  x="100" y="160">async · child · wait</text>
       <line x1="36" y1="182" x2="294" y2="182" stroke="#3a3e45"></line>
       <text class="txt"  x="36" y="204">from the AST, at boot</text>
@@ -58,7 +61,7 @@
       <rect x="36" y="244" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
       <text class="chip" x="91" y="260" text-anchor="middle">BLOCKS</text>
       <rect x="154" y="244" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
-      <text class="chip" x="209" y="260" text-anchor="middle">DEPS</text>
+      <text class="chip" x="209" y="260" text-anchor="middle">PATHS</text>
       <rect x="36" y="274" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
       <text class="chip" x="91" y="290" text-anchor="middle">LEVELS</text>
       <rect x="154" y="274" width="110" height="24" rx="5" fill="rgba(184,188,196,0.06)" stroke="#8f96a3"/>
@@ -84,7 +87,7 @@
 
       <rect class="step" x="340" y="170" width="330" height="44" rx="6"/>
       <text class="stepno" x="354" y="188">3 · REPRESENT</text>
-      <text class="txt"    x="354" y="206">per type: async · if · loop · sequence</text>
+      <text class="txt"    x="354" y="206">per type: sequence · join · if · loop (+ node symbols)</text>
 
       <text class="arrow" x="505" y="224" text-anchor="middle">↓</text>
 
@@ -96,7 +99,7 @@
 
       <rect class="step" x="340" y="286" width="330" height="44" rx="6"/>
       <text class="stepno" x="354" y="304">5 · EMIT</text>
-      <text class="txt"    x="354" y="322">build the SVG</text>
+      <text class="txt"    x="354" y="322">build the SVG · scale(1.25)</text>
 
       <!-- arrow web/graph -> graphic -->
       <line x1="670" y1="187" x2="696" y2="187" stroke="#8f96a3" marker-end="url(#bt-arr)"></line>
@@ -141,24 +144,14 @@
       <text class="txt" x="586" y="409">L1</text>
       <rect x="630" y="392" width="30" height="24" rx="4" fill="none" stroke="#7c3aed" stroke-width="2"/>
       <text class="txt" x="666" y="409">L2</text>
-      <text class="txt" x="720" y="409">L3+ reuses L2 + badge</text>
+      <text class="txt" x="720" y="409">L3+ reuses L2</text>
     </svg>
 
     <figcaption class="legend">
       <span><span class="dot" style="background:#a78bfa"></span> outline color = block level (violet ramp L0/L1/L2)</span>
-      <span>status keeps its own 4 colors · target model (design)</span>
+      <span>status keeps its own 4 colors</span>
     </figcaption>
   </figure>
 
-  <style>
-    .panel { fill: rgba(184, 188, 196, 0.04); stroke: #3a3e45; stroke-width: 1; }
-    .step { fill: rgba(184, 188, 196, 0.06); stroke: #3a3e45; stroke-width: 1; }
-    .sec { font: 11px "Geist Mono", monospace; fill: #8f96a3; letter-spacing: 0.08em; text-transform: uppercase; }
-    .mono { font: 12px "Geist Mono", monospace; fill: #b8bcc4; }
-    .txt { font: 12px "Geist", system-ui, sans-serif; fill: #e8e6e1; }
-    .stepno { font: 12px "Geist Mono", monospace; fill: #8f96a3; font-weight: 600; }
-    .chip { font: 9px "Geist Mono", monospace; fill: #b8bcc4; letter-spacing: 0.06em; }
-    .arrow { font: 13px "Geist Mono", monospace; fill: #8f96a3; }
-  </style>
 </body>
 </html>

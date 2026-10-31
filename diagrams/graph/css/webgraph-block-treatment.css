@@ -83,3 +83,13 @@ figure {
   border-radius: 50%;
   display: inline-block;
 }
+
+/* SVG-scoped classes (moved from the inline <style> in webgraph-block-treatment.html) */
+.panel { fill: rgba(184, 188, 196, 0.04); stroke: #3a3e45; stroke-width: 1; }
+.step { fill: rgba(184, 188, 196, 0.06); stroke: #3a3e45; stroke-width: 1; }
+.sec { font: 11px "Geist Mono", monospace; fill: #8f96a3; letter-spacing: 0.08em; text-transform: uppercase; }
+.mono { font: 12px "Geist Mono", monospace; fill: #b8bcc4; }
+.txt { font: 12px "Geist", system-ui, sans-serif; fill: #e8e6e1; }
+.stepno { font: 12px "Geist Mono", monospace; fill: #8f96a3; font-weight: 600; }
+.chip { font: 9px "Geist Mono", monospace; fill: #b8bcc4; letter-spacing: 0.06em; }
+.arrow { font: 13px "Geist Mono", monospace; fill: #8f96a3; }

@@ -7,25 +7,13 @@
 <link rel="stylesheet" href="../css/paths-blocks.css">
 </head>
 <body>
-<p class="eyebrow">Paths · Go blocks × DBOS constructs · core/graph (possiblePaths)</p>
+<p class="eyebrow">Paths · Go blocks × DBOS constructs · core/graph (the block parser)</p>
 <h1>What's inside what — the blocks and the constructs</h1>
-<p class="sublabel">Every <code>DBOS</code> construct can nest inside any <code>Go</code> block: the block shapes the path (fork / loop / sequence), the construct becomes a node (step / child / async / wait). The left column is the Go syntax a workflow body can use; the right column is what <code>dbos</code> offers to put inside. The <code>same block</code> column makes the rule explicit: <span style="color:var(--ink)">no</span> = the item creates a new block, <span style="color:var(--ink)">yes</span> = it stays in the current block (no new block). <span style="color:var(--ink)">Status</span> = how <code>possiblePaths</code> (core/graph) handles each today.</p>
+<p class="sublabel">Every <code>DBOS</code> construct can nest inside any <code>Go</code> block: the block shapes the path (fork / loop / sequence), the construct becomes a node (step / child / async / wait). The left column is the Go syntax a workflow body can use; the right column is what <code>dbos</code> offers to put inside. The <code>same block</code> column makes the rule explicit: <span style="color:var(--ink)">no</span> = the item creates a new block, <span style="color:var(--ink)">yes</span> = it stays in the current block (no new block). <span style="color:var(--ink)">Status</span> = how the parser (core/graph) handles each.</p>
 <figure>
 <svg viewBox="0 0 1080 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pb-title pb-desc">
   <title id="pb-title">The paths — Go blocks × DBOS constructs</title>
-  <desc id="pb-desc">Left: the Go syntax blocks a workflow body can use (block, if, else if, switch, type switch, for, for range, select, go, defer/return), each with its path effect (sequence, fork, loop), a same-block flag (yes = stays in the current block, no = creates a new block), and today's possiblePaths status. Right: the DBOS constructs that can be put inside any block (RunAsStep, RunAsTransaction, RunWorkflow, Go, Select, Sleep, Recv, Enqueue, Send/SetEvent), each with the node type it produces (step, child workflow, async, wait, off-path), a same-block flag, and today's status. Bottom: an example nesting — a for loop holding an async Go step and a RunWorkflow child, plus an if/else-if/else and a switch that dispatch to different steps.</desc>
-  <style>
-    .lbl { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; fill: #b8bcc4; }
-    .name { font: 500 10px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
-    .eff { font: 400 8.5px "Geist", system-ui, sans-serif; fill: #8f96a3; }
-    .typ { font: 400 8.5px "Geist", system-ui, sans-serif; }
-    .sb { font: 500 9px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
-    .box { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
-    .chip { fill: rgba(184,188,196,0.05); stroke-width: 1; }
-    .cl { font: 500 9px "Geist Mono", ui-monospace, monospace; }
-    .sec { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; fill: #b8bcc4; }
-    .res { font: 400 10px "Geist", system-ui, sans-serif; fill: #b8bcc4; }
-  </style>
+  <desc id="pb-desc">Left: the Go syntax blocks a workflow body can use (block, if, else if, switch, type switch, for, for range, select, go, defer/return), each with its path effect (sequence, fork, loop), a same-block flag (yes = stays in the current block, no = creates a new block), and the parser's status. Right: the DBOS constructs that can be put inside any block (RunAsStep, RunAsTransaction, RunWorkflow, Go, Select, Sleep, Recv, Enqueue, Send/SetEvent), each with the node type it produces (step, child workflow, async, wait, off-path), a same-block flag, and the parser's status. Bottom: an example nesting — a for loop holding an async Go step and a RunWorkflow child, plus an if/else-if/else and a switch that dispatch to different steps.</desc>
 
   <!-- LEFT: Go blocks (containers) -->
   <text class="lbl" x="40" y="74">Go blocks (the containers)</text>
@@ -66,25 +54,25 @@
   <text class="name" x="52" y="341">for</text>
   <text class="eff" x="290" y="341">loop (repeats)</text>
   <text class="sb" x="480" y="341" text-anchor="end">no</text>
-  <circle cx="505" cy="336" r="4.5" fill="#ff9142"/>
+  <circle cx="505" cy="336" r="4.5" fill="#46d19a"/>
   <!-- 7 for range -->
   <rect class="box" x="40" y="364" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="387">for range</text>
   <text class="eff" x="290" y="387">loop ×item</text>
   <text class="sb" x="480" y="387" text-anchor="end">no</text>
-  <circle cx="505" cy="382" r="4.5" fill="#ff9142"/>
+  <circle cx="505" cy="382" r="4.5" fill="#46d19a"/>
   <!-- 8 select -->
   <rect class="box" x="40" y="410" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="433">select</text>
   <text class="eff" x="290" y="433">fork ×chan</text>
   <text class="sb" x="480" y="433" text-anchor="end">no</text>
-  <circle cx="505" cy="428" r="4.5" fill="#ff9142"/>
+  <circle cx="505" cy="428" r="4.5" fill="#ff5450"/>
   <!-- 9 go -->
   <rect class="box" x="40" y="456" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="479">go fn()</text>
   <text class="eff" x="290" y="479">goroutine (async)</text>
   <text class="sb" x="480" y="479" text-anchor="end">no</text>
-  <circle cx="505" cy="474" r="4.5" fill="#ff9142"/>
+  <circle cx="505" cy="474" r="4.5" fill="#ff5450"/>
   <!-- 10 defer / return -->
   <rect class="box" x="40" y="502" width="490" height="36" rx="6"/>
   <text class="name" x="52" y="525">defer / return</text>
@@ -113,31 +101,31 @@
   <text class="name" x="572" y="203">RunWorkflow</text>
   <text class="typ" x="810" y="203" fill="#ff9142">child workflow</text>
   <text class="sb" x="1000" y="203" text-anchor="end">no</text>
-  <circle cx="1025" cy="198" r="4.5" fill="#ff5450"/>
+  <circle cx="1025" cy="198" r="4.5" fill="#46d19a"/>
   <!-- 4 Go -->
   <rect class="box" x="560" y="226" width="490" height="36" rx="6"/>
   <text class="name" x="572" y="249">Go</text>
-  <text class="typ" x="810" y="249" fill="#7cc0ff">async step (→ chan)</text>
+  <text class="typ" x="810" y="249" fill="#7cc0ff">async</text>
   <text class="sb" x="1000" y="249" text-anchor="end">no</text>
-  <circle cx="1025" cy="244" r="4.5" fill="#ff5450"/>
+  <circle cx="1025" cy="244" r="4.5" fill="#46d19a"/>
   <!-- 5 Select -->
   <rect class="box" x="560" y="272" width="490" height="36" rx="6"/>
   <text class="name" x="572" y="295">Select (chans)</text>
-  <text class="typ" x="810" y="295" fill="#8f96a3">join (drawn as a wait)</text>
+  <text class="typ" x="810" y="295" fill="#8f96a3">wait · join</text>
   <text class="sb" x="1000" y="295" text-anchor="end">no</text>
-  <circle cx="1025" cy="290" r="4.5" fill="#ff5450"/>
+  <circle cx="1025" cy="290" r="4.5" fill="#46d19a"/>
   <!-- 6 Sleep -->
   <rect class="box" x="560" y="318" width="490" height="36" rx="6"/>
   <text class="name" x="572" y="341">Sleep</text>
   <text class="typ" x="810" y="341" fill="#8f96a3">wait</text>
   <text class="sb" x="1000" y="341" text-anchor="end">no</text>
-  <circle cx="1025" cy="336" r="4.5" fill="#ff5450"/>
+  <circle cx="1025" cy="336" r="4.5" fill="#46d19a"/>
   <!-- 7 Recv -->
   <rect class="box" x="560" y="364" width="490" height="36" rx="6"/>
   <text class="name" x="572" y="387">Recv (topic)</text>
   <text class="typ" x="810" y="387" fill="#8f96a3">wait (message)</text>
   <text class="sb" x="1000" y="387" text-anchor="end">no</text>
-  <circle cx="1025" cy="382" r="4.5" fill="#ff5450"/>
+  <circle cx="1025" cy="382" r="4.5" fill="#46d19a"/>
   <!-- 8 Enqueue -->
   <rect class="box" x="560" y="410" width="490" height="36" rx="6"/>
   <text class="name" x="572" y="433">Enqueue (queue)</text>
@@ -186,8 +174,8 @@
 </svg>
 </figure>
 <div class="legend">
-  <span><i class="dot d-green"></i>✓ handled today</span>
-  <span><i class="dot d-coral"></i>✗ flattened (stepsIn picks the steps, shape is wrong)</span>
+  <span><i class="dot d-green"></i>✓ handled (block · node)</span>
+  <span><i class="dot d-coral"></i>✗ flattened (steps picked up, shape is wrong)</span>
   <span><i class="dot d-red"></i>✗ invisible (not recognized)</span>
   <span><i class="dot d-blue"></i>async (channel)</span>
   <span>same block: <b>no</b> = creates a new block · <b>yes</b> = stays in the current block</span>

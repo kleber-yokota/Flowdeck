@@ -89,3 +89,22 @@ figure {
 .d-red { background: var(--red); }
 .d-blue { background: var(--blue); }
 .d-soft { background: var(--soft); }
+
+/* SVG-scoped classes (moved from the inline <style> in paths-block-levels.html) */
+.sec { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; fill: #b8bcc4; }
+.blk { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
+.blk.loop { stroke: #ff9142; }
+.blk.if { stroke: #7cc0ff; }
+.lvl { fill: rgba(184,188,196,0.10); stroke: #8f96a3; stroke-width: 1; }
+.lvl-t { font: 600 9px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
+.bname { font: 500 10px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
+.bname.loop { fill: #ff9142; }
+.bname.if { fill: #7cc0ff; }
+.seq { fill: #0b0c0e; stroke: #3a3e45; stroke-width: 1; }
+.seq-t { font: 500 8px "Geist Mono", ui-monospace, monospace; fill: #b8bcc4; }
+.step { fill: rgba(184,188,196,0.05); stroke: #46d19a; stroke-width: 1; }
+.step-t { font: 500 9px "Geist Mono", ui-monospace, monospace; fill: #46d19a; }
+.panel { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
+.mono { font: 400 9.5px "Geist Mono", ui-monospace, monospace; fill: #b8bcc4; }
+.mono-h { font: 500 9.5px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
+.rule { font: 400 10px "Geist", system-ui, sans-serif; fill: #b8bcc4; }

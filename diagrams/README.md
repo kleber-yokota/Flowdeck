@@ -4,7 +4,7 @@ Style: dark metallic skin (background `#0b0c0e`, steel borders, orange highlight
 `queued` (light blue), `running` (orange), `success` (green) and `failed` (red).
 
 **Reading rule**: open only the HTML file(s) your task actually needs — route via the phase sections below
-or `package-map.html` (`#tasks`); do not read the other `.html` files without a reason or unless explicitly asked.
+or `package-map.html`; do not read the other `.html` files without a reason or unless explicitly asked.
 
 ## Phase 1 — Dynamic listing
 
@@ -42,69 +42,62 @@ or `package-map.html` (`#tasks`); do not read the other `.html` files without a 
 
 ## Package map (navigable)
 
-- Ranked package graph (9 nodes, 13 edges, zero cycles): `main` → `web` → `core` + `web/graph`
+- Ranked package graph (10 nodes, 17 edges, zero cycles): `main` → `web` → `core` + `web/graph`
   → `core/status` + `core/graph` + `dbos` (third); edge labels = the functions that
-  contact across modules;
+  contact across modules; `cmd/workflowgen` (build) and `cmd/svgdump` (diagnosis) are
+  main packages that are never imported;
 - `core` is the convergence point (fan-in 4: `main`, `web`, `web/graph`, `workflows`); the `web`↔`core`
   contact is the single `Port`; `core/status` and `core/graph` are pure;
 - **Clickable nodes**: clicking a package shows its files, functions and contacts
   — navigate without reading the code;
 - Navigation without JavaScript (anchors + `:target`): deep-link by hash, keyboard and
   back button work; each detail section has drill-down links to the contact packages.
-- **One file, two readers**: the `#tasks` section (task→files routing), the `#contacts`
-  section (where the modules touch: per edge, file/function + identifiers) and the
-  `<section id="package-*">` blocks (file | responsibility | functions) are the
-  machine-readable map (AGENTS.md points to them); the SVG is the human view of the same
-  data. No separate map exists — if you update it, it is here.
+- **One file, two readers**: the `#contacts` section (where the modules touch: per edge,
+  file/function + identifiers) and the `<section id="package-*">` blocks
+  (file | responsibility | functions) are the machine-readable map (AGENTS.md points to
+  them); the SVG is the human view of the same data. No separate map exists — if you
+  update it, it is here.
 
 ## Graph subsystem (deep dive)
 
-Two folders: **`current/`** = the state of the code today (as-is); **`melhoria/`** = the
-improvement (target model — what the graph subsystem should become).
-
-### current — the code today (as-is)
+One folder — `graph/current/` = the state of the code today (the block model is built and
+stored at boot; `web/graph` renders it):
 
 - `graph/current/graph-flow.html` — data flow: who owns what in the graph subsystem and how the
   data moves (embedded source → `core/graph` parse → `PathGraph` → `Port` → `web/graph`
   render, durable steps from Postgres feeding the executed path);
-- `graph/current/core-graph-extraction.html` — flowchart of how `core/graph` extracts
-  (ParseFile · collect → `possiblePaths` → `specs` → `PathGraph`); the spec for improving
-  the AST extraction;
-- `graph/current/possible-paths.html` — detailed flowchart of the `possiblePaths` walk: the open
-  paths list (starts with one empty path), `RunAsStep` appending to every open path, `if`
-  forking taken/not-taken (cartesian), dedupe at the end — with the `decide` workflow trace;
 - `graph/current/graph-contract.html` — the two path-diagram pipelines, reflecting the current code:
-  the possible-paths map (boot · AST: `core/graph.New(fsys)` → `Port.Graph` →
-  `handleWorkflowPage` → `PathsToSVG` → workflow page) and the executed path (runtime ·
+  the block-model map (boot · AST: `core/graph.New(fsys)` → `Port.Graph` →
+  `handleWorkflowPage` → `BlockToSVG` → workflow page) and the executed path (runtime ·
   Postgres: `core.Steps` → `Port.Steps` → `handleExecutionSteps` (2s poll) /
-  `handleExecutionDetail` → `ExecutedPathToSVG` → steps fragment), both sharing the same
-  drawing code (`newGraphLayout` · `svg()` · `pathNode`);
-### melhoria — the target model (improvement)
-
-- `graph/melhoria/paths-blocks.html` — taxonomy of "what's inside what": the Go syntax blocks a
-  workflow body can use (the containers: block, if/else-if/else, switch, type switch, for,
-  for range, select, go, defer/return) × the DBOS constructs that can be put inside any of
-  them (the contents: `RunAsStep`, `RunAsTransaction`, `RunWorkflow`, `Go`, `Select`,
-  `Sleep`, `Recv`, `Enqueue`, `Send`/`SetEvent`), each with its path effect (sequence / fork
-  / loop) and the node type it produces (step / child workflow / async / wait / off-path),
-  plus today's `possiblePaths` coverage (handled / flattened / invisible) — the reference
-  for extending the AST extraction beyond `RunAsStep` + `if`;
-- `graph/melhoria/paths-block-levels.html` — the possible-paths structure as a **tree of blocks by level**: every
-  block has a level (depth — root = L0, larger = more internal), a type (sequence · loop · if) and
-  ordered children; independent blocks share a level (siblings — two sequential loops are both L1);
-  the tree is stored and read back, not recomputed; the example is a workflow with two sequential
-  loops + steps, with the flattened execution order.
-- `graph/melhoria/webgraph-block-treatment.html` — the target-model flow of how `web/graph` receives and
-  treats the block model: `core/graph` produces the block model (blocks · dependencies · levels ·
-  types) at boot; `web/graph` receives it, then treats it (top → bottom) — (1) receive, (2) assign
-  the block level (L0/L1/L2) to each block's outline, (3) represent each block type (async · if ·
-  loop · sequence), (4) layout (positions · arrows · symbols · nesting by level), (5) emit the SVG;
-- `graph/melhoria/webgraph-block-representation.html` — the block representation key: how each block type
-  is drawn (sequence = boxes in order, async = each box one below the last, if/else-if/else = a
-  stack whose branches arrow to the next dependency, loop = a repeat symbol, child workflow and
-  wait = distinct box symbols). Two distinct palettes: status (badges: queued/running/success/
-  failed) and block level (outlines: L0 ink, L1 soft, L2 dark; L3+ reuses L2 + badge); sequence
-  flows top → bottom.
+  `handleExecutionDetail` → `ExecutedPathToSVG` → steps fragment), both emitted at 1.25×
+  through the shared SVG machinery (`num` · the marker defs · `<g transform="scale(1.25)">`);
+- `graph/current/paths-blocks.html` — taxonomy of "what's inside what": the Go syntax blocks a
+  workflow body can use (the containers: block, if/else-if/else, for, for range) × the DBOS
+  constructs that can be put inside any of them (the contents: `RunAsStep`,
+  `RunAsTransaction`, `RunWorkflow`, `Go`, `Select`, `Sleep`, `Recv`, `Enqueue`,
+  `Send`/`SetEvent`), each with its path effect (sequence / fork / loop) and the node type
+  it produces (step / child workflow / async / wait / off-path) — the reference for the
+  AST extraction; the parser recognizes constructs by function name, groups a run of async
+  children right before a channel wait (`select`/`recv`) into a join block, and filters
+  empty guard blocks;
+- `graph/current/paths-block-levels.html` — the possible-paths structure as a **tree of blocks by level**: every
+  block has a level (depth — root = L0, larger = more internal), a type (sequence · loop · if ·
+  join) and ordered children; independent blocks share a level (siblings — two sequential loops
+  are both L1); the tree is stored and read back, not recomputed; the example is a workflow with
+  two sequential loops + steps, with the flattened execution order;
+- `graph/current/webgraph-block-treatment.html` — the flow of how `web/graph` receives and treats the
+  block model: `core/graph` produces the stored block model (blocks · levels · types) at boot;
+  `web/graph` receives it, then treats it (top → bottom) — (1) receive, (2) assign the block
+  level (L0/L1/L2) to each block's outline, (3) represent each block type (sequence · async ·
+  if · loop · join), (4) layout (positions · arrows · symbols · nesting by level), (5) emit
+  the SVG at 1.25×;
+- `graph/current/webgraph-block-representation.html` — the block representation key: how each block type
+  is drawn (sequence = boxes in order, async = side-by-side boxes + the ∥ mark, if/else-if/else =
+  a fork whose branches arrow to the next dependency, loop = the open-arc symbol, join = the
+  async group + the wait node, child workflow ◉ and wait = distinct box symbols). Two distinct
+  palettes: status (badges: queued/running/success/failed) and block level (outlines: L0
+  `#ddd6fe`, L1 `#a78bfa`, L2 `#7c3aed`; L3+ reuses L2); sequence flows top → bottom.
 
 ## Files
 
@@ -121,11 +114,8 @@ improvement (target model — what the graph subsystem should become).
 - `graph/` — graph subsystem deep dive (own `graph/css/`, one stylesheet per HTML file)
   - `graph/current/` — the code today (as-is)
     - `graph/current/graph-flow.html` (dependency and flow)
-    - `graph/current/core-graph-extraction.html` (how `core/graph` extracts)
-    - `graph/current/possible-paths.html` (the `possiblePaths` walk, step by step)
-    - `graph/current/graph-contract.html` (the two path-diagram pipelines: possible-paths + executed path)
-  - `graph/melhoria/` — the target model (improvement)
-    - `graph/melhoria/paths-blocks.html` (Go blocks × DBOS constructs — what's inside what)
-    - `graph/melhoria/paths-block-levels.html` (possible paths as a tree of blocks by level)
-    - `graph/melhoria/webgraph-block-treatment.html` (how `web/graph` receives and treats the block model)
-    - `graph/melhoria/webgraph-block-representation.html` (how each block type is represented + the two palettes: status and block level)
+    - `graph/current/graph-contract.html` (the two path-diagram pipelines: block model + executed path)
+    - `graph/current/paths-blocks.html` (Go blocks × DBOS constructs — what's inside what)
+    - `graph/current/paths-block-levels.html` (possible paths as a tree of blocks by level)
+    - `graph/current/webgraph-block-treatment.html` (how `web/graph` receives and treats the block model)
+    - `graph/current/webgraph-block-representation.html` (how each block type is represented + the two palettes: status and block level)

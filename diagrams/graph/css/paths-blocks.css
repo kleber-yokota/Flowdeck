@@ -88,3 +88,15 @@ figure {
 .d-coral { background: var(--accent); }
 .d-red { background: var(--red); }
 .d-blue { background: var(--blue); }
+
+/* SVG-scoped classes (moved from the inline <style> in paths-blocks.html) */
+.lbl { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; fill: #b8bcc4; }
+.name { font: 500 10px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
+.eff { font: 400 8.5px "Geist", system-ui, sans-serif; fill: #8f96a3; }
+.typ { font: 400 8.5px "Geist", system-ui, sans-serif; }
+.sb { font: 500 9px "Geist Mono", ui-monospace, monospace; fill: #e8e6e1; }
+.box { fill: rgba(184,188,196,0.04); stroke: #3a3e45; stroke-width: 1; }
+.chip { fill: rgba(184,188,196,0.05); stroke-width: 1; }
+.cl { font: 500 9px "Geist Mono", ui-monospace, monospace; }
+.sec { font: 600 9px "Geist Mono", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; fill: #b8bcc4; }
+.res { font: 400 10px "Geist", system-ui, sans-serif; fill: #b8bcc4; }

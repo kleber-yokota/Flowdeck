@@ -83,3 +83,12 @@ figure {
   border-radius: 50%;
   display: inline-block;
 }
+
+/* SVG-scoped classes (moved from the inline <style> in webgraph-block-representation.html) */
+.card { fill: rgba(184, 188, 196, 0.03); stroke: #3a3e45; stroke-width: 1; }
+.box { fill: none; }
+.lbl { font: 12px "Geist Mono", monospace; fill: #e8e6e1; font-weight: 600; }
+.btxt { font: 11px "Geist Mono", monospace; fill: #e8e6e1; }
+.note { font: 11px "Geist", system-ui, sans-serif; fill: #8f96a3; }
+.sec { font: 11px "Geist Mono", monospace; fill: #8f96a3; letter-spacing: 0.08em; text-transform: uppercase; }
+.sym { font: 14px "Geist Mono", monospace; fill: #e8e6e1; }
