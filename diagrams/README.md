@@ -72,6 +72,18 @@ stored at boot; `web/graph` renders it):
   Postgres: `core.Steps` → `Port.Steps` → `handleExecutionSteps` (2s poll) /
   `handleExecutionDetail` → `ExecutedPathToSVG` → steps fragment), both emitted at 1.25×
   through the shared SVG machinery (`num` · the marker defs · `<g transform="scale(1.25)">`);
+- `graph/current/executed-path-flow.html` — the executed-path (runtime · Postgres) data flow:
+  the execution page and its 2s poll (`GET /executions/{id}` · `GET /executions/{id}/steps`)
+  go through the web handlers into the core Port (`Steps` · `Detail` · `Status`), the core reads
+  the status row and the step rows from Postgres (step_id asc, `row.Error` mapped to failed) and
+  hands the durable steps to `web/graph.ExecutedPathToSVG`, which renders the executed-path SVG
+  into the steps fragment that HTMX swaps every 2s until the run is terminal;
+- `graph/current/executed-path-dependencies.html` — how the executed-path dependencies are
+  generated: the Postgres step rows (step_id asc) → `core.Steps` maps each row to a
+  `Step{Name, State}` (`row.Error != nil` → failed, else success) → `ExecutedPathToSVG` wires the
+  dependency (`nodes[i-1].Children = []pathNode{nodes[i]}` — each step → the next step that ran)
+  and keeps only the first step as the single root → the shared layout (measure · place ·
+  collect) emits the linear SVG (one rect and arrow per step, colored by the step state);
 - `graph/current/paths-blocks.html` — taxonomy of "what's inside what": the Go syntax blocks a
   workflow body can use (the containers: block, if/else-if/else, for, for range) × the DBOS
   constructs that can be put inside any of them (the contents: `RunAsStep`,
@@ -119,3 +131,5 @@ stored at boot; `web/graph` renders it):
     - `graph/current/paths-block-levels.html` (possible paths as a tree of blocks by level)
     - `graph/current/webgraph-block-treatment.html` (how `web/graph` receives and treats the block model)
     - `graph/current/webgraph-block-representation.html` (how each block type is represented + the two palettes: status and block level)
+    - `graph/current/executed-path-flow.html` (executed path — flow and fetch: page + 2s poll → handlers → Port → Postgres step rows → `ExecutedPathToSVG` → steps fragment)
+    - `graph/current/executed-path-dependencies.html` (executed path — dependency generation: step rows → Step mapping → chain wiring → single root → layout → SVG)
