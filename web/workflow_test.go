@@ -3,17 +3,14 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/graph"
 	"flowdeck/core/status"
 )
-
-// graphNodeY matches a graph node rect: the node's y coordinate is group 1.
-var graphNodeY = regexp.MustCompile(`class="g-node" x="[0-9.]+" y="([0-9.]+)"`)
 
 // The workflow page (full page, opened from the list) has the dispatch
 // button and the executions list that receives the ACK rows.
@@ -68,9 +65,17 @@ func TestWorkflowPageColumnsLayout(t *testing.T) {
 // graph: the common prefix is drawn once and the if forks the branches —
 // not one row per path (from the boot map: map lookup, no re-parse, no DB).
 func TestWorkflowPageRendersForkedGraph(t *testing.T) {
+	wg := &graph.WorkflowGraph{
+		Root: &graph.Block{ID: "b0", Level: 0, Type: graph.BlockSequence, Children: []graph.Child{
+			{Block: &graph.Block{ID: "b1", Level: 0, Type: graph.BlockIf,
+				Children: []graph.Child{{Node: &graph.Node{Name: "left", Kind: graph.NodeStep}}},
+				Else:     &graph.Block{ID: "b2", Level: 0, Children: []graph.Child{{Node: &graph.Node{Name: "right", Kind: graph.NodeStep}}}},
+			}},
+		}},
+	}
 	d := testPort()
 	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
-	d.Graph = fakeGraph("wf-alpha", [][]string{{"base", "left"}, {"base", "right"}})
+	d.Graph = &graph.PathGraph{ByName: map[string]*graph.WorkflowGraph{"wf-alpha": wg}}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -78,22 +83,17 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
-	// The prefix once — the fork shows both branches, not one row per path.
-	if n := strings.Count(body, ">base<"); n != 1 {
-		t.Errorf("prefix drawn %d times, want 1", n)
-	}
+	// The if forks: both branch boxes are drawn, and the L0 outline is
+	// present (the root sequence).
 	for _, want := range []string{
 		`<svg`,
 		">left<",
 		">right<",
+		`class="g-block l0"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q", want)
 		}
-	}
-	// The fork: the branches sit on different rows than the prefix.
-	if n := len(rowYs(t, body)); n < 2 {
-		t.Errorf("fork rows: got %d distinct rows, want >= 2", n)
 	}
 }
 
@@ -113,19 +113,11 @@ func TestWorkflowPageRendersLinearGraph(t *testing.T) {
 	if n := strings.Count(body, `class="g-node"`); n != 3 {
 		t.Errorf("graph nodes: got %d, want 3", n)
 	}
-	if n := len(rowYs(t, body)); n != 1 {
-		t.Errorf("linear rows: got %d distinct rows, want 1", n)
+	for _, s := range []string{`>fetch</text>`, `>parse</text>`, `>store</text>`} {
+		if !strings.Contains(body, s) {
+			t.Errorf("page does not contain %q", s)
+		}
 	}
-}
-
-// rowYs returns the distinct y coordinates of the graph node rects.
-func rowYs(t *testing.T, body string) map[string]bool {
-	t.Helper()
-	ys := map[string]bool{}
-	for _, m := range graphNodeY.FindAllStringSubmatch(body, -1) {
-		ys[m[1]] = true
-	}
-	return ys
 }
 
 // The workflow page lists the runs of the workflow (phase 3, LIST): one

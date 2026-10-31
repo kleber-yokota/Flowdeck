@@ -11,13 +11,14 @@ import (
 	"strings"
 )
 
-// PathGraph is the possible-paths graph: workflow name → paths, plus the
-// parameter spec of each workflow (phase 5, BOOT).
+// PathGraph is the possible-paths graph: workflow name → the stored block
+// model (the blocks, the read-back paths, the steps), plus the parameter
+// spec of each workflow (phase 5, BOOT).
 type PathGraph struct {
-	// ByName is the built graph: workflow name → paths. Read-only after
-	// the build — the web holds the graph through the Port and only
-	// reads it via Of.
-	ByName map[string][][]string
+	// ByName is the built graph: workflow name → the stored block model. Read-only
+	// after the build — the web holds the graph through the Port and only reads
+	// it via Of.
+	ByName map[string]*WorkflowGraph
 	// Specs is the built spec map: workflow name → parameter spec
 	// (input + step defaults). Read-only after the build.
 	Specs map[string]Spec
@@ -53,6 +54,7 @@ func New(fsys fs.FS) (*PathGraph, error) {
 	return &PathGraph{ByName: byName, Specs: specs}, nil
 }
 
-// Of returns the possible paths of the named workflow, or nil when the
-// name is unknown.
-func (g *PathGraph) Of(name string) [][]string { return g.ByName[name] }
+// Of returns the possible paths of the named workflow (the stored block
+// model: the blocks, the read-back paths, the steps), or nil when the name
+// is unknown. The page renders it as the block DAG.
+func (g *PathGraph) Of(name string) *WorkflowGraph { return g.ByName[name] }

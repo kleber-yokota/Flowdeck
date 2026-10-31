@@ -59,8 +59,8 @@ func New(p core.Port, ready func() error) http.Handler {
 	})
 
 	// HTMX partial: the execution badge for the 2s poll (phase 2). Returns
-	// only the badge fragment. Terminal badges carry no hx attributes, so
-	// the swapped-in element has nothing left to re-trigger and the poll
+	// only the badge fragment. Terminal badges carry no hx attributes, so the
+	// swapped-in element has nothing left to re-trigger and the poll
 	// stops.
 	mux.HandleFunc("GET /status/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
@@ -146,7 +146,7 @@ func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
 // handleResume is the POST /resume/{id} handler (phase 5, RESUME): the
 // re-enqueue of a failed run by id — the same stored input, restarting
 // from the last completed step. The response is the badge fragment (the
-// ACK), swapped into the badge of the detail page.
+// ACK, enqueued again), swapped into the badge of the detail page.
 func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
 	ex, err := p.Resume(id)
@@ -178,8 +178,8 @@ func formValues(r *http.Request) (map[string]string, error) {
 
 // handleWorkflowPage renders the full page of one registered workflow:
 // the parameter form on top (phase 5, DISPLAY), the dispatch, the possible
-// paths (phase 4, STEP 2, overview) and the runs of it (phase 3, LIST):
-// every execution the core knows, newest first — workflow ID + badge.
+// paths (phase 4, STEP 2, overview) and the runs of it
+// (phase 3, LIST): every execution the core knows, newest first — workflow ID + badge.
 func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	name := r.PathValue("name")
 	if !registered(p.List(), name) {
@@ -204,13 +204,13 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	if s, specErr := p.Spec(name); specErr == nil {
 		spec = &s
 	}
-	// Phase 4, STEP 2: the paths come from the graph component (the boot
-	// map: map lookup, no re-parse, no DB) — never hardcoded in the web.
+	// Phase 4, STEP 2: the block model comes from the graph component (the
+	// boot map: map lookup, no re-parse, no DB) — never hardcoded in the web.
 	page(w, "workflow.html", workflowPage{
 		Title:      name + " · FlowDeck",
 		Name:       name,
 		Spec:       spec,
-		Graph:      graph.PathsToSVG(p.Graph.Of(name)),
+		Graph:      graph.BlockToSVG(p.Graph.Of(name)),
 		Executions: rows,
 	})
 }
@@ -219,8 +219,7 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 // DETAIL — click on the workflow ID in the list): badge state, the
 // attempts (retries 1..N-1 are the failures recovered by a retry, retry N
 // the final status), on failure the error and the step that failed, and
-// the executed path (phase 4, STEP 3: the steps that ran, in execution
-// order).
+// the executed path (phase 4, STEP 3, polling).
 func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
 	d, err := p.Detail(id)

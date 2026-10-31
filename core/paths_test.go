@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/graph"
 )
 
 // SetWorkflowsSource builds the possible-paths graph from the workflows
@@ -17,20 +18,46 @@ func TestPathsGraphFromWorkflowsTree(t *testing.T) {
 	}
 	g := core.NewPort().Graph
 
-	if got := g.Of("hello-world"); len(got) != 1 || len(got[0]) != 1 || got[0][0] != "greet" {
-		t.Fatalf("hello-world paths: got %v", got)
+	wg := g.Of("hello-world")
+	if wg == nil {
+		t.Fatalf("hello-world: nil graph")
 	}
-	if got := g.Of("pipeline"); len(got) != 1 || len(got[0]) != 4 || got[0][0] != "fetch" || got[0][3] != "store" {
-		t.Fatalf("pipeline paths: got %v", got)
+	if len(wg.Paths) != 1 || len(wg.Paths[0]) != 1 || wg.Paths[0][0] != "greet" {
+		t.Fatalf("hello-world paths: got %v", wg.Paths)
 	}
-	if got := g.Of("decide"); len(got) != 2 || len(got[0]) != 2 || got[0][0] != "base" {
-		t.Fatalf("decide paths: got %v", got)
+	if len(wg.Steps) != 1 || wg.Steps[0] != "greet" {
+		t.Fatalf("hello-world steps: got %v", wg.Steps)
 	}
-	if got := g.Of("buy"); len(got) != 1 || len(got[0]) != 1 || got[0][0] != "charge" {
-		t.Fatalf("buy paths (subpackage): got %v", got)
+	if wg.Root == nil || wg.Root.Type != graph.BlockSequence {
+		t.Fatalf("hello-world root: got %v", wg.Root)
 	}
-	// The graph of an unregistered name is empty (no parse, no crash).
-	if got := g.Of("ghost"); len(got) != 0 {
-		t.Fatalf("ghost paths: got %v", got)
+
+	wg = g.Of("pipeline")
+	if wg == nil {
+		t.Fatalf("pipeline: nil graph")
+	}
+	if len(wg.Paths) != 1 || len(wg.Paths[0]) != 4 || wg.Paths[0][0] != "fetch" || wg.Paths[0][3] != "store" {
+		t.Fatalf("pipeline paths: got %v", wg.Paths)
+	}
+
+	wg = g.Of("decide")
+	if wg == nil {
+		t.Fatalf("decide: nil graph")
+	}
+	if len(wg.Paths) != 2 || len(wg.Paths[0]) != 2 || wg.Paths[0][0] != "base" {
+		t.Fatalf("decide paths: got %v", wg.Paths)
+	}
+
+	wg = g.Of("buy")
+	if wg == nil {
+		t.Fatalf("buy: nil graph")
+	}
+	if len(wg.Paths) != 1 || len(wg.Paths[0]) != 1 || wg.Paths[0][0] != "charge" {
+		t.Fatalf("buy paths: got %v", wg.Paths)
+	}
+
+	// The graph of an unregistered name is nil (no parse, no crash).
+	if got := g.Of("ghost"); got != nil {
+		t.Fatalf("ghost: got %v, want nil", got)
 	}
 }

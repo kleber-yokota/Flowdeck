@@ -194,6 +194,20 @@ a.name { color: inherit; text-decoration: none; }
 }
 .g-arrow { fill: var(--soft); fill-opacity: 0.55; }
 
+/* The block-DAG (the possible-paths model): the blocks are level outlines
+   (the violet ramp L0·L1·L2), the nodes are boxes with a per-type
+   representation (the loop · child · wait symbols) */
+.g-block { fill: none; stroke-width: 1.5; stroke-opacity: 0.7; }
+.g-block.l0 { stroke: #ddd6fe; }
+.g-block.l1 { stroke: #a78bfa; }
+.g-block.l2 { stroke: #7c3aed; }
+.loop-symbol path { stroke: var(--steel); stroke-opacity: 0.55; fill: none; }
+.loop-symbol polygon { fill: var(--steel); fill-opacity: 0.55; }
+.child-ring { fill: none; stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
+.child-dot { fill: var(--soft); fill-opacity: 0.55; }
+.wait-symbol circle { fill: var(--soft); fill-opacity: 0.55; }
+.async-symbol path { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 2; }
+
 .executions { list-style: none; margin: 0; padding: 0; }
 
 .execution {

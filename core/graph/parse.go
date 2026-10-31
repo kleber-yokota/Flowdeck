@@ -16,7 +16,7 @@ import (
 // function name, so any import alias of the dbos package is found. A
 // RunAsStep call adds a step to every open path; an if forks the paths
 // (taken branch vs not-taken branch).
-func pathsFromSources(files map[string][]byte) (map[string][][]string, map[string]Spec, error) {
+func pathsFromSources(files map[string][]byte) (map[string]*WorkflowGraph, map[string]Spec, error) {
 	fset := token.NewFileSet()
 	funcs := map[string]*ast.FuncDecl{}
 	regs := map[string]string{} // registered name → workflow func name
@@ -150,56 +150,308 @@ func collectRegistrations(file *ast.File, regs map[string]string) {
 	})
 }
 
-// pathsFromRegistrations builds the map: registered name → all possible
-// paths (workflow funcs not defined in this package's source are skipped).
-func pathsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDecl) map[string][][]string {
-	out := make(map[string][][]string, len(regs))
+// pathsFromRegistrations builds the map: registered name → the stored block
+// model (workflow funcs not defined in this package's source are skipped).
+func pathsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDecl) map[string]*WorkflowGraph {
+	out := make(map[string]*WorkflowGraph, len(regs))
 	for name, fnName := range regs {
 		fd := funcs[fnName]
 		if fd == nil || fd.Body == nil {
 			continue // workflow func not defined in this package's source
 		}
-		out[name] = possiblePaths(fd.Body)
+		out[name] = buildGraph(fd.Body)
 	}
 	return out
 }
 
 // possiblePaths returns every sequence of steps that can run in the
-// function: each RunAsStep call adds a step to every open path, each if
-// forks the paths. Empty sequences and duplicates are dropped.
+// function: the stored block tree read back (each RunAsStep adds a step to
+// every open path, each if forks). Empty sequences and duplicates are
+// dropped.
 func possiblePaths(body *ast.BlockStmt) [][]string {
-	// One open path: the empty sequence.
-	paths := [][]string{{}}
-	walkStmts(body.List, &paths)
-	return dedupePaths(paths)
+	return buildGraph(body).Paths
 }
 
-func walkStmts(stmts []ast.Stmt, paths *[][]string) {
+// buildGraph builds the block tree of the workflow body (the stored
+// possible-paths model): the root is a sequence block (L0), a block has a
+// type (sequence · if · loop) and a level (a loop adds one level, an if
+// keeps the level of the block it appears in), and a leaf node has a kind
+// (step · async · child · wait). The read-back paths (Paths) and the steps
+// (Steps) are derived from the stored tree.
+func buildGraph(body *ast.BlockStmt) *WorkflowGraph {
+	g := &idGen{}
+	root := &Block{ID: g.next(), Level: 0, Type: BlockSequence}
+	root.Children = buildChildren(body.List, 0, g)
+	return &WorkflowGraph{
+		Root:  root,
+		Steps: stepsOf(root),
+		Paths: readPaths(root),
+	}
+}
+
+// idGen assigns the block ids (b0, b1, ...) in build order.
+type idGen struct{ n int }
+
+func (g *idGen) next() string {
+	id := "b" + strconv.Itoa(g.n)
+	g.n++
+	return id
+}
+
+// buildChildren builds the ordered children of the block at the given level
+// (the level of the block whose children these are): a for / for range is a
+// loop block (one level deeper), an if is an if block (it keeps the level),
+// a bare {} block is transparent, and any other statement yields its
+// constructs (the leaf nodes) in source order.
+func buildChildren(stmts []ast.Stmt, level int, g *idGen) []Child {
+	var children []Child
 	for _, stmt := range stmts {
-		walkStmt(stmt, paths)
+		switch s := stmt.(type) {
+		case *ast.BlockStmt:
+			children = append(children, buildChildren(s.List, level, g)...)
+		case *ast.IfStmt:
+			children = append(children, blockChild(buildIf(s, level, g))...)
+		case *ast.ForStmt:
+			children = append(children, blockChild(buildLoop(s.Body, level, g))...)
+		case *ast.RangeStmt:
+			children = append(children, blockChild(buildLoop(s.Body, level, g))...)
+		default:
+			for _, n := range constructsIn(stmt) {
+				children = append(children, Child{Node: n})
+			}
+		}
 	}
+	return groupJoins(children, level, g)
 }
 
-func walkStmt(stmt ast.Stmt, paths *[][]string) {
-	switch s := stmt.(type) {
-	case *ast.BlockStmt:
-		walkStmts(s.List, paths)
-	case *ast.IfStmt:
-		// Fork: every open path splits into the taken branch (if-body
-		// steps) and the not-taken one (else-body steps, or no extra step
-		// when there is no else).
-		taken := [][]string{{}}
-		walkStmts(s.Body.List, &taken)
-		notTaken := [][]string{{}}
-		if s.Else != nil {
-			walkStmt(s.Else, &notTaken)
+// groupJoins wraps each run of async nodes right before a channel wait (a
+// select or a recv) in a join block: the asyncs and the wait that joins
+// them, one level deeper.
+func groupJoins(children []Child, level int, g *idGen) []Child {
+	var out []Child
+	for i := 0; i < len(children); {
+		j := i
+		for j < len(children) && isAsyncChild(children[j]) {
+			j++
 		}
-		*paths = forkPaths(*paths, taken, notTaken)
-	default:
-		if steps := stepsIn(stmt); len(steps) > 0 {
-			*paths = addStepToAll(*paths, steps...)
+		if j > i && isJoinWait(children[j]) {
+			join := &Block{ID: g.next(), Level: level + 1, Type: BlockJoin}
+			join.Children = append(join.Children, children[i:j]...)
+			join.Children = append(join.Children, children[j])
+			out = append(out, Child{Block: join})
+			i = j + 1
+			continue
+		}
+		out = append(out, children[i])
+		i++
+	}
+	return out
+}
+
+// isAsyncChild reports whether the child is an async node.
+func isAsyncChild(c Child) bool {
+	return c.Node != nil && c.Node.Kind == NodeAsync
+}
+
+// isJoinWait reports whether the child is the channel wait that joins an
+// async run (a select or a recv — a sleep is a timer, not a join).
+func isJoinWait(c Child) bool {
+	if c.Node == nil || c.Node.Kind != NodeWait {
+		return false
+	}
+	return c.Node.Name == "select" || c.Node.Name == "recv"
+}
+
+// blockChild returns the block child if it has content — an error guard (an
+// if or a loop with no workflow constructs, like `if err != nil { return }`)
+// has none and is filtered out of the tree.
+func blockChild(b *Block) []Child {
+	if hasNode(b) {
+		return []Child{{Block: b}}
+	}
+	return nil
+}
+
+// hasNode reports whether the block (or any descendant) contains a node.
+func hasNode(b *Block) bool {
+	for _, c := range b.Children {
+		if c.Node != nil {
+			return true
+		}
+		if c.Block != nil && hasNode(c.Block) {
+			return true
 		}
 	}
+	if b.Else != nil && hasNode(b.Else) {
+		return true
+	}
+	return false
+}
+
+// buildIf builds the if block: the if-body is Children (built at the if's
+// level, which keeps the level of the block it appears in); the else is Else
+// (an else-if is another if block, an else body is a sequence block, no else
+// is nil).
+func buildIf(s *ast.IfStmt, level int, g *idGen) *Block {
+	b := &Block{ID: g.next(), Level: level, Type: BlockIf}
+	b.Children = buildChildren(s.Body.List, level, g)
+	switch e := s.Else.(type) {
+	case *ast.IfStmt:
+		if eb := buildIf(e, level, g); hasNode(eb) {
+			b.Else = eb
+		}
+	case *ast.BlockStmt:
+		eb := &Block{ID: g.next(), Level: level, Type: BlockSequence}
+		eb.Children = buildChildren(e.List, level, g)
+		if hasNode(eb) {
+			b.Else = eb
+		}
+	}
+	return b
+}
+
+// buildLoop builds the loop block: a for / for range, one level deeper than
+// the block it appears in.
+func buildLoop(body *ast.BlockStmt, level int, g *idGen) *Block {
+	b := &Block{ID: g.next(), Level: level + 1, Type: BlockLoop}
+	b.Children = buildChildren(body.List, level+1, g)
+	return b
+}
+
+// constructsIn returns the DBOS constructs in the statement, in source
+// order, as leaf nodes. It does not descend into function literals: a
+// step's own body is not part of the workflow's path.
+func constructsIn(stmt ast.Stmt) []*Node {
+	var nodes []*Node
+	ast.Inspect(stmt, func(n ast.Node) bool {
+		if _, isLit := n.(*ast.FuncLit); isLit {
+			return false
+		}
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		if name, kind, ok := nodeName(call); ok {
+			nodes = append(nodes, &Node{Name: name, Kind: kind})
+		}
+		return false
+	})
+	return nodes
+}
+
+// waitNames is the fixed name of each wait construct (the callee name → the
+// node name).
+var waitNames = map[string]string{
+	"Sleep":  "sleep",
+	"Recv":   "recv",
+	"Select": "select",
+}
+
+// nodeName is the leaf node of one DBOS construct call: the name (the
+// WithStepName literal when present, else the called function's name; the
+// fixed name for Sleep · Recv · Select) and the kind.
+func nodeName(call *ast.CallExpr) (string, NodeKind, bool) {
+	switch calleeName(call.Fun) {
+	case "RunAsStep":
+		return namedNode(call, NodeStep)
+	case "Go":
+		return namedNode(call, NodeAsync)
+	case "RunWorkflow":
+		return childNode(call)
+	}
+	if name, ok := waitNames[calleeName(call.Fun)]; ok {
+		return name, NodeWait, true
+	}
+	return "", "", false
+}
+
+// namedNode is the name of a RunAsStep/Go call (the WithStepName literal
+// when present, else the called function's name) and its kind.
+func namedNode(call *ast.CallExpr, kind NodeKind) (string, NodeKind, bool) {
+	name := runAsStepName(call)
+	if name == "" {
+		return "", "", false
+	}
+	return name, kind, true
+}
+
+// childNode is the name of a RunWorkflow call (the child workflow func's
+// name) and its kind.
+func childNode(call *ast.CallExpr) (string, NodeKind, bool) {
+	if len(call.Args) < 2 {
+		return "", "", false
+	}
+	name := exprName(call.Args[1])
+	if name == "" {
+		return "", "", false
+	}
+	return name, NodeChild, true
+}
+
+// readPaths returns every sequence of step names through the block: the
+// stored tree read back (a node appends its name to every open path, a
+// sequence/loop block's children extend every open path, an if forks). Empty
+// sequences and duplicates are dropped.
+func readPaths(b *Block) [][]string {
+	return dedupePaths(readBlock(b, [][]string{{}}))
+}
+
+// readBlock reads the block's children into the open paths (forking at the
+// nested ifs).
+func readBlock(b *Block, open [][]string) [][]string {
+	for _, c := range b.Children {
+		open = readChild(c, open)
+	}
+	return open
+}
+
+// readChild reads one child into the open paths: a node appends its name, an
+// if forks (taken vs not-taken), a sequence/loop block's children extend
+// every open path.
+func readChild(c Child, open [][]string) [][]string {
+	if c.Node != nil {
+		return addStepToAll(open, c.Node.Name)
+	}
+	b := c.Block
+	if b.Type == BlockIf {
+		taken := readBlock(b, [][]string{{}})
+		notTaken := blockSequences(b.Else)
+		return forkPaths(open, taken, notTaken)
+	}
+	return readBlock(b, open)
+}
+
+// blockSequences returns the sequences of step names through the else (the
+// not-taken branch of an if): nil is the empty sequence, an else-if forks, an
+// else body extends.
+func blockSequences(b *Block) [][]string {
+	if b == nil {
+		return [][]string{{}}
+	}
+	if b.Type == BlockIf {
+		return forkPaths([][]string{{}}, readBlock(b, [][]string{{}}), blockSequences(b.Else))
+	}
+	return readBlock(b, [][]string{{}})
+}
+
+// stepsOf returns the leaf node names of the block tree, in build order.
+func stepsOf(b *Block) []string {
+	var steps []string
+	var walk func(bl *Block)
+	walk = func(bl *Block) {
+		for _, c := range bl.Children {
+			if c.Node != nil {
+				steps = append(steps, c.Node.Name)
+			} else {
+				walk(c.Block)
+			}
+		}
+		if bl.Else != nil {
+			walk(bl.Else)
+		}
+	}
+	walk(b)
+	return steps
 }
 
 // forkPaths splits every open path into taken (p + each taken sequence) and
@@ -248,25 +500,6 @@ func dedupePaths(paths [][]string) [][]string {
 		out = append(out, p)
 	}
 	return out
-}
-
-// stepsIn returns the RunAsStep step names inside the statement, in source
-// order. It does not descend into function literals: a step's own body is
-// not part of the workflow's path.
-func stepsIn(stmt ast.Stmt) []string {
-	var steps []string
-	ast.Inspect(stmt, func(n ast.Node) bool {
-		if _, isLit := n.(*ast.FuncLit); isLit {
-			return false
-		}
-		call, isCall := n.(*ast.CallExpr)
-		if !isCall || calleeName(call.Fun) != "RunAsStep" {
-			return true
-		}
-		steps = append(steps, runAsStepName(call))
-		return false
-	})
-	return steps
 }
 
 // calleeName is the call's function name, no matter the import alias:

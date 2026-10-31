@@ -14,9 +14,9 @@ type Port struct {
 	// List returns the workflows registered in the core (single source of
 	// truth); the web knows nothing about specific workflows.
 	List func() []Workflow
-	// Graph is the possible-paths graph component (phase 4, STEP 2 — the
-	// boot map: map lookup, no re-parse, no DB). Never nil: empty before
-	// Boot.
+	// Graph is the possible-paths graph (name → the block model: the stored
+	// tree, the read-back paths, the steps) — the boot map: map lookup, no
+	// re-parse, no DB. Never nil: empty before Boot.
 	Graph *graph.PathGraph
 
 	// Spec returns the parameter spec of a workflow (phase 5, BOOT): the
