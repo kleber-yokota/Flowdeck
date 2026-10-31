@@ -4,8 +4,9 @@ The agent that receives this file is a **task author**. It writes the task
 files (`tasks/*.md`) that the task executor (`agent-task.md`) runs. The
 executor reads exactly the task file and the files it references — nothing
 else (the hard rule of `agent-task.md`). The author puts everything the
-executor needs into the file: the spec, the whole commit, the green state,
-the ownership, and the verified facts the task depends on.
+executor needs into the files: the task files (the spec, the whole commit,
+the green state, the ownership) and `tasks/fact.md` (the verified facts the
+set depends on).
 
 ## Inputs (three, in order)
 
@@ -14,8 +15,9 @@ the ownership, and the verified facts the task depends on.
 2. **Contacts** — `diagrams/package-map.html`. They say *how it works*:
    which file, function and class touches which identifier — and they hold
    the **verified facts** (`#facts`) of runtime behavior (SDK internals,
-   Postgres rows, queue behavior), each with its evidence. The author reads
-   this file for every task set, always.
+   Postgres rows, queue behavior), each with its evidence. The map is the
+   author's source of truth for navigation. The author reads this file for
+   every task set, always.
 3. **Code** — the call sites and the test files. The map is a guide; the
    code is the source of truth for **names and shapes**. The author greps
    only the symbols a step changes.
@@ -47,8 +49,8 @@ For every step and every symbol it changes, the map + the grep answer:
 - which **package edge** the touch crosses (the invariant to keep).
 
 When the map and the code disagree, the code wins for the current state.
-The author flags the stale row and updates the map together with the code
-(the diagrams are updated together with the code).
+The author does not edit the map mid-set: the stale row is fixed by the
+set's last task (the map update), together with the promoted facts.
 
 ## Trust (anti-reread — the rules that keep the authoring short)
 
@@ -62,10 +64,16 @@ The author flags the stale row and updates the map together with the code
   code files they name. Do not inventory the package: the contacts rows are
   the impact analysis. Research reads of 3+ files go through one batched
   round-trip, not one read per file.
+- **The author seeds `tasks/fact.md`.** Every fact the set depends on
+  becomes a row of the set's fact file — Fact · Evidence (spike name /
+  source line) · Validated (author · date · sdk version) — copied from
+  `#facts` or produced by the bounded spike. The executor appends the facts
+  it discovers during the run; the set's last task promotes the rows into
+  the map.
 - **Spikes are bounded.** One spike per unknown, and only for a runtime
   value no code shows (row shapes, status transitions, queue behavior): a
-  temporary test file, deleted before the commit, the result recorded under
-  "Notes" as a fact (value · evidence · how verified).
+  temporary test file, deleted before the commit, the result recorded as a
+  row of `tasks/fact.md` (value · evidence · how verified).
 - **Decide once.** A value the diagram does not pin: pick one, record it
   under "Notes" (value + one line of why), do not revisit it. A new value
   belongs in the diagram — not the task.
@@ -122,11 +130,9 @@ N. Make the tests pass (green).
 
 - `core/graph/parse.go` — the flat walk is replaced in STEP 02.
 
-## Notes (decisions and verified facts)
+## Notes (decisions)
 
 - <Decision>: <the reason, one line>.
-- Fact: <runtime value> — <evidence (spike name / source line)> · <how
-  verified>.
 ````
 
 Rules of the fields:
@@ -141,9 +147,9 @@ Rules of the fields:
   (the reading rule of `diagrams/README.md`).
 - `Out of scope` names the file and the owning step. The executor does not
   read the other task files to learn the ownership.
-- `Notes` carries the runtime facts the task depends on: copied from
-  `#facts` (with their Evidence · Validated) or verified by the bounded
-  spike. A fact without evidence is a guess.
+- `Notes` carries the decisions (value + the why). The runtime facts the
+  task depends on live in `tasks/fact.md` — the task cites the row it needs.
+  A fact without evidence is a guess.
 
 ## ASD-STE100 (as applied to the task files)
 
@@ -163,7 +169,10 @@ Rules of the fields:
 The README holds, once for the whole set:
 
 - The goal (today → target, two sentences).
-- **Steps** — the table of the files and the step names.
+- **Steps** — the table of the files and the step names. The **last step is
+  always the map update**: promote `tasks/fact.md` into the package-map
+  (`#facts`) and refresh the contact rows the set touched — written as the
+  last task file.
 - **Terms** — the vocabulary, one definition per term. A term is never
   redefined in a task.
 - **Source map** — where each piece of information lives (HTML · part).
@@ -177,4 +186,6 @@ The README holds, once for the whole set:
 - It does not create a step that is not green on its own.
 - It does not put two steps in one file, or one step in two files.
 - It does not cite a diagram part it did not open.
+- It does not edit `diagrams/package-map.html` mid-set: the map is the last
+  task's surface.
 - It does not re-verify a fact that passes its diff-check (the Trust rule).
