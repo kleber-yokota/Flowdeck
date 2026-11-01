@@ -186,7 +186,16 @@ func (g *graphLayout) svg() string {
 func ExecutedPathToSVG(steps []core.Step) template.HTML {
 	nodes := make([]pathNode, 0, len(steps))
 	for _, s := range steps {
-		nodes = append(nodes, pathNode{Step: s.Name, State: string(s.State)})
+		// The child row renders as the child workflow: the node is labeled
+		// with the child's name and colored with the child's live badge
+		// state (the row is the dispatch — the row's own state is the
+		// dispatch's, not the child's); a child row missing the child's
+		// name (defensive) falls back to the row name and the row's state.
+		name, state := s.Name, string(s.State)
+		if s.Kind == core.KindChild && s.ChildName != "" {
+			name, state = s.ChildName, string(s.ChildState)
+		}
+		nodes = append(nodes, pathNode{Step: name, State: state})
 	}
 	for i := len(nodes) - 1; i > 0; i-- {
 		nodes[i-1].Children = []pathNode{nodes[i]}

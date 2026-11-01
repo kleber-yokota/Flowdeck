@@ -10,10 +10,10 @@ import (
 	"flowdeck/core/graph"
 )
 
-// The block-DAG treatment (diagrams/graph/melhoria/webgraph-block-*.html):
-// the block tree is received as-is, each block is stroked at its level (the
-// level ramp), the node kind is represented (child/wait symbols, async side
-// by side, loop symbol), and the result is the SVG.
+// Block-DAG treatment: the block tree is received as-is, each block is
+// stroked at its level (the level ramp), the node kind is represented
+// (child/wait symbols, async side by side, loop symbol), and the result
+// is the SVG.
 //
 // The layout is top → bottom: the blocks are outlines, the nodes are boxes,
 // the if forks the branches side by side, the async is side by side, and the

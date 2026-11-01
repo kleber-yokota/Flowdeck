@@ -188,8 +188,11 @@ a.name { color: inherit; text-decoration: none; }
 /* Executed path (phase 4, STEP 3): the same graph, with the single row of
    the steps that ran — the nodes are colored by the step's state
    (success/failed; every executed step is terminal) */
+.g-node.queued { stroke: var(--queued); stroke-opacity: 0.8; }
+.g-node.running { stroke: var(--running); stroke-opacity: 0.8; }
 .g-node.success { stroke: var(--success); stroke-opacity: 0.8; }
 .g-node.error { stroke: var(--error); stroke-opacity: 0.8; }
+.g-node.cancelled { stroke: var(--cancelled); stroke-opacity: 0.8; }
 .g-text {
   font-family: ui-monospace, "Geist Mono", monospace;
   font-size: 14px;

@@ -9,6 +9,46 @@ import (
 	"flowdeck/core/status"
 )
 
+// TestExecutedPathToSVGChildNodeShowsChildNameAndBadge: the child row
+// (a RunWorkflow dispatch) renders as the child workflow — the node is
+// labeled with the child's name and colored with the child's live badge
+// state (the row's own state is the dispatch's, not the child's).
+func TestExecutedPathToSVGChildNodeShowsChildNameAndBadge(t *testing.T) {
+	steps := []core.Step{
+		{Name: "DBOS.enqueue", Kind: core.KindChild, ChildID: "child-1", ChildName: "pipeline", ChildState: status.Running, State: status.Success},
+		{Name: "DBOS.getResult", Kind: core.KindWait, State: status.Success},
+	}
+	svg := string(ExecutedPathToSVG(steps))
+	if !strings.Contains(svg, `class="g-node running"`) {
+		t.Errorf("child node missing the child's live state: %s", svg)
+	}
+	if !strings.Contains(svg, ">pipeline<") {
+		t.Errorf("child node missing the child's name: %s", svg)
+	}
+	if !strings.Contains(svg, `class="g-node success"`) {
+		t.Errorf("wait node missing its own state: %s", svg)
+	}
+	if !strings.Contains(svg, ">DBOS.getResult<") {
+		t.Errorf("wait node missing the row name: %s", svg)
+	}
+}
+
+// TestExecutedPathToSVGChildFallbackUsesRowName: a child row missing the
+// child's name (the child row is absent — defensive) renders the row name
+// and the row's own state.
+func TestExecutedPathToSVGChildFallbackUsesRowName(t *testing.T) {
+	steps := []core.Step{
+		{Name: "DBOS.enqueue", Kind: core.KindChild, ChildID: "child-1", State: status.Success},
+	}
+	svg := string(ExecutedPathToSVG(steps))
+	if !strings.Contains(svg, `class="g-node success"`) {
+		t.Errorf("fallback node missing the row's state: %s", svg)
+	}
+	if !strings.Contains(svg, ">DBOS.enqueue<") {
+		t.Errorf("fallback node missing the row name: %s", svg)
+	}
+}
+
 // TestNewGraphLayoutLinearRow: a chain without an if runs in one row, left
 // to right, with one edge per continuation.
 func TestNewGraphLayoutLinearRow(t *testing.T) {
