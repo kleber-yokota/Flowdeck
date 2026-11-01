@@ -70,12 +70,13 @@ type badge struct {
 }
 
 // badgeLabels maps the core states onto the badge labels (the
-// presentation of the four colors; the terminal rule lives on core.State).
+// presentation of the five colors; the terminal rule lives on core.State).
 var badgeLabels = map[status.State]string{
-	status.Queued:  "Queued",
-	status.Running: "Running",
-	status.Success: "Success",
-	status.Error:   "Failed",
+	status.Queued:    "Queued",
+	status.Running:   "Running",
+	status.Success:   "Success",
+	status.Error:     "Failed",
+	status.Cancelled: "Cancelled",
 }
 
 func badgeFor(id string, state status.State) badge {

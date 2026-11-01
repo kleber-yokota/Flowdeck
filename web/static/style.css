@@ -1,8 +1,9 @@
 /*
  * FlowDeck — single stylesheet for all full pages.
  *
- * The design tokens follow the diagrams palette (AGENTS.md); the four badge
- * states (queued/running/success/failed) must stay in sync with diagrams/.
+ * The design tokens follow the diagrams palette (AGENTS.md); the five badge
+ * states (queued/running/success/failed/cancelled) must stay in sync with
+ * diagrams/.
  * Partials (badge, workflows, execution rows) need no styles of their own:
  * they are always swapped into a full page that loads this file.
  */
@@ -13,10 +14,11 @@
   --steel:  #b8bcc4;
   --soft:   #8f96a3;
   --accent: #ff9142;
-  --queued:  #7cc0ff;
-  --running: #ff9142;
-  --success: #46d19a;
-  --error:   #ff5450;
+  --queued:    #7cc0ff;
+  --running:   #ff9142;
+  --success:   #46d19a;
+  --error:     #ff5450;
+  --cancelled: #8f96a3;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -52,8 +54,8 @@ h1 {
   color: var(--ink);
 }
 
-/* Badge — the four states of the workflow (same colors as the diagrams);
-   terminal states (success/failed) show a dot */
+/* Badge — the five states of the workflow (same colors as the diagrams);
+   terminal states (success/failed/cancelled) show a dot */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -69,12 +71,13 @@ h1 {
   white-space: nowrap;
 }
 
-/* The four states of the badge — same colors as the diagrams */
+/* The five states of the badge — same colors as the diagrams */
 .badge.running { color: var(--running); background: rgba(255, 145, 66, 0.08); border-color: var(--running); }
 .badge.success { color: var(--success); background: rgba(70, 209, 154, 0.08); border-color: var(--success); }
 .badge.error { color: var(--error); background: rgba(255, 84, 80, 0.08); border-color: var(--error); }
+.badge.cancelled { color: var(--cancelled); background: rgba(143, 150, 163, 0.08); border-color: var(--cancelled); }
 
-/* Terminal states (success/failed) show a dot */
+/* Terminal states (success/failed/cancelled) show a dot */
 .badge.terminal::before {
   content: "";
   width: 0.45rem;

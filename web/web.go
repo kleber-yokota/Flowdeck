@@ -90,6 +90,14 @@ func New(p core.Port, ready func() error) http.Handler {
 		handleResume(w, r, p)
 	})
 
+	// HTMX partial: POST cancel — the cancel of a live run by id
+	// (queued/running — the core guard). The response is the badge
+	// fragment (the ACK, cancelled — terminal, the poll stops), swapped
+	// into the badge of the detail page.
+	mux.HandleFunc("POST /cancel/{id}", func(w http.ResponseWriter, r *http.Request) {
+		handleCancel(w, r, p)
+	})
+
 	// Health: the web asks the core if it is ready (core.Ready); the
 	// container healthcheck pings this
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -152,6 +160,20 @@ func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
 	ex, err := p.Resume(id)
 	if err != nil {
 		fail(w, "resume", err)
+		return
+	}
+	partial(w, "badge.html", badgeFor(ex.ID, ex.State))
+}
+
+// handleCancel is the POST /cancel/{id} handler: the cancel of a live
+// run by id (queued/running — the core guard; a terminal run answers 400).
+// The response is the badge fragment (the ACK, cancelled), swapped into
+// the badge of the detail page.
+func handleCancel(w http.ResponseWriter, r *http.Request, p core.Port) {
+	id := r.PathValue("id")
+	ex, err := p.Cancel(id)
+	if err != nil {
+		fail(w, "cancel", err)
 		return
 	}
 	partial(w, "badge.html", badgeFor(ex.ID, ex.State))

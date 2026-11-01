@@ -22,6 +22,8 @@ func fail(w http.ResponseWriter, op string, err error) {
 		http.Error(w, "unknown execution", http.StatusNotFound)
 	case errors.Is(err, core.ErrNotResumable):
 		http.Error(w, "run cannot be resumed", http.StatusBadRequest)
+	case errors.Is(err, core.ErrNotCancellable):
+		http.Error(w, "run cannot be cancelled", http.StatusBadRequest)
 	case errors.Is(err, core.ErrNotLaunched):
 		http.Error(w, "core not ready", http.StatusServiceUnavailable)
 	default:

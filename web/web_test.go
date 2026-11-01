@@ -62,6 +62,11 @@ func okResumer(id string) (core.Execution, error) {
 	return core.Execution{ID: id, State: status.Queued}, nil
 }
 
+// okCanceller is the cancel stub: the ACK is the same id, now cancelled.
+func okCanceller(id string) (core.Execution, error) {
+	return core.Execution{ID: id, State: status.Cancelled}, nil
+}
+
 // testPort builds the base stub port — the shared stubs above (and the
 // empty graph); each test overrides only the core operation under test.
 func testPort() core.Port {
@@ -75,6 +80,7 @@ func testPort() core.Port {
 		Steps:      okSteps,
 		Detail:     okDetail,
 		Resume:     okResumer,
+		Cancel:     okCanceller,
 	}
 }
 

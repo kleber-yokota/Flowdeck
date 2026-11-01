@@ -42,6 +42,18 @@
       Resume
     </button>
 {{end}}
+{{if not .Badge.Terminal}}
+    <!-- The cancel sequence: a live run (queued/running) can be cancelled
+         by id — the ACK badge (cancelled, terminal) replaces this badge
+         and the 2s poll stops. -->
+    <button type="button"
+            class="run"
+            hx-post="/cancel/{{ .ID }}"
+            hx-target="#badge"
+            hx-swap="innerHTML">
+      Cancel
+    </button>
+{{end}}
 {{if .Error}}
     <section class="failure">
       <p class="failure-title">error</p>

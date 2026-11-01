@@ -12,14 +12,15 @@ import (
 )
 
 // GET /status is the poll half of the dispatch (phase 2): it returns the
-// badge fragment for each of the four states, and only the non-terminal
+// badge fragment for each of the five states, and only the non-terminal
 // badges carry the hx attributes that keep the poll running.
 func TestStatusBadgeRendersState(t *testing.T) {
 	for state, want := range map[status.State]string{
-		status.Queued:  `class="badge queued"`,
-		status.Running: `class="badge running"`,
-		status.Success: `class="badge success terminal"`,
-		status.Error:   `class="badge error terminal"`,
+		status.Queued:    `class="badge queued"`,
+		status.Running:   `class="badge running"`,
+		status.Success:   `class="badge success terminal"`,
+		status.Error:     `class="badge error terminal"`,
+		status.Cancelled: `class="badge cancelled terminal"`,
 	} {
 		t.Run(string(state), func(t *testing.T) {
 			d := testPort()
@@ -58,10 +59,11 @@ func TestStatusBadgeRendersState(t *testing.T) {
 // bug.
 func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
 	for state := range map[status.State]bool{
-		status.Queued:  true,
-		status.Running: true,
-		status.Success: true,
-		status.Error:   true,
+		status.Queued:    true,
+		status.Running:   true,
+		status.Success:   true,
+		status.Error:     true,
+		status.Cancelled: true,
 	} {
 		t.Run(string(state), func(t *testing.T) {
 			d := testPort()
