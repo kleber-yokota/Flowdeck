@@ -48,6 +48,11 @@ type Port struct {
 	// stored input, restarting from the last completed step) and returns
 	// the ACK (the same id, enqueued again).
 	Resume func(workflowID string) (Execution, error)
+
+	// Cancel cancels a live run by id (queued/running — the guard; a
+	// terminal run is not cancellable) and returns the ACK (the same id,
+	// now cancelled).
+	Cancel func(workflowID string) (Execution, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -70,5 +75,6 @@ func NewPort() Port {
 		Steps:      Steps,
 		Detail:     Detail,
 		Resume:     Resume,
+		Cancel:     Cancel,
 	}
 }

@@ -16,7 +16,8 @@ var ErrUnknownExecution = errors.New("core: unknown workflow execution")
 // Status maps the DBOS state of a run onto the UI states:
 //
 //	ENQUEUED/DELAYED -> queued, PENDING -> running,
-//	SUCCESS -> success, ERROR/CANCELLED/MAX_RECOVERY_ATTEMPTS_EXCEEDED -> error
+//	SUCCESS -> success, ERROR/MAX_RECOVERY_ATTEMPTS_EXCEEDED -> error,
+//	CANCELLED -> cancelled
 //
 // It is the read half of the dispatch (phase 2): the web polls it every 2s
 // and swaps the badge. Nothing is executed here — the DBOS executor owns
@@ -59,7 +60,7 @@ func Status(workflowID string) (status.State, error) {
 }
 
 // mapState maps a DBOS workflow state onto the UI states (the phase 2
-// contract: every DBOS state lands on one of the four, unknown states are
+// contract: every DBOS state lands on one of the five, unknown states are
 // rejected, not guessed).
 func mapState(s dbos.WorkflowStatusType) (status.State, error) {
 	switch s {
@@ -69,7 +70,9 @@ func mapState(s dbos.WorkflowStatusType) (status.State, error) {
 		return status.Running, nil
 	case dbos.WorkflowStatusSuccess:
 		return status.Success, nil
-	case dbos.WorkflowStatusError, dbos.WorkflowStatusCancelled, dbos.WorkflowStatusMaxRecoveryAttemptsExceeded:
+	case dbos.WorkflowStatusCancelled:
+		return status.Cancelled, nil
+	case dbos.WorkflowStatusError, dbos.WorkflowStatusMaxRecoveryAttemptsExceeded:
 		return status.Error, nil
 	default:
 		return "", fmt.Errorf("core: unmapped workflow state: %s", s)

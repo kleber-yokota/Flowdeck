@@ -9,15 +9,16 @@ import (
 )
 
 // mapState is the phase 2 contract: every DBOS state lands on one of the
-// four UI states, and unknown states are rejected, not guessed.
+// five UI states, and unknown states are rejected, not guessed.
 func TestMapState(t *testing.T) {
 	for state, want := range map[dbos.WorkflowStatusType]status.State{
-		dbos.WorkflowStatusEnqueued:  status.Queued,
-		dbos.WorkflowStatusDelayed:   status.Queued,
-		dbos.WorkflowStatusPending:   status.Running,
-		dbos.WorkflowStatusSuccess:   status.Success,
-		dbos.WorkflowStatusError:     status.Error,
-		dbos.WorkflowStatusCancelled: status.Error,
+		dbos.WorkflowStatusEnqueued:                    status.Queued,
+		dbos.WorkflowStatusDelayed:                     status.Queued,
+		dbos.WorkflowStatusPending:                     status.Running,
+		dbos.WorkflowStatusSuccess:                     status.Success,
+		dbos.WorkflowStatusError:                       status.Error,
+		dbos.WorkflowStatusCancelled:                   status.Cancelled,
+		dbos.WorkflowStatusMaxRecoveryAttemptsExceeded: status.Error,
 	} {
 		got, err := mapState(state)
 		if err != nil {
