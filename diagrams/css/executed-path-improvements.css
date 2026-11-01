@@ -4,8 +4,8 @@
       --color-ink:     #e8e6e1;   /* silver-white */
       --color-muted:   #b8bcc4;   /* steel */
       --color-soft:    #8f96a3;
-      --color-accent:  #ff9142;   /* orange */
-      --color-link:    #7cc0ff;   /* light blue */
+      --color-accent:  #ff9142;   /* laranja */
+      --color-link:    #7cc0ff;   /* azul claro */
       --font-sans:     'Geist', system-ui, sans-serif;
       --font-serif:   'Instrument Serif', 'Noto Serif', serif;
       --font-mono:     'Geist Mono', ui-monospace, monospace;
@@ -24,6 +24,7 @@
 
     .frame { max-width: 1200px; width: 100%; }
     .diagram-container { width: 100%; overflow-x: auto; }
+    .diagram-container + .diagram-container { margin-top: 2.5rem; }
 
     .eyebrow {
       font-family: var(--font-mono);
@@ -60,4 +61,3 @@
       letter-spacing: 0.08em;
       color: var(--color-soft);
     }
-  

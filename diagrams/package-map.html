@@ -10,7 +10,8 @@
   <!--
     AGENT: this file is the package map. The machine-readable map is the sections
     below: #contacts (where the modules touch —
-    per edge: file/function + identifiers) and one per package (package-main,
+    per edge: file/function + identifiers), #facts (the verified runtime
+    facts the design depends on) and one per package (package-main,
     package-core, package-workflows, package-gen, package-status, package-graph, package-web,
     package-webgraph, package-dbos) — each has a file table (file | responsibility | functions;
     test files name the symbols they assert) plus a contacts table (module | where (file ·
@@ -27,7 +28,7 @@
       <span><i class="sw leaf"></i>LEAF (NO IMPORTS)</span>
       <span><i class="sw ext"></i>THIRD-PARTY</span>
     </div>
-    <nav class="index" aria-label="Index">NAVIGATE — <a href="#contacts">contacts</a> · <a href="#package-main">main</a> · <a href="#package-core">core</a> · <a href="#package-workflows">workflows</a> · <a href="#package-gen">cmd tools</a> · <a href="#package-status">core/status</a> · <a href="#package-graph">core/graph</a> · <a href="#package-web">web</a> · <a href="#package-webgraph">web/graph</a> · <a href="#package-dbos">dbos</a></nav>
+    <nav class="index" aria-label="Index">NAVIGATE — <a href="#contacts">contacts</a> · <a href="#facts">facts</a> · <a href="#package-main">main</a> · <a href="#package-core">core</a> · <a href="#package-workflows">workflows</a> · <a href="#package-gen">cmd tools</a> · <a href="#package-status">core/status</a> · <a href="#package-graph">core/graph</a> · <a href="#package-web">web</a> · <a href="#package-webgraph">web/graph</a> · <a href="#package-dbos">dbos</a></nav>
 
     <svg id="graph" viewBox="0 0 960 600" role="img" aria-labelledby="t d" tabindex="0">
       <title id="t">FlowDeck package dependency graph</title>
@@ -223,7 +224,7 @@
           <tr>
             <td><code>web → core</code></td>
             <td><code>web.go</code> · <code>New</code> + handlers · <code>models.go</code> · <code>render.go</code></td>
-            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code></td>
+            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code> · <code>core.ErrNotCancellable</code></td>
           </tr>
           <tr>
             <td><code>web → core/graph</code></td>
@@ -233,7 +234,7 @@
           <tr>
             <td><code>web → core/status</code></td>
             <td><code>models.go</code> · <code>badgeFor</code> · <code>badgeLabels</code> · <code>newStepsView</code></td>
-            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>State.Terminal</code></td>
+            <td><code>status.State</code> · the 5 constants (<code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code>) · <code>State.Terminal</code></td>
           </tr>
           <tr>
             <td><code>web → web/graph</code></td>
@@ -262,8 +263,8 @@
           </tr>
           <tr>
             <td><code>core → core/status</code></td>
-            <td><code>status.go</code> · <code>mapState</code> · <code>Status</code> · <code>executions.go</code> · <code>port.go</code></td>
-            <td><code>status.State</code> · the 4 constants · <code>Port.Status</code> return · <code>State</code> fields</td>
+            <td><code>status.go</code> · <code>mapState</code> · <code>Status</code> · <code>cancel.go</code> · <code>Cancel</code> · <code>executions.go</code> · <code>port.go</code></td>
+            <td><code>status.State</code> · the 5 constants · <code>Port.Status</code> return · <code>State</code> fields</td>
           </tr>
           <tr>
             <td><code>core → core/graph</code></td>
@@ -272,13 +273,75 @@
           </tr>
           <tr>
             <td><code>core → dbos</code></td>
-            <td><code>core.go</code> · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>dispatch</code> · <code>status.go</code> · <code>executions.go</code> · <code>resume.go</code></td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · status types</td>
+            <td><code>core.go</code> · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>dispatch</code> · <code>status.go</code> · <code>executions.go</code> · <code>resume.go</code> · <code>cancel.go</code> · <code>Cancel</code></td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types</td>
           </tr>
           <tr>
             <td><code>cmd/workflowgen → workflows</code></td>
             <td><code>cmd/workflowgen/main.go</code> · <code>run</code> (<code>go generate ./workflows</code>)</td>
             <td>writes <code>workflows/zz_generated.go</code> (the subpackage blank imports — build-time, no runtime import)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ facts ============ -->
+    <section id="facts" class="pkg">
+      <a class="close" href="#graph">× CLOSE</a>
+      <h2>Facts — the verified runtime rows</h2>
+      <p class="role">The verified runtime facts the design depends on (promoted from <code>tasks/fact.md</code>): Fact · Evidence · Validated (author · date · SDK version).</p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Fact</th><th>Evidence</th><th>Validated</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>dbos.CancelWorkflow(id)</code> cancels a queued/running run: the row becomes <code>CANCELLED</code> and leaves the queue; the workflow stops executing at the start of the next step; an executing step is not interrupted. When no live row is canceled it returns <code>NonExistentWorkflowError</code>.</td>
+            <td>SDK v1.7.0 <code>dbos/workflow.go</code> — <code>CancelWorkflow</code> doc + the <code>len(found) == 0 → models.NewNonExistentWorkflowError</code> path</td>
+            <td>author · 2026-10-31 · dbos v1.7.0</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>A canceled run (SQLite): the row is <code>CANCELLED</code> immediately (a running run: <code>attempts=1</code>; a queued run: <code>attempts=0</code>); the running step finishes in-process but its row is not written (<code>operation_outputs</code> stays empty); the output is not written; the row stays <code>CANCELLED</code>.</td>
+            <td>spike <code>TestSpikeCancelRunning</code> / <code>TestSpikeCancelQueued</code> (temporary <code>core/zz_spike_test.go</code>, deleted) — <code>workflow_status</code> + <code>operation_outputs</code> rows</td>
+            <td>author · 2026-10-31 · dbos v1.7.0</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>The <code>RunWorkflow</code> child step row: the row name is the child workflow name (not <code>DBOS.enqueue</code>); <code>child_workflow_id</code> is set; <code>completed_at</code> is never set on it; a separate <code>DBOS.getResult</code> wait row carries the same child id.</td>
+            <td>spike <code>TestSpikeKitchenRows</code> (temporary <code>core/zz_spike_test.go</code>, deleted) — <code>operation_outputs</code> dump of a successful <code>kitchen</code> run</td>
+            <td>author · 2026-10-31 · dbos v1.7.0</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>SDK-internal step row names: <code>DBOS.sleep</code> · <code>DBOS.select</code> · <code>DBOS.getResult</code>; a loop writes one row per iteration (the same name, <code>spin</code> ×2); an async Go step is a plain row (no async flag).</td>
+            <td>spike <code>TestSpikeKitchenRows</code> — the row dump · the SDK <code>queues_test.go</code> asserts <code>StepName == "DBOS.getResult"</code></td>
+            <td>author · 2026-10-31 · dbos v1.7.0</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>The child rows: <code>dbos.ListWorkflows(c, dbos.WithFilterParentWorkflowID(id))</code> returns the child workflow rows (<code>ID</code> · <code>Name</code> · <code>Status</code>).</td>
+            <td>spike <code>TestSpikeKitchenRows</code> — the child dump (<code>name=pipeline status=SUCCESS</code>)</td>
+            <td>author · 2026-10-31 · dbos v1.7.0</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>A frozen queue (<code>dbos.RegisterQueue(c, "frozen", dbos.WithWorkerConcurrency(0))</code>) leaves the run <code>queued</code> — the executor never claims it (deterministic queued-state setup).</td>
+            <td><code>TestResumeOfQueuedRun</code> (core/resume_test.go)</td>
+            <td>author · 2026-10-31 · code</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>The steel <code>#8f96a3</code> is already the CSS token <code>--soft</code> (web/static/style.css); the new <code>--cancelled</code> token carries the same value (per-state naming like <code>--queued</code>/<code>--running</code>/<code>--success</code>/<code>--error</code>).</td>
+            <td>web/static/style.css (the <code>:root</code> tokens)</td>
+            <td>author · 2026-10-31 · code</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>A retries-exhausted run (SQLite): the row's <code>workflow_status.status</code> is <code>ERROR</code> (the distinct <code>MAX_RECOVERY_ATTEMPTS_EXCEEDED</code> status never lands on the row), and <code>dbos.ResumeWorkflow</code> is a no-op on it — nil error, row untouched (the SDK's SQL filter is <code>status NOT IN (SUCCESS, ERROR)</code>; <code>CANCELLED</code> rows are re-enqueued). The doc comment's "exceeded their maximum recovery attempts" does not hold in v1.7.0; <code>dbos.RewindWorkflow</code> is the SDK's terminal-workflow mechanism instead (rewinds a SUCCESS/ERROR row, re-enqueue under the same id).</td>
+            <td>spike <code>TestSpikeRetryExhaustedStatus</code> (temporary <code>core/zz_spike_test.go</code>, deleted) + the red test (now pinned as <code>TestResumeOfFailedRun</code>/<code>TestE2EResumeOfFailedRun</code> — see <code>bug.md</code>) · SDK v1.7.0 <code>internal/sysdb/system_database.go</code> (<code>ResumeWorkflows</code> · <code>RewindWorkflow</code>)</td>
+            <td>executor · 2026-10-31 · dbos v1.7.0</td>
           </tr>
         </tbody>
       </table>
@@ -334,7 +397,7 @@
     <section id="package-core" class="pkg">
       <a class="close" href="#graph">× CLOSE</a>
       <h2>core <span class="badge">FAN-IN 4</span></h2>
-      <p class="role">DBOS singleton: env-driven context (<code>init</code>), executor, dispatch (Enqueue with the clean input), resume (Resume), reads (Status/Steps/Detail/Executions), spec (Spec), graph, Port. The workflow packages register on it via <code>Ctx()</code>.</p>
+      <p class="role">DBOS singleton: env-driven context (<code>init</code>), executor, dispatch (Enqueue with the clean input), resume (Resume), cancel (Cancel), reads (Status/Steps/Detail/Executions), spec (Spec), graph, Port. The workflow packages register on it via <code>Ctx()</code>.</p>
       <table>
         <thead>
           <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
@@ -357,8 +420,8 @@
           </tr>
           <tr>
             <td><code>executions.go</code></td>
-            <td>Executions queries: list, detail (state, first execution date, the stored input values, error/failed step), steps</td>
-            <td><code>Executions</code> · <code>Detail</code> · <code>Steps</code> · <code>inputValues</code> · <code>inputOf</code> · <code>structValues</code></td>
+            <td>Executions queries: list, detail (state, first execution date, the stored input values, error/failed step), steps (the <code>Step</code> fields: Kind · ChildID · ChildName · ChildState · StartedAt · CompletedAt — the child name/state fetched from the child rows)</td>
+            <td><code>Executions</code> · <code>Detail</code> · <code>Steps</code> · <code>inputValues</code> · <code>inputOf</code> · <code>structValues</code> · <code>childRows</code> · <code>childInfo</code> · <code>kindOf</code> · <code>KindStep</code> · <code>KindChild</code> · <code>KindWait</code></td>
           </tr>
           <tr>
             <td><code>spec.go</code></td>
@@ -371,13 +434,18 @@
             <td><code>Resume</code> · <code>resumeAck</code> · <code>ErrNotResumable</code></td>
           </tr>
           <tr>
+            <td><code>cancel.go</code></td>
+            <td>Cancel of a live run by id (queued/running — the guard): the DBOS cancel flips the row to CANCELLED, the ACK reads the row back (the same id, now cancelled)</td>
+            <td><code>Cancel</code> · <code>cancelAck</code> · <code>ErrNotCancellable</code></td>
+          </tr>
+          <tr>
             <td><code>sqlite_driver.go</code></td>
             <td>Links the DBOS SQLite driver (blank import) so env-driven <code>init</code> works with <code>sqlite:</code> URLs (tests, local dev)</td>
             <td>—</td>
           </tr>
           <tr>
             <td><code>core_test.go</code></td>
-            <td>The core contract: <code>Spec</code> (registered/unknown) · <code>List</code> · <code>Enqueue</code> (clean input · branch) · <code>Detail</code> (input values · struct · failing run) · <code>Executions</code> · registration matches the source — on the env boot; test-only <code>failing-test</code> workflow</td>
+            <td>The core contract: <code>Spec</code> (registered/unknown) · <code>List</code> · <code>Enqueue</code> (clean input · branch) · <code>Detail</code> (input values · struct · failing run) · <code>Executions</code> · registration matches the source — on the env boot; test-only <code>failing-test</code> + <code>resume-test</code> (the flaky <code>flakyFail</code> step — retries exhausted, the deterministic failed run) workflows</td>
             <td><code>TestMain</code> · <code>TestSpec*</code> · <code>TestList*</code> · <code>TestEnqueue*</code> · <code>TestDetail*</code> · <code>TestExecutions*</code> · <code>TestRegistrationMatchesSource</code></td>
           </tr>
           <tr>
@@ -392,8 +460,18 @@
           </tr>
           <tr>
             <td><code>resume_test.go</code></td>
-            <td>Phase 5 resume tests: unknown id 404 · not-failed/queued/running rejected · restart a failed run (same stored input)</td>
+            <td>Phase 5 resume tests: unknown id 404 · not-failed/queued/running rejected · the retries-exhausted run is not resumable (<code>TestResumeOfFailedRun</code> — the pinned SDK behavior, <code>bug.md</code>)</td>
             <td><code>TestResume*</code></td>
+          </tr>
+          <tr>
+            <td><code>cancel_test.go</code></td>
+            <td>The cancel of a live run by id: unknown 404 · not-live 400 · queued (the frozen queue) · running (the ACK: same id, now cancelled) · the cancelled run is not resumable</td>
+            <td><code>TestCancel*</code> · <code>TestResumeOfCancelledRun</code></td>
+          </tr>
+          <tr>
+            <td><code>steps_test.go</code></td>
+            <td>The executed path rows of the <code>kitchen</code> run: the row kinds (step · wait · child, the row names) · the child row (child id + the child name/state · never completed)</td>
+            <td><code>TestStepsOfKitchenRun</code></td>
           </tr>
           <tr>
             <td><code>e2e_test.go</code></td>
@@ -409,8 +487,8 @@
         <tbody>
           <tr>
             <td><a href="#package-status">core/status</a> →</td>
-            <td>status.go · <code>mapState</code> · <code>Status</code> · executions.go · <code>Detail</code> · <code>Executions</code> · port.go · <code>NewPort</code></td>
-            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code></td>
+            <td>status.go · <code>mapState</code> · <code>Status</code> · cancel.go · <code>Cancel</code> · executions.go · <code>Detail</code> · <code>Executions</code> · port.go · <code>NewPort</code></td>
+            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code></td>
           </tr>
           <tr>
             <td><a href="#package-graph">core/graph</a> →</td>
@@ -419,8 +497,8 @@
           </tr>
           <tr>
             <td><a href="#package-dbos">dbos</a> →</td>
-            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · <code>ctxOrErr</code> · <code>listByID</code> · executions.go · resume.go · <code>Resume</code> · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · status types · SQLite driver</td>
+            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · <code>ctxOrErr</code> · <code>listByID</code> · executions.go · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code> · sqlite_driver.go</td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types · SQLite driver</td>
           </tr>
           <tr>
             <td><a href="#package-workflows">workflows</a> ←</td>
@@ -434,8 +512,8 @@
           </tr>
           <tr>
             <td><a href="#package-web">web</a> ←</td>
-            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code></td>
-            <td><code>core.Port</code> (the whole domain contract: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume)</td>
+            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleCancel</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code></td>
+            <td><code>core.Port</code> (the whole domain contract: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel)</td>
           </tr>
         </tbody>
       </table>
@@ -617,7 +695,7 @@
     <section id="package-status" class="pkg">
       <a class="close" href="#graph">× CLOSE</a>
       <h2>core/status <span class="badge">PURE · LEAF</span></h2>
-      <p class="role">State machine — the 4 badge states + the <code>Terminal</code> rule. No imports.</p>
+      <p class="role">State machine — the 5 badge states + the <code>Terminal</code> rule. No imports.</p>
       <table>
         <thead>
           <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
@@ -625,8 +703,8 @@
         <tbody>
           <tr>
             <td><code>state.go</code></td>
-            <td>State machine: <code>queued</code> → <code>running</code> → <code>success</code> | <code>failed</code> (the 4 badge colors)</td>
-            <td><code>State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>(State).Terminal</code></td>
+            <td>State machine: <code>queued</code> → <code>running</code> → <code>success</code> | <code>failed</code> | <code>cancelled</code> (the 5 badge colors)</td>
+            <td><code>State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code> · <code>(State).Terminal</code></td>
           </tr>
         </tbody>
       </table>
@@ -637,13 +715,13 @@
         <tbody>
           <tr>
             <td><a href="#package-core">core</a> ←</td>
-            <td>status.go · <code>mapState</code> · <code>Status</code> · port.go · <code>NewPort</code></td>
-            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code></td>
+            <td>status.go · <code>mapState</code> · <code>Status</code> · cancel.go · <code>Cancel</code> · port.go · <code>NewPort</code></td>
+            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code></td>
           </tr>
           <tr>
             <td><a href="#package-web">web</a> ←</td>
             <td>models.go · <code>badgeLabels</code> · <code>badgeFor</code> · <code>newStepsView</code> · <code>retriesFor</code></td>
-            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>(State).Terminal</code></td>
+            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code> · <code>(State).Terminal</code></td>
           </tr>
         </tbody>
       </table>
@@ -732,12 +810,12 @@
         <tbody>
           <tr>
             <td><code>web.go</code></td>
-            <td>Routes + polling (2s) + health <code>/healthz</code> (from the injected <code>ready</code>) + the handlers (dispatch with the form values — phase 5, resume — phase 5)</td>
-            <td><code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · <code>formValues</code></td>
+            <td>Routes + polling (2s) + health <code>/healthz</code> (from the injected <code>ready</code>) + the handlers (dispatch with the form values — phase 5, resume — phase 5, cancel — the Cancel button of the live run)</td>
+            <td><code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleCancel</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · <code>formValues</code></td>
           </tr>
           <tr>
             <td><code>render.go</code></td>
-            <td>HTML fragments rendering (partials) + core-error mapping</td>
+            <td>HTML fragments rendering (partials) + core-error mapping (404 · 400 — <code>ErrNotResumable</code>/<code>ErrNotCancellable</code> · 503 · 500)</td>
             <td><code>partial</code> · <code>page</code> · <code>render</code> · <code>fail</code></td>
           </tr>
           <tr>
@@ -763,7 +841,7 @@
           <tr>
             <td><code>web_test.go</code></td>
             <td>Test harness: the stub Port (the <code>ok*</code> fields) · <code>fakeGraph</code> (a <code>*graph.PathGraph</code> for the page tests) · <code>TestMain</code> (env → <code>Launch</code>)</td>
-            <td><code>testPort</code> · <code>fakeGraph</code> · <code>get</code> · <code>post</code> · <code>containsAll</code> · <code>containsAny</code> · <code>TestMain</code></td>
+            <td><code>testPort</code> · <code>fakeGraph</code> · <code>okCanceller</code> · <code>get</code> · <code>post</code> · <code>containsAll</code> · <code>containsAny</code> · <code>TestMain</code></td>
           </tr>
           <tr>
             <td><code>booted_core_test.go</code></td>
@@ -806,6 +884,11 @@
             <td><code>TestExecutionDetail*Resume*</code> · <code>TestResume*</code></td>
           </tr>
           <tr>
+            <td><code>cancel_test.go</code></td>
+            <td>The cancel of a live run from the execution page: the Cancel button (live run) · no button on the terminal runs · 404/400/503 of <code>POST /cancel</code> · the booted twin (the cancelled badge, the poll stops) (asserts <code>Cancel</code>)</td>
+            <td><code>TestExecutionDetail*Cancel*</code> · <code>TestCancel*</code></td>
+          </tr>
+          <tr>
             <td><code>root_test.go</code></td>
             <td>Dashboard + workflows partial: registry · empty · no store · links · vendored HTMX · 404/405 (asserts <code>List</code>)</td>
             <td><code>TestRoot*</code> · <code>TestWorkflowsPartial*</code> · <code>TestStatic*</code> · <code>TestUnknownPathReturns404</code> · <code>TestPostRootReturns405</code></td>
@@ -834,8 +917,8 @@
         <tbody>
           <tr>
             <td><a href="#package-core">core</a> → (domain)</td>
-            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · models.go · <code>badgeFor</code> · <code>newStepsView</code> · <code>row</code> · render.go · <code>fail</code></td>
-            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code></td>
+            <td>web.go · <code>New</code> · <code>handleWorkflowPage</code> · <code>handleRunDispatch</code> · <code>handleResume</code> · <code>handleCancel</code> · <code>handleExecutionDetail</code> · <code>handleExecutionSteps</code> · models.go · <code>badgeFor</code> · <code>newStepsView</code> · <code>row</code> · render.go · <code>fail</code></td>
+            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code> · <code>core.ErrNotCancellable</code></td>
           </tr>
           <tr>
             <td><a href="#package-graph">core/graph</a> →</td>
@@ -850,7 +933,7 @@
           <tr>
             <td><a href="#package-status">core/status</a> →</td>
             <td>models.go · <code>badgeLabels</code> · <code>badgeFor</code> · <code>newStepsView</code> · <code>retriesFor</code></td>
-            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>(State).Terminal</code></td>
+            <td><code>status.State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code> · <code>(State).Terminal</code></td>
           </tr>
           <tr>
             <td><a href="#package-webgraph">web/graph</a> →</td>
@@ -895,6 +978,11 @@
             <td>the re-enqueue of a failed run</td>
           </tr>
           <tr>
+            <td><code>handleCancel</code> · POST /cancel/{id}</td>
+            <td><code>Cancel</code></td>
+            <td>the cancel of a live run (the badge ACK)</td>
+          </tr>
+          <tr>
             <td><code>handleExecutionDetail</code> · GET /executions/{id}</td>
             <td><code>Detail</code> · <code>Steps</code></td>
             <td>the detail page + the executed path</td>
@@ -925,7 +1013,7 @@
           </tr>
           <tr>
             <td><code>graph.go</code></td>
-            <td>Executed-path layout + SVG (status colors) and the shared SVG emission (scale 1.25 · <code>num</code> · marker defs)</td>
+            <td>Executed-path layout + SVG (status colors; the child row renders the child's name + the child's live badge) and the shared SVG emission (scale 1.25 · <code>num</code> · marker defs)</td>
             <td><code>ExecutedPathToSVG</code> · <code>graphLayout</code> · <code>newGraphLayout</code> · <code>measure</code> · <code>place</code> · <code>svg</code> · <code>num</code> · <code>graphScale</code></td>
           </tr>
           <tr>
@@ -935,8 +1023,8 @@
           </tr>
           <tr>
             <td><code>graph_test.go</code></td>
-            <td>Layout + SVG: the graph layout (linear/fork/nested/empty) · executed path (linear · failed · empty) · the 1.25× scale · well-formed XML</td>
-            <td><code>TestNewGraphLayout*</code> · <code>TestExecutedPathToSVG*</code></td>
+            <td>Layout + SVG: the graph layout (linear/fork/nested/empty) · executed path (linear · failed · empty) · the child node (the child's name + live badge · the fallback to the row name) · the 1.25× scale · well-formed XML</td>
+            <td><code>TestNewGraphLayout*</code> · <code>TestExecutedPathToSVG*</code> · <code>TestExecutedPathToSVG*Child*</code></td>
           </tr>
         </tbody>
       </table>
@@ -948,7 +1036,7 @@
           <tr>
             <td><a href="#package-core">core</a> →</td>
             <td>graph.go · <code>ExecutedPathToSVG</code></td>
-            <td><code>core.Step</code></td>
+            <td><code>core.Step</code> (the fields: <code>Name</code> · <code>State</code> · <code>Kind</code> · <code>ChildID</code> · <code>ChildName</code> · <code>ChildState</code>)</td>
           </tr>
           <tr>
             <td><a href="#package-graph">core/graph</a> →</td>
@@ -993,8 +1081,8 @@
         <tbody>
           <tr>
             <td><a href="#package-core">core</a> ←</td>
-            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · executions.go · resume.go · <code>Resume</code> · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · status types · SQLite driver</td>
+            <td>core.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>List</code>/<code>Enqueue</code>/<code>dispatch</code> · status.go · executions.go · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code> · sqlite_driver.go</td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types · SQLite driver</td>
           </tr>
           <tr>
             <td><a href="#package-workflows">workflows</a> ←</td>

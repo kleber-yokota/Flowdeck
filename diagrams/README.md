@@ -40,6 +40,16 @@ or `package-map.html`; do not read the other `.html` files without a reason or u
   failed run, `POST /resume/{id}` re-enqueues by id and re-reads the same stored
   input — the input per workflow_id is immutable (editing only affects new dispatches).
 
+## Agent process (the pipeline)
+
+- How this project is built: `sequence-agent-flow.html` — WANT (the user's input) → agent-diagram
+  writes `improve/*.html` (the user validates; a previous `bug.md` is deleted) → agent-write-task writes
+  `tasks/*.md` + `tasks/fact.md` → agent-task implements red → green, in order → green deletes the
+  ephemeral files; a bug (an existing test failing outside the task surface) writes `bug.md` and stops —
+  the user reads it and starts the process over;
+- Every agent enters with a **clean context**: only the handoff files, in their current state — no git
+  tree, no history (machine view: `#handoffs` · `#artifacts` · `#rules` · `#terms` of the same file).
+
 ## Package map (navigable)
 
 - Ranked package graph (10 nodes, 17 edges, zero cycles): `main` → `web` → `core` + `web/graph`
@@ -141,8 +151,12 @@ shared layout are unchanged; the SVG shows state · child name per step.
 - `sequence-phase-3.html` (runs of a workflow)
 - `sequence-phase-4.html` (paths graph)
 - `sequence-phase-5.html` (parameters, edit, stored input)
+- `sequence-agent-flow.html` (agent flow — the pipeline: WANT → `improve/*.html` → `tasks/*.md` → red → green; bug → `bug.md` → restart; clean context per agent)
 - `improve/` — proposed improvements over the current flow (NEW/CHANGED against the current base)
   - `improve/sequence-cancel.html` (improve — cancel a run: POST /cancel/{id} → `dbos.CancelWorkflow` → CANCELLED row → the new fifth badge (cancelled · steel `#8f96a3`) via the 2s poll; mapState + CANCELLED → cancelled)
+  - `improve/sequence-resume.html` (improve — resume a run: POST /resume/{id} → guard {error, cancelled} → failed via `dbos.RewindWorkflow(id, queue, cut)` (bug.md — the SDK `ResumeWorkflow` is a silent no-op on ERROR rows) · cancelled via `dbos.ResumeWorkflow` → ACK enqueued · badge back to queued · web error mapping 404/500)
+  - `improve/executed-path-improvements.html` (improve — the executed path for /executions/{id}: Postgres rows → core `Steps`/`Detail` (+Children) → `groupPath` (runtime parallel by times overlap · loop by repeated name) → top-down layout with larger boxes (36→48px · font 14→16 · scale 1.25) → SVG (∥ outline · loop arc ×N · collapse >4 → one box ×N + `<title>` · child name + live badge) → UI (child id list); discovered DBOS states · row facts · app-version safety)
+  - `improve/execution-detail-map.html` (improve — the run lifecycle with the fifth badge (cancelled · `#8f96a3`), the cancel/resume guards and edges (failed → rewind · cancelled → resume), the UI surface per state, and the where-applied ledger (file · function per improvement))
 - `graph/` — graph subsystem deep dive (own `graph/css/`, one stylesheet per HTML file)
   - `graph/current/` — the code today (as-is)
   - `graph/improve/` — proposed improvements over the current flow (NEW/CHANGED against the current base)

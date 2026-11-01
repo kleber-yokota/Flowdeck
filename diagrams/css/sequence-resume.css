@@ -24,6 +24,7 @@
 
     .frame { max-width: 1200px; width: 100%; }
     .diagram-container { width: 100%; overflow-x: auto; }
+    .diagram-container + .diagram-container { margin-top: 2.5rem; }
 
     .eyebrow {
       font-family: var(--font-mono);
@@ -60,4 +61,3 @@
       letter-spacing: 0.08em;
       color: var(--color-soft);
     }
-  
