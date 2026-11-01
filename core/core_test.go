@@ -25,12 +25,17 @@ import (
 // created the DBOS context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL
 // (see .env.test), and the workflow files (which import core) have
 // registered their workflows in their own init. This TestMain only
-// registers the test-only failing workflow and starts the executor once.
+// registers the test-only failing and flaky workflows and starts the
+// executor once.
 func TestMain(m *testing.M) {
 	core.SetWorkflowsSource(os.DirFS("../workflows"))
 	if c := core.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, failingTestWorkflow,
 			dbos.WithWorkflowName("failing-test"),
+			dbos.WithMaxRecoveryAttempts(3),
+		)
+		dbos.RegisterWorkflow(c, flakyTestWorkflow,
+			dbos.WithWorkflowName("resume-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 		if err := core.Launch(); err != nil {
@@ -66,6 +71,28 @@ func failingTestWorkflow(ctx dbos.Context, _ string) (string, error) {
 func failingTestStep() dbos.Step[string] {
 	return func(_ context.Context) (string, error) {
 		return "", errors.New("boom: step failed")
+	}
+}
+
+// flakyFail makes the flaky test workflow fail in its step — the test-only
+// resume setup: a failed run with a known stored input.
+var flakyFail bool
+
+// flakyTestWorkflow fails in the "flaky" step while flakyFail is set, and
+// returns msg otherwise. Test-only: registered here by the TestMain, never
+// part of the workflows package, so it does not appear in the production
+// registry (like failing-test).
+func flakyTestWorkflow(ctx dbos.Context, msg string) (string, error) {
+	return dbos.RunAsStep(ctx, flakyStep(msg), dbos.WithStepName("flaky"))
+}
+
+// flakyStep is the step that fails while flakyFail is set.
+func flakyStep(msg string) dbos.Step[string] {
+	return func(_ context.Context) (string, error) {
+		if flakyFail {
+			return "", errors.New("flaky: step failed")
+		}
+		return msg, nil
 	}
 }
 

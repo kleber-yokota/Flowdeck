@@ -3,11 +3,8 @@
 package core_test
 
 import (
-	"encoding/json"
-	"fmt"
+	"errors"
 	"testing"
-
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
 	"flowdeck/core/status"
@@ -53,64 +50,23 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	}
 }
 
-// Phase 5, RESUME, E2E: the resume re-enqueues a failed (canceled) run by
-// id on Postgres — the same stored input, restarting from the last
-// completed step.
-func TestE2EResumeRestartsWithSameInput(t *testing.T) {
+// Phase 5, RESUME, E2E: the resume of a failed (retries-exhausted) run on
+// Postgres is not resumable today (the SDK's ResumeWorkflow is a no-op on
+// ERROR rows — bug.md); the Postgres twin of the unit test above.
+func TestE2EResumeOfFailedRun(t *testing.T) {
 	needCore(t)
-	ex, err := core.Enqueue("pause", nil)
+	t.Cleanup(func() { flakyFail = false })
+	flakyFail = true
+	ex, err := core.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Running); err != nil {
-		t.Fatalf("poll to running: %v", err)
+	if _, err := pollState(t, ex.ID, status.Error); err != nil {
+		t.Fatalf("poll to failed: %v", err)
 	}
-	if err := dbos.CancelWorkflow(core.Ctx(), ex.ID); err != nil {
-		t.Fatalf("CancelWorkflow: %v", err)
+	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
+		t.Fatalf("Resume of failed run: got %v, want ErrNotResumable", err)
 	}
-	if st, err := pollState(t, ex.ID, status.Error); err != nil {
-		t.Fatalf("poll to failed: %v (state %s)", err, st)
-	}
-
-	ack, err := core.Resume(ex.ID)
-	if err != nil {
-		t.Fatalf("Resume: %v", err)
-	}
-	if ack.ID != ex.ID || (ack.State != status.Queued && ack.State != status.Running) {
-		t.Fatalf("ACK: %+v", ack)
-	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
-		t.Fatalf("poll to success: %v", err)
-	}
-
-	// The same stored input: the resume re-enqueues the stored input
-	// (the workflow has no input — it stays nil) and the restarted run's
-	// output is the step's fixed return.
-	var out string
-	if err := readStoredOutput(t, ex.ID, &out); err != nil {
-		t.Fatalf("stored output: %v", err)
-	}
-	if out != "paused" {
-		t.Fatalf("output: got %q, want %q", out, "paused")
-	}
-}
-
-// readStoredOutput reads the stored output of a finished run (the JSON of
-// the workflow's return value).
-func readStoredOutput(t *testing.T, id string, out *string) error {
-	t.Helper()
-	statuses, err := dbos.ListWorkflows(core.Ctx(),
-		dbos.WithFilterWorkflowIDs(id),
-		dbos.WithFilterLoadInput(false),
-		dbos.WithFilterLoadOutput(true),
-	)
-	if err != nil {
-		return fmt.Errorf("ListWorkflows: %w", err)
-	}
-	if len(statuses) != 1 {
-		return fmt.Errorf("ListWorkflows: %d rows, want 1", len(statuses))
-	}
-	return json.Unmarshal([]byte(statuses[0].Output.(string)), out)
 }
 
 // The executed path of a branched run on Postgres (phase 4, STEP 3).
