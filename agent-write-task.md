@@ -10,21 +10,27 @@ set depends on).
 
 ## Inputs (three, in order)
 
-1. **Spec** — the design HTMLs of the feature (under `diagrams/`). They say
-   *what to build*.
+1. **Spec** — the design HTMLs of the feature (under `diagrams/improve/`).
+   They say *what to build*.
 2. **Contacts** — `diagrams/package-map.html`. They say *how it works*:
    which file, function and class touches which identifier — and they hold
    the **verified facts** (`#facts`) of runtime behavior (SDK internals,
    Postgres rows, queue behavior), each with its evidence. The map is the
    author's source of truth for navigation. The author reads this file for
-   every task set, always.
-3. **Code** — the call sites and the test files. The map is a guide; the
-   code is the source of truth for **names and shapes**. The author greps
-   only the symbols a step changes.
+   every task set, always — and first after every compaction: the names come
+   from the map, not from a re-read of the source.
+3. **Code** — the files the map sections name, read in ONE batched dump:
+   a single `bash` call that prints them all (`for f in …; do echo "== $f";
+   cat "$f"; done`, or the named line ranges via `sed -n`). The map is a
+   guide; the code is the source of truth for **names and shapes**. Grep
+   confirms a digest row; it does not build the digest.
 
 The diagrams show "today" and "target". They do not show the intermediate
 states, and they do not name the tests. The green state of each step comes
 from the code, not from a diagram.
+
+The context is clean: only these three inputs — the files in their current
+state (no git history, no archaeology, no previous conversation).
 
 ## `package-map.html` — how to read it
 
@@ -60,16 +66,17 @@ set's last task (the map update), together with the promoted facts.
   since the validated date, or the SDK version in `go.mod` moved. Then
   re-validate **that fact only** (one targeted grep or spike) and note the
   refresh.
-- **Reads are scoped.** Read the map sections the task touches, then the
-  code files they name. Do not inventory the package: the contacts rows are
-  the impact analysis. Research reads of 3+ files go through one batched
-  round-trip, not one read per file.
+- **Reads are scoped.** Read the map sections the task touches. The code
+  files they name enter through ONE batched dump (input 3) — not one read
+  per file. Do not inventory the package: the contacts rows are the impact
+  analysis.
 - **The author seeds `tasks/fact.md`.** Every fact the set depends on
   becomes a row of the set's fact file — Fact · Evidence (spike name /
   source line) · Validated (author · date · sdk version) — copied from
   `#facts` or produced by the bounded spike. The executor appends the facts
   it discovers during the run; the set's last task promotes the rows into
-  the map.
+  the map. Names and values are not facts: they live in `tasks/symbols.md`
+  (the symbol digest, the section below).
 - **Spikes are bounded.** One spike per unknown, and only for a runtime
   value no code shows (row shapes, status transitions, queue behavior): a
   temporary test file, deleted before the commit, the result recorded as a
@@ -77,6 +84,39 @@ set's last task (the map update), together with the promoted facts.
 - **Decide once.** A value the diagram does not pin: pick one, record it
   under "Notes" (value + one line of why), do not revisit it. A new value
   belongs in the diagram — not the task.
+
+## The symbol digest (`tasks/symbols.md`)
+
+`fact.md` holds the runtime facts; the map holds the names for navigation;
+`tasks/symbols.md` holds the **names and values of the current code** — the
+half a compaction wipes that the other two do not keep. The task file demands
+exact names and values ("no approximations"), and the post-compaction summary
+does not carry them: the digest is the on-disk copy. Reading it replaces the
+re-read of the dozen source files.
+
+**Structure** — one section per touched surface, one line per symbol. The
+surfaces are known before the first task file: the `#package-*` sections
+the set touches (the map names them) + the spec HTMLs + the SDK.
+
+| Section | The row holds |
+|---|---|
+| production file | the functions and their shapes — guards, signatures, the key constants **with values** (ex. a signature, a guard, `name = value`) |
+| test file | the test function names + the pinned assertion values (ex. the canvas `W×H`, the `N` rows of a workflow run) |
+| template | the section order + the conditions (ex. a button shows on one status only) |
+| the spec HTMLs (`diagrams/improve/`) | the pinned spec values the task cites (ex. a px size, a hex color, the 404/500 mapping) |
+| the SDK (the `go.mod` version) | the verified signatures + behaviors (ex. the states a function acts on, the states where it is a no-op) |
+
+**Rules:**
+- The author writes the digest **before the first task file**, from the
+  batched dump (input 3). It costs exactly one dump — not zero (the shapes
+  live in no other input) and not more.
+- It is **ephemeral**: the last task (the map update) deletes it with
+  `tasks/`, like the improve diagrams.
+- After a compaction: read the map (the names) + the digest (the values) +
+  the written task files; open the source only for a symbol missing from
+  both, in ONE batched dump (input 3) — never one read per file.
+- Digest and code disagree: **the code wins** — fix the digest row in place
+  (the same rule as the map and code disagree).
 
 ## The green state (the rule that makes a task runnable)
 
@@ -97,6 +137,29 @@ set's last task (the map update), together with the promoted facts.
   (the type is still the old one), or a declared "keep" that compiles with
   the new type. If the check fails, move the type change to the consumer's
   step.
+
+## Bugs and divergences (`bug.md`)
+
+A bug is the behavior affecting something it does not name. When the
+authoring meets a bug — a divergence (map, diagram, code or runtime
+disagree) or a test error the task does not declare — the author writes
+`bug.md` (repo root) and **stops the set**: the user reads it and the
+process starts over (a new WANT to `agent-diagram.md`). The title is
+`# bug — <the wrong behavior in one line>` — with the three parts:
+
+- **The problem** — the wrong behavior as observed: the failing test, the
+  wrong row or the wrong state, with the evidence (the output, the row
+  dump, the source line).
+- **The cause** — the code path or SDK behavior that produces it (file ·
+  function · version); when doc and implementation disagree, the
+  disagreement is the cause.
+- **The touch** — what was changed to create the behavior: the commit,
+  the step or the SDK version that introduced it, and why it never showed
+  before.
+
+The bug is not authored around, parked, or fixed inside the set: no
+drive-by. The set stops at the bug, `bug.md` is the report, and the process
+starts over from the user.
 
 ## Template (every file, same sections, same order)
 
@@ -144,7 +207,7 @@ Rules of the fields:
   `core/graph/graph.go` (`PathGraph` · `Of`)". A file without a function is
   not a task.
 - `Source` cites the exact parts, so the executor opens only what it needs
-  (the reading rule of `diagrams/README.md`).
+  (routing lives in the map's `#tasks` table).
 - `Out of scope` names the file and the owning step. The executor does not
   read the other task files to learn the ownership.
 - `Notes` carries the decisions (value + the why). The runtime facts the
@@ -171,7 +234,8 @@ The README holds, once for the whole set:
 - The goal (today → target, two sentences).
 - **Steps** — the table of the files and the step names. The **last step is
   always the map update**: promote `tasks/fact.md` into the package-map
-  (`#facts`) and refresh the contact rows the set touched — written as the
+  (`#facts`), refresh the contact rows the set touched, and delete the
+  set's ephemeral files (the improve diagrams + `tasks/`) — written as the
   last task file.
 - **Terms** — the vocabulary, one definition per term. A term is never
   redefined in a task.
@@ -189,3 +253,10 @@ The README holds, once for the whole set:
 - It does not edit `diagrams/package-map.html` mid-set: the map is the last
   task's surface.
 - It does not re-verify a fact that passes its diff-check (the Trust rule).
+- It does not fix a bug inside another step: the bug lands in `bug.md`
+  and the set stops.
+- It does not re-read a file for a name the map names or a value the
+  digest holds: names come from `package-map.html`, values from
+  `tasks/symbols.md`.
+- It does not read `layout.md`: the layout is already decided — the map
+  and the code carry it; the author navigates the map and the code.
