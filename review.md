@@ -23,3 +23,8 @@ worth making. The signal points; the agent decides.
 | many files + few imports | The package can be split into subpackages (the folder is an index of intentions that already live apart). |
 | few files + many imports | Responsibility is concentrated — the files carry more than their name says. Read the file before touching it. |
 | files and imports both high | Do not stop at the ratio — check which files carry the imports. Many files with few imports next to one or two files with many imports means the folder is carrying more responsibility than its density says; the file with the many imports is where the next intention should be extracted. |
+
+Every reading resolves in the same direction: the intention the number
+points at gets drawn out — as a subpackage of the folder, or as a
+package of its own. The signal points where to draw; the agent decides
+whether the draw is worth making.
