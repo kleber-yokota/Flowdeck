@@ -1,35 +1,17 @@
-package core
+package core_test
 
 import (
+	"errors"
 	"testing"
 
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
-	"flowdeck/core/status"
+	"flowdeck/core"
 )
 
-// mapState is the phase 2 contract: every DBOS state lands on one of the
-// five UI states, and unknown states are rejected, not guessed.
-func TestMapState(t *testing.T) {
-	for state, want := range map[dbos.WorkflowStatusType]status.State{
-		dbos.WorkflowStatusEnqueued:                    status.Queued,
-		dbos.WorkflowStatusDelayed:                     status.Queued,
-		dbos.WorkflowStatusPending:                     status.Running,
-		dbos.WorkflowStatusSuccess:                     status.Success,
-		dbos.WorkflowStatusError:                       status.Error,
-		dbos.WorkflowStatusCancelled:                   status.Cancelled,
-		dbos.WorkflowStatusMaxRecoveryAttemptsExceeded: status.Error,
-	} {
-		got, err := mapState(state)
-		if err != nil {
-			t.Fatalf("mapState(%s): %v", state, err)
-		}
-		if got != want {
-			t.Errorf("mapState(%s): got %s, want %s", state, got, want)
-		}
-	}
-
-	if _, err := mapState(dbos.WorkflowStatusType("bogus")); err == nil {
-		t.Error("mapState(bogus): expected error, got nil")
+// A run the core does not know errors with ErrUnknownExecution (the web
+// maps it to a 404).
+func TestStatusOfUnknownExecution(t *testing.T) {
+	needCore(t)
+	if _, err := core.Status("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
+		t.Fatalf("Status unknown: got %v, want ErrUnknownExecution", err)
 	}
 }

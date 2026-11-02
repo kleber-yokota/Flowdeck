@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"flowdeck/core"
 	"flowdeck/core/graph"
@@ -155,5 +156,47 @@ func TestRunEnqueueFailureIs500(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusInternalServerError)
+	}
+}
+
+// Phase 5, EXECUTE: the dispatch posts the form values — the core
+// sanitizes them and the run takes the value: the decide run branches to
+// the left (the executed path shows it, no right).
+func TestRunPostWithFormValuesTakesBranch(t *testing.T) {
+	srv := bootedTestServer(t)
+	defer srv.Close()
+
+	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
+	if err != nil {
+		t.Fatalf("POST /run: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dispatch: %d", resp.StatusCode)
+	}
+	ack := readAll(t, resp)
+	if !strings.Contains(ack, `class="badge queued"`) {
+		t.Fatalf("ACK: %s", ack)
+	}
+	id := executionID(t, ack)
+
+	// The run completes taking the branch the value picked.
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		code, row := get(t, srv.URL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no success badge: %d, %s", code, row)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	code, steps := get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Fatalf("steps: %d", code)
+	}
+	if !strings.Contains(steps, ">left<") || strings.Contains(steps, ">right<") {
+		t.Fatalf("executed path without the left branch: %s", steps)
 	}
 }

@@ -71,12 +71,12 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 // stepNames returns the executed step names of the run.
 func stepNames(t *testing.T, ex core.Execution) []string {
 	t.Helper()
-	steps, err := core.Steps(ex.ID)
+	path, err := core.Steps(ex.ID)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}
-	names := make([]string, 0, len(steps))
-	for _, s := range steps {
+	names := make([]string, 0, len(path.Steps))
+	for _, s := range path.Steps {
 		names = append(names, s.Name)
 	}
 	return names

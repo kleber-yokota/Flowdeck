@@ -14,15 +14,13 @@ import (
 // The steps partial (phase 4, STEP 3, polling): a live run returns the
 // executed-path SVG with the hx attributes that keep the 2s poll running.
 func TestStepsPartialPollsWhenRunning(t *testing.T) {
-	steps := func(id string) ([]core.Step, error) {
-		return []core.Step{
+	d := testPort()
+	d.Steps = func(id string) (core.RunPath, error) {
+		return core.RunPath{State: status.Running, Steps: []core.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Success},
-		}, nil
+		}}, nil
 	}
-	d := testPort()
-	d.Status = stateStatuser(status.Running)
-	d.Steps = steps
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -46,15 +44,13 @@ func TestStepsPartialPollsWhenRunning(t *testing.T) {
 // A terminal run stops the poll: the fragment has no hx attributes and
 // shows the path that ran.
 func TestStepsPartialTerminalStopsPolling(t *testing.T) {
-	steps := func(id string) ([]core.Step, error) {
-		return []core.Step{
+	d := testPort()
+	d.Steps = func(id string) (core.RunPath, error) {
+		return core.RunPath{State: status.Success, Steps: []core.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "store", State: status.Success},
-		}, nil
+		}}, nil
 	}
-	d := testPort()
-	d.Status = stateStatuser(status.Success)
-	d.Steps = steps
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -77,15 +73,13 @@ func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 // A failed step is colored with the failed state (the node's class), the
 // successful steps keep the success color.
 func TestStepsPartialColorsTheFailedStep(t *testing.T) {
-	steps := func(id string) ([]core.Step, error) {
-		return []core.Step{
+	d := testPort()
+	d.Steps = func(id string) (core.RunPath, error) {
+		return core.RunPath{State: status.Error, Steps: []core.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Error},
-		}, nil
+		}}, nil
 	}
-	d := testPort()
-	d.Status = stateStatuser(status.Error)
-	d.Steps = steps
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -103,16 +97,14 @@ func TestStepsPartialColorsTheFailedStep(t *testing.T) {
 
 // The fragment keeps the steps in execution order (step_id asc).
 func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
-	steps := func(id string) ([]core.Step, error) {
-		return []core.Step{
+	d := testPort()
+	d.Steps = func(id string) (core.RunPath, error) {
+		return core.RunPath{State: status.Success, Steps: []core.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Success},
 			{Name: "store", State: status.Success},
-		}, nil
+		}}, nil
 	}
-	d := testPort()
-	d.Status = stateStatuser(status.Success)
-	d.Steps = steps
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -131,11 +123,10 @@ func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 	}
 }
 
-// A run the core does not know is a clean 404.
+// A run the core does not know is a clean 404 (the Steps read maps it).
 func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
-	statuser := func(id string) (status.State, error) { return "", core.ErrUnknownExecution }
 	d := testPort()
-	d.Status = statuser
+	d.Steps = func(id string) (core.RunPath, error) { return core.RunPath{}, core.ErrUnknownExecution }
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -146,9 +137,8 @@ func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
-	statuser := func(id string) (status.State, error) { return "", core.ErrNotLaunched }
 	d := testPort()
-	d.Status = statuser
+	d.Steps = func(id string) (core.RunPath, error) { return core.RunPath{}, core.ErrNotLaunched }
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -170,8 +160,10 @@ func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
 		}, nil
 	}
 	d := testPort()
-	d.Status = stateStatuser(status.Running)
 	d.Detail = detailer
+	d.Steps = func(id string) (core.RunPath, error) {
+		return core.RunPath{State: status.Running, Steps: []core.Step{{Name: "greet", State: status.Success}}}, nil
+	}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -204,8 +196,10 @@ func TestExecutionDetailPageTerminalExecutedPath(t *testing.T) {
 		}, nil
 	}
 	d := testPort()
-	d.Status = stateStatuser(status.Success)
 	d.Detail = detailer
+	d.Steps = func(id string) (core.RunPath, error) {
+		return core.RunPath{State: status.Success, Steps: []core.Step{{Name: "greet", State: status.Success}}}, nil
+	}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 

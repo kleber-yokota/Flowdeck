@@ -3,17 +3,13 @@ package core_test
 import (
 	"context"
 	"errors"
+	"flowdeck/core"
+	"flowdeck/core/status"
 	"fmt"
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 	"os"
-	"strings"
 	"testing"
 	"time"
-
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
-	"flowdeck/core"
-	"flowdeck/core/graph"
-	"flowdeck/core/status"
 
 	// The workflow files register themselves in the env-driven core DBOS
 	// context (their init) — the same single blank import main.go carries;
@@ -116,264 +112,17 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 	}
 }
 
-// Phase 5, BOOT: the core exposes the spec of a registered workflow —
-// the input and the steps' default values, parsed from the source at boot
-// (the web renders them on top of the workflow page).
-func TestSpecOfRegisteredWorkflow(t *testing.T) {
-	spec, err := core.Spec("decide")
-	if err != nil {
-		t.Fatalf("core.Spec(decide): %v", err)
-	}
-	if len(spec.Inputs) != 1 {
-		t.Fatalf("decide inputs: got %v, want 1", spec.Inputs)
-	}
-	if in := spec.Inputs[0]; in.Name != "msg" || in.Type != "string" {
-		t.Fatalf("decide input: got %+v, want {msg string}", in)
-	}
-	wantSteps := map[string]string{"base": "base", "left": "left", "right": "right"}
-	if len(spec.Steps) != len(wantSteps) {
-		t.Fatalf("decide steps: got %v, want %v", spec.Steps, wantSteps)
-	}
-	for _, s := range spec.Steps {
-		if wantSteps[s.Name] != s.Default {
-			t.Fatalf("decide step %s: got default %q, want %q", s.Name, s.Default, wantSteps[s.Name])
-		}
-	}
-}
-
-// Spec of a name that is not in the source errors with ErrUnknownWorkflow
-// (the web maps it to a 404).
-func TestSpecOfUnknownWorkflow(t *testing.T) {
-	if _, err := core.Spec("no-such-workflow"); !errors.Is(err, core.ErrUnknownWorkflow) {
-		t.Fatalf("Spec unknown: got %v, want ErrUnknownWorkflow", err)
-	}
-}
-
-// The registry (the web listing's source) has the shipped workflows — the
-// registration is the workflow files' init, applied to the env context.
-func TestListShowsRegisteredWorkflows(t *testing.T) {
-	needCore(t)
-	names := map[string]bool{}
-	for _, w := range core.List() {
-		names[w.Name] = true
-	}
-	for _, want := range []string{"hello-world", "pipeline", "decide", "buy", "pause"} {
-		if !names[want] {
-			t.Fatalf("registry missing %s: %v", want, names)
-		}
-	}
-}
-
-// Enqueue (the dispatch) returns the new execution (id + state +
-// created_at) — the dispatch ACK the web renders as the "queued" row.
-func TestEnqueueReturnsExecution(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("hello-world", nil)
-	if err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	if ex.ID == "" || ex.ID == "00000000-0000-0000-0000-000000000000" {
-		t.Fatalf("ACK without an execution id: %+v", ex)
-	}
-	if ex.State != status.Queued && ex.State != status.Running {
-		t.Fatalf("ACK state: got %s, want queued/running", ex.State)
-	}
-	if ex.CreatedAt.IsZero() {
-		t.Fatal("ACK without a created_at")
-	}
-}
-
-// Enqueue of a name that is not in the registry errors with
-// ErrUnknownWorkflow (the web maps it to a 400).
-func TestEnqueueUnknownWorkflow(t *testing.T) {
-	needCore(t)
-	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, core.ErrUnknownWorkflow) {
-		t.Fatalf("Enqueue unknown: got %v, want ErrUnknownWorkflow", err)
-	}
-}
-
-// Phase 5, EXECUTE: the dispatch enqueues the clean input (the web
-// sanitized the raw form values against the spec) — the run takes the
-// value (the decide workflow branches on it: base + left, no right).
-func TestEnqueueWithValuesTakesBranch(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("decide", "left")
-	if err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
-		t.Fatalf("poll to success: %v", err)
-	}
-	for _, name := range mustStepNames(t, ex) {
-		if name == "right" {
-			t.Fatalf("steps: right ran, want the left branch: %v", mustStepNames(t, ex))
-		}
-	}
-}
-
-// A run that fails in a step reaches the failed state, and Detail shows the
-// error and the failed step (phase 3, DETAIL: on failure: error + the failed
-// step).
-// Phase 5, DETAIL: the detail shows the stored input values — the values
-// the run used (the input is written once at enqueue, immutable per
-// workflow_id).
-func TestDetailShowsInputValues(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
-	if err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	d, err := core.Detail(ex.ID)
-	if err != nil {
-		t.Fatalf("Detail: %v", err)
-	}
-	if len(d.Inputs) != 1 || d.Inputs[0].Name != "msg" || d.Inputs[0].Value != "FlowDeck" {
-		t.Fatalf("inputs: got %+v, want [{msg FlowDeck}]", d.Inputs)
-	}
-}
-
-// A struct input shows one value per field (the map the core enqueued,
-// stored by DBOS).
-func TestDetailShowsStructInputValues(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("schedule", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
-	if err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	d, err := core.Detail(ex.ID)
-	if err != nil {
-		t.Fatalf("Detail: %v", err)
-	}
-	want := []core.InputValue{{Name: "Name", Value: "Ada"}, {Name: "StartDate", Value: "2026-01-01"}}
-	if len(d.Inputs) != len(want) {
-		t.Fatalf("inputs: got %+v, want %v", d.Inputs, want)
-	}
-	for i, in := range want {
-		if d.Inputs[i] != in {
-			t.Fatalf("input %d: got %+v, want %+v", i, d.Inputs[i], in)
-		}
-	}
-}
-
-func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("failing-test", nil)
-	if err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	st, err := pollState(t, ex.ID, status.Error)
-	if err != nil {
-		t.Fatalf("poll to error: %v", err)
-	}
-	if st != status.Error {
-		t.Fatalf("failing run state: got %s, want error", st)
-	}
-	d, err := core.Detail(ex.ID)
-	if err != nil {
-		t.Fatalf("Detail: %v", err)
-	}
-	if !strings.Contains(d.Error, "boom: step failed") {
-		t.Fatalf("Detail error: got %q", d.Error)
-	}
-	if d.FailedStep != "boom-step" {
-		t.Fatalf("Detail failed step: got %q, want boom-step", d.FailedStep)
-	}
-	if d.Attempts < 1 {
-		t.Fatalf("Detail attempts: %d, want >= 1", d.Attempts)
-	}
-}
-
 // mustStepNames returns the step names of the run, failing the test if the
 // steps cannot be read.
 func mustStepNames(t *testing.T, ex core.Execution) []string {
 	t.Helper()
-	steps, err := core.Steps(ex.ID)
+	path, err := core.Steps(ex.ID)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}
-	names := make([]string, 0, len(steps))
-	for _, s := range steps {
+	names := make([]string, 0, len(path.Steps))
+	for _, s := range path.Steps {
 		names = append(names, s.Name)
 	}
 	return names
-}
-
-// Executions lists the runs of a workflow (phase 3, LIST), newest first:
-// the run I enqueued is in the list, with its final state (the assertions
-// filter by id — the test database may hold runs from other tests).
-func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("hello-world", "one")
-	if err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
-		t.Fatalf("poll to success: %v", err)
-	}
-	list, err := core.Executions("hello-world")
-	if err != nil {
-		t.Fatalf("Executions: %v", err)
-	}
-	found := false
-	for _, e := range list {
-		if e.ID != ex.ID {
-			continue
-		}
-		found = true
-		if e.State != status.Success {
-			t.Fatalf("execution %s state: got %s, want success", e.ID, e.State)
-		}
-	}
-	if !found {
-		t.Fatalf("run %s not in Executions(hello-world)", ex.ID)
-	}
-}
-
-// Executions of a name with no runs is empty (no error).
-func TestExecutionsUnknownWorkflowIsEmpty(t *testing.T) {
-	needCore(t)
-	list, err := core.Executions("no-such-workflow")
-	if err != nil {
-		t.Fatalf("Executions: %v", err)
-	}
-	if len(list) != 0 {
-		t.Fatalf("Executions(unknown): got %d rows, want 0", len(list))
-	}
-}
-
-// The reads of an execution that is not known by the core error with
-// ErrUnknownExecution (the web maps it to a 404).
-func TestDetailAndStepsOfUnknownExecution(t *testing.T) {
-	needCore(t)
-	unknown := "00000000-0000-0000-0000-000000000000"
-	if _, err := core.Detail(unknown); !errors.Is(err, core.ErrUnknownExecution) {
-		t.Fatalf("Detail unknown: got %v, want ErrUnknownExecution", err)
-	}
-	if _, err := core.Steps(unknown); !errors.Is(err, core.ErrUnknownExecution) {
-		t.Fatalf("Steps unknown: got %v, want ErrUnknownExecution", err)
-	}
-	if _, err := core.Status(unknown); !errors.Is(err, core.ErrUnknownExecution) {
-		t.Fatalf("Status unknown: got %v, want ErrUnknownExecution", err)
-	}
-}
-
-// The embedded source (parsed, no imports involved) is the ground truth
-// for which workflows exist: every workflow it declares must be registered
-// in the core DBOS. A mismatch means workflows/zz_generated.go is stale —
-// a new subpackage was added without running: go generate ./workflows.
-func TestRegistrationMatchesSource(t *testing.T) {
-	needCore(t)
-	g, err := graph.New(os.DirFS("../workflows"))
-	if err != nil {
-		t.Fatalf("build graph from source: %v", err)
-	}
-	registered := map[string]bool{}
-	for _, w := range core.List() {
-		registered[w.Name] = true
-	}
-	for name := range g.ByName {
-		if !registered[name] {
-			t.Fatalf("source declares workflow %q but the registry does not — run 'go generate ./workflows'", name)
-		}
-	}
 }

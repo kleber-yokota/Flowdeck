@@ -1,0 +1,56 @@
+package core_test
+
+import (
+	"errors"
+	"testing"
+
+	"flowdeck/core"
+	"flowdeck/core/status"
+)
+
+// Enqueue (the dispatch) returns the new execution (id + state +
+// created_at) — the dispatch ACK the web renders as the "queued" row.
+func TestEnqueueReturnsExecution(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("hello-world", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if ex.ID == "" || ex.ID == "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("ACK without an execution id: %+v", ex)
+	}
+	if ex.State != status.Queued && ex.State != status.Running {
+		t.Fatalf("ACK state: got %s, want queued/running", ex.State)
+	}
+	if ex.CreatedAt.IsZero() {
+		t.Fatal("ACK without a created_at")
+	}
+}
+
+// Enqueue of a name that is not in the registry errors with
+// ErrUnknownWorkflow (the web maps it to a 400).
+func TestEnqueueUnknownWorkflow(t *testing.T) {
+	needCore(t)
+	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, core.ErrUnknownWorkflow) {
+		t.Fatalf("Enqueue unknown: got %v, want ErrUnknownWorkflow", err)
+	}
+}
+
+// Phase 5, EXECUTE: the dispatch enqueues the clean input (the web
+// sanitized the raw form values against the spec) — the run takes the
+// value (the decide workflow branches on it: base + left, no right).
+func TestEnqueueWithValuesTakesBranch(t *testing.T) {
+	needCore(t)
+	ex, err := core.Enqueue("decide", "left")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+	for _, name := range mustStepNames(t, ex) {
+		if name == "right" {
+			t.Fatalf("steps: right ran, want the left branch: %v", mustStepNames(t, ex))
+		}
+	}
+}

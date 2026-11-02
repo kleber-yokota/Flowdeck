@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -47,10 +48,13 @@ func okStatuser(workflowID string) (status.State, error) {
 	return status.Queued, nil
 }
 
-// okSteps returns the executed path of a clean run: a single successful
-// step (phase 4, STEP 3 stub).
-func okSteps(workflowID string) ([]core.Step, error) {
-	return []core.Step{{Name: "greet", State: status.Success}}, nil
+// okSteps returns the executed path of a clean run: the terminal state
+// (the poll stops) and a single successful step (phase 4, STEP 3 stub).
+func okSteps(workflowID string) (core.RunPath, error) {
+	return core.RunPath{
+		State: status.Success,
+		Steps: []core.Step{{Name: "greet", State: status.Success}},
+	}, nil
 }
 
 func okDetail(id string) (core.ExecutionDetail, error) {
@@ -143,6 +147,13 @@ func readAll(t *testing.T, resp *http.Response) string {
 		t.Fatalf("read body: %v", err)
 	}
 	return string(body)
+}
+
+// postForm posts a urlencoded form and returns the open response (the
+// caller closes it).
+func postForm(t *testing.T, url string, form url.Values) (*http.Response, error) {
+	t.Helper()
+	return http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
 }
 
 // executionID extracts the workflow ID from an execution row (the dispatch

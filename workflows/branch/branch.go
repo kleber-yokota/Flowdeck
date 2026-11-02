@@ -1,10 +1,17 @@
-package workflows
+// Package branch registers the branch workflow in the core DBOS context
+// (the subpackage form: its own folder, its own init).
+package branch
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
+	"flowdeck/workflows/steps"
 )
+
+// defaultMsg is the default value of the branch workflow's msg input (the
+// parser extracts the const default<NamePascal>).
+const defaultMsg = "FlowDeck"
 
 // Registers the branch workflow in the core DBOS context. With no env (unit
 // tests, tools) the context is nil and the registration is skipped.
@@ -22,23 +29,23 @@ func init() {
 func Branch(ctx dbos.Context, msg string) (string, error) {
 	var r string
 	if msg == "a" {
-		_, err := dbos.RunAsStep(ctx, EchoStep("left"), dbos.WithStepName("left"))
+		_, err := dbos.RunAsStep(ctx, steps.EchoStep("left"), dbos.WithStepName("left"))
 		if err != nil {
 			return "", err
 		}
 	} else if msg == "b" {
-		_, err := dbos.RunAsStep(ctx, EchoStep("mid"), dbos.WithStepName("mid"))
+		_, err := dbos.RunAsStep(ctx, steps.EchoStep("mid"), dbos.WithStepName("mid"))
 		if err != nil {
 			return "", err
 		}
 
 	} else {
-		_, err := dbos.RunAsStep(ctx, EchoStep("right"), dbos.WithStepName("right"))
+		_, err := dbos.RunAsStep(ctx, steps.EchoStep("right"), dbos.WithStepName("right"))
 		if err != nil {
 			return "", err
 		}
 	}
-	r, err := dbos.RunAsStep(ctx, EchoStep("result"), dbos.WithStepName("result"))
+	r, err := dbos.RunAsStep(ctx, steps.EchoStep("result"), dbos.WithStepName("result"))
 	if err != nil {
 		return "", err
 	}

@@ -1,0 +1,19 @@
+package web
+
+import (
+	"net/http"
+
+	"flowdeck/core"
+)
+
+// handleResume re-enqueues a failed run by id (phase 5, RESUME) — the same
+// stored input; the ACK badge replaces the badge (the 2s poll takes over).
+func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
+	id := r.PathValue("id")
+	ex, err := p.Resume(id)
+	if err != nil {
+		fail(w, "resume", err)
+		return
+	}
+	partial(w, "badge.html", badgeFor(ex.ID, ex.State))
+}

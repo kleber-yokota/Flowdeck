@@ -1,9 +1,12 @@
-package workflows
+// Package schedule registers the schedule workflow in the core DBOS context
+// (the subpackage form: its own folder, its own init).
+package schedule
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
+	"flowdeck/workflows/steps"
 )
 
 // Registers the schedule workflow in the core DBOS context — the context
@@ -36,7 +39,7 @@ const (
 // Schedule is a workflow with a struct input: one step that echoes what
 // was scheduled.
 func Schedule(ctx dbos.Context, args ScheduleArgs) (string, error) {
-	scheduled, err := dbos.RunAsStep(ctx, EchoStep("scheduled "+args.Name+" @ "+args.StartDate), dbos.WithStepName("schedule"))
+	scheduled, err := dbos.RunAsStep(ctx, steps.EchoStep("scheduled "+args.Name+" @ "+args.StartDate), dbos.WithStepName("schedule"))
 	if err != nil {
 		return "", err
 	}

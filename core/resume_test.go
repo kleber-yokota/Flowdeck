@@ -84,6 +84,26 @@ func TestResumeOfRunningRun(t *testing.T) {
 	}
 }
 
+// The resume of a cancelled run errors with ErrNotResumable (the web maps
+// it to a 400): only failed runs are resumable.
+func TestResumeOfCancelledRun(t *testing.T) {
+	needCore(t)
+	if _, err := dbos.RegisterQueue(core.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
+		t.Fatalf("RegisterQueue: %v", err)
+	}
+	h, err := core.Ctx().Enqueue(core.Ctx(), "frozen", "pause", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	id := h.GetWorkflowID()
+	if _, err := core.Cancel(id); err != nil {
+		t.Fatalf("Cancel: %v", err)
+	}
+	if _, err := core.Resume(id); !errors.Is(err, core.ErrNotResumable) {
+		t.Fatalf("Resume of cancelled: got %v, want ErrNotResumable", err)
+	}
+}
+
 // The resume of a failed (retries-exhausted) run is not resumable today:
 // the guard lets the error state through, but the SDK's ResumeWorkflow is a
 // no-op on ERROR rows (bug.md) — the ACK read-back is still error. The

@@ -1,4 +1,6 @@
-package workflows
+// Package fanout registers the fanout workflow in the core DBOS context
+// (the subpackage form: its own folder, its own init).
+package fanout
 
 import (
 	"context"
@@ -7,6 +9,10 @@ import (
 
 	"flowdeck/core"
 )
+
+// defaultMsg is the default value of the fanout workflow's msg input (the
+// parser extracts the const default<NamePascal>).
+const defaultMsg = "FlowDeck"
 
 // Registers the fanout workflow in the core DBOS context. With no env (unit
 // tests, tools) the context is nil and the registration is skipped.

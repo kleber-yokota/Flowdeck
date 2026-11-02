@@ -1,0 +1,40 @@
+package core_test
+
+import (
+	"errors"
+	"flowdeck/core"
+	"testing"
+)
+
+// Phase 5, BOOT: the core exposes the spec of a registered workflow —
+// the input and the steps' default values, parsed from the source at boot
+// (the web renders them on top of the workflow page).
+func TestSpecOfRegisteredWorkflow(t *testing.T) {
+	spec, err := core.Spec("decide")
+	if err != nil {
+		t.Fatalf("core.Spec(decide): %v", err)
+	}
+	if len(spec.Inputs) != 1 {
+		t.Fatalf("decide inputs: got %v, want 1", spec.Inputs)
+	}
+	if in := spec.Inputs[0]; in.Name != "msg" || in.Type != "string" {
+		t.Fatalf("decide input: got %+v, want {msg string}", in)
+	}
+	wantSteps := map[string]string{"base": "base", "left": "left", "right": "right"}
+	if len(spec.Steps) != len(wantSteps) {
+		t.Fatalf("decide steps: got %v, want %v", spec.Steps, wantSteps)
+	}
+	for _, s := range spec.Steps {
+		if wantSteps[s.Name] != s.Default {
+			t.Fatalf("decide step %s: got default %q, want %q", s.Name, s.Default, wantSteps[s.Name])
+		}
+	}
+}
+
+// Spec of a name that is not in the source errors with ErrUnknownWorkflow
+// (the web maps it to a 404).
+func TestSpecOfUnknownWorkflow(t *testing.T) {
+	if _, err := core.Spec("no-such-workflow"); !errors.Is(err, core.ErrUnknownWorkflow) {
+		t.Fatalf("Spec unknown: got %v, want ErrUnknownWorkflow", err)
+	}
+}

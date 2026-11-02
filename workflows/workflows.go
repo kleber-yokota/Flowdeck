@@ -1,6 +1,8 @@
-// Package workflows holds the durable workflows. Each file registers its
-// workflow in the core DBOS context (core.Ctx()) in init — see the
-// registration comment below.
+// Package workflows holds the durable workflows: one subpackage per
+// workflow (workflows/<name>/ — its own folder, its own file, its own init
+// registering on the core DBOS context, core.Ctx()) and the shared step
+// functions (workflows/steps/, the leaf of the tree: imported by the
+// workflow subpackages, no workflow in it).
 //
 // New workflow subpackage (workflows/<name>/): add the files, then run
 //
@@ -12,36 +14,3 @@
 //go:generate go run flowdeck/cmd/workflowgen
 
 package workflows
-
-import (
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
-	"flowdeck/core"
-)
-
-// defaultMsg is the default value of the msg input — shared by the
-// hello-world, pipeline and decide workflows (same package, same input
-// name; phase 5, BOOT: the parser extracts the const default<NamePascal>).
-const defaultMsg = "FlowDeck"
-
-// Registers the hello-world workflow in the core DBOS context — the
-// context is up since core's init (dependency order: core before this
-// package). With no env (unit tests, tools) the context is nil and the
-// registration is skipped.
-func init() {
-	if c := core.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, HelloWorld,
-			dbos.WithWorkflowName("hello-world"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
-}
-
-// HelloWorld is an example workflow with a durable step.
-func HelloWorld(ctx dbos.Context, msg string) (string, error) {
-	greeting, err := dbos.RunAsStep(ctx, GreetStep(msg), dbos.WithStepName("greet"))
-	if err != nil {
-		return "", err
-	}
-	return greeting, nil
-}

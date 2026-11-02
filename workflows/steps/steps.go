@@ -1,4 +1,7 @@
-package workflows
+// Package steps holds the shared step functions of the workflows: the leaf
+// of the workflows tree (imported by the workflow subpackages, no workflow
+// in it).
+package steps
 
 import (
 	"context"

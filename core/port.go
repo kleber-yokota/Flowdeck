@@ -37,10 +37,11 @@ type Port struct {
 	// Status reports the state of a run (the read half of the dispatch,
 	// polled every 2s by the badge).
 	Status func(workflowID string) (status.State, error)
-	// Steps returns the executed path of a run (phase 4, STEP 3: the steps
-	// that ran, in execution order — polled every 2s until the run is
-	// terminal).
-	Steps func(workflowID string) ([]Step, error)
+	// Steps returns the executed path of a run (phase 4, STEP 3: the state
+	// and the steps that ran, in execution order — polled every 2s until
+	// the run is terminal; the state rides in the RunPath and is the poll
+	// control).
+	Steps func(workflowID string) (RunPath, error)
 	// Detail reads one run for its page (phase 3, DETAIL).
 	Detail func(workflowID string) (ExecutionDetail, error)
 
