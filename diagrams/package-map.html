@@ -177,7 +177,7 @@
         <text x="740" y="524" text-anchor="middle">web/graph</text>
         <rect class="badge-bg" x="804" y="506" width="70" height="14"></rect>
         <text class="fan" x="839" y="516" text-anchor="middle">FAN-IN 2</text>
-        <text x="740" y="542" text-anchor="middle" class="fn">graph.go · block.go</text>
+        <text x="740" y="542" text-anchor="middle" class="fn">graph.go · block.go · block_fork.go · block_svg.go</text>
         <text x="740" y="556" text-anchor="middle" class="fn">BlockToSVG · ExecutedPathToSVG</text>
         <text x="740" y="569" text-anchor="middle" class="fn">blockLayout · graphLayout · 1.25× scale</text>
       </g>
@@ -1152,8 +1152,18 @@
         <tbody>
           <tr>
             <td><code>block.go</code></td>
-            <td>Block-DAG layout + SVG (level-ramp outlines · the type symbols: ∥ async · ◉ child · … wait · the loop arc) — rows from the visible extents; the root outline clears the inner blocks</td>
-            <td><code>BlockToSVG</code> · <code>blockLayout</code> · <code>layoutColumn</code> · <code>layoutIf</code> · <code>placeAsyncRun</code> · <code>outlinePadded</code> · <code>canvas</code> · <code>svg</code></td>
+            <td>Block-DAG layout: main-flow cursor · nodes boxed · async runs side-by-side · canvas (rows from the visible extents; the root outline clears the inner blocks)</td>
+            <td><code>BlockToSVG</code> · <code>blockLayout</code> · <code>layoutColumn</code> · <code>placeChild</code> · <code>placeAsyncRun</code> · <code>connectTo</code> · <code>canvas</code></td>
+          </tr>
+          <tr>
+            <td><code>block_fork.go</code></td>
+            <td>If-fork: equal-width branches · the skip branch forks as arrows · the width metrics · the fork wiring (the incoming arrows)</td>
+            <td><code>layoutIf</code> · <code>forkMaxWidth</code> · <code>ifBranches</code> · <code>measureContentWidth</code> · <code>nodeBoxW</code> · <code>forkIn</code></td>
+          </tr>
+          <tr>
+            <td><code>block_svg.go</code></td>
+            <td>Block-DAG SVG emission: the level-ramp outlines · the type symbols (∥ async · ◉ child · … wait · the loop arc) · the edges · the 1.25×</td>
+            <td><code>outlinePadded</code> · <code>svg</code> · <code>levelClass</code></td>
           </tr>
           <tr>
             <td><code>graph.go</code></td>
@@ -1162,8 +1172,18 @@
           </tr>
           <tr>
             <td><code>block_test.go</code></td>
-            <td>Block DAG: nil · sequence · loop · forks · node symbols · the symbol space · async mark · async group edge · the loop symbol shape (arc, not a circle) · the join outline · the root outline clears · no sibling overlap · the 1.25× scale · well-formed XML</td>
+            <td>Block structure: nil · sequence · loop · forks · the 1.25× scale · async (side-by-side · group edge) · the join · well-formed XML</td>
             <td><code>TestBlockToSVG*</code></td>
+          </tr>
+          <tr>
+            <td><code>block_outlines_test.go</code></td>
+            <td>The outlines: the root outline clears the inner blocks · no sibling overlap</td>
+            <td><code>TestBlockToSVGRootOutlineClearsInnerBlocks</code> · <code>TestBlockToSVGOutlinesDontOverlap</code></td>
+          </tr>
+          <tr>
+            <td><code>block_symbols_test.go</code></td>
+            <td>The kind symbols: the loop symbol shape (arc, not a circle) · the top-right anchor · the child ring + dot · the wait dots · the ∥ mark · the symbol space</td>
+            <td><code>TestBlockToSVGLoopSymbol*</code> · <code>TestBlockToSVGNodeSymbol*</code> · <code>TestBlockToSVGAsyncParallelMark</code></td>
           </tr>
           <tr>
             <td><code>graph_test.go</code></td>
