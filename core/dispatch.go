@@ -6,9 +6,6 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
 
-// QueueName is the single DBOS queue every dispatch (Enqueue) goes through.
-const QueueName = "flowdeck"
-
 // Enqueue puts a run of the named workflow onto the DBOS queue and returns
 // the new execution (id + state + created_at) — the dispatch ACK: the web
 // renders the "queued" row with it, and nothing is executed by the

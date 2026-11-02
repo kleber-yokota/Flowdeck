@@ -274,13 +274,13 @@
           </tr>
           <tr>
             <td><code>core → core/graph</code></td>
-            <td><code>lifecycle.go</code> · <code>SetWorkflowsSource</code> · <code>spec.go</code> · <code>specOf</code> · <code>port.go</code> · <code>NewPort</code></td>
+            <td><code>lifecycle.go</code> · <code>SetWorkflowsSource</code> · <code>warnUnregistered</code> · <code>spec.go</code> · <code>specOf</code> · <code>port.go</code> · <code>NewPort</code></td>
             <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>Port.Graph</code> · <code>(PathGraph).Of</code> · <code>graph.Spec</code> · <code>Port.Spec</code></td>
           </tr>
           <tr>
             <td><code>core → dbos</code></td>
-            <td><code>lifecycle.go</code> · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code> · <code>registry.go</code> · <code>List</code> · <code>dispatch.go</code> · <code>dispatch</code> · <code>status.go</code> · <code>executions.go</code> · <code>steps.go</code> · <code>detail.go</code> · <code>resume.go</code> · <code>cancel.go</code> · <code>Cancel</code></td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.GetWorkflowSteps</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types</td>
+            <td><code>lifecycle.go</code> · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>warnUnregistered</code> · <code>registry.go</code> · <code>List</code> · <code>dispatch.go</code> · <code>dispatch</code> · <code>status.go</code> · <code>executions.go</code> · <code>steps.go</code> · <code>detail.go</code> · <code>resume.go</code> · <code>cancel.go</code> · <code>Cancel</code></td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ListRegisteredWorkflows</code> · <code>dbos.GetWorkflowSteps</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types</td>
           </tr>
           <tr>
             <td><code>cmd/workflowgen → workflows</code></td>
@@ -473,18 +473,18 @@
         <tbody>
           <tr>
             <td><code>lifecycle.go</code></td>
-            <td>The singleton lifecycle: env <code>init</code> (context from <code>DBOS_APP_NAME</code>/<code>DBOS_SYSTEM_DATABASE_URL</code>), the <code>boot</code> (register + launch), <code>SetWorkflowsSource</code> (the graph source), <code>Ctx</code> (the context the workflow registrations run on) + its read guard (booted + launched → the live context, else <code>ErrNotLaunched</code>), <code>Ready</code> (health), <code>Shutdown</code></td>
-            <td><code>init</code> · <code>boot</code> · <code>SetWorkflowsSource</code> · <code>Launch</code> · <code>warnUnregistered</code> · <code>Ctx</code> · <code>ctxOrErr</code> · <code>Ready</code> · <code>Shutdown</code> · <code>coreState</code></td>
+            <td>The singleton lifecycle: env <code>init</code> (context from <code>DBOS_APP_NAME</code>/<code>DBOS_SYSTEM_DATABASE_URL</code>), the <code>boot</code> (register + launch), the queue contract (<code>QueueName</code>: the single DBOS queue Launch registers — dispatch and resume go through it), <code>SetWorkflowsSource</code> (the graph source), the registry verification (<code>warnUnregistered</code>: a name the source declares but the registry lacks warns — <code>zz_generated.go</code> staleness), <code>Ctx</code> (the context the workflow registrations run on) + its read guard (booted + launched → the live context, else <code>ErrNotLaunched</code>), <code>Ready</code> (health), <code>Shutdown</code></td>
+            <td><code>QueueName</code> · <code>init</code> · <code>boot</code> · <code>SetWorkflowsSource</code> · <code>Launch</code> · <code>warnUnregistered</code> · <code>Ctx</code> · <code>ctxOrErr</code> · <code>Ready</code> · <code>Shutdown</code> · <code>coreState</code></td>
           </tr>
           <tr>
             <td><code>registry.go</code></td>
-            <td>The registry: the registered workflows (from DBOS) — the read the dashboard and the workflow pages use</td>
+            <td>The registry read: the registered workflows (from DBOS) — the read the dashboard and the workflow pages use (no hardcoding)</td>
             <td><code>Workflow</code> · <code>List</code> · <code>ErrUnknownWorkflow</code></td>
           </tr>
           <tr>
             <td><code>dispatch.go</code></td>
-            <td>The dispatch (phase 5, EXECUTE): the clean input + the per-workflow queue (the default queue when no dedicated queue is registered)</td>
-            <td><code>QueueName</code> · <code>Enqueue</code> · <code>dispatch</code></td>
+            <td>The dispatch (phase 5, EXECUTE): the clean input → the single queue, the dispatch ACK (the queued row: id + state + created_at)</td>
+            <td><code>Enqueue</code> · <code>dispatch</code></td>
           </tr>
           <tr>
             <td><code>port.go</code></td>
@@ -537,9 +537,14 @@
             <td><code>TestMain</code> · <code>needCore</code> · <code>pollState</code> · <code>mustStepNames</code></td>
           </tr>
           <tr>
+            <td><code>lifecycle_test.go</code></td>
+            <td>The lifecycle contract: the source declares every registered workflow (<code>zz_generated.go</code> staleness guard)</td>
+            <td><code>TestRegistrationMatchesSource</code></td>
+          </tr>
+          <tr>
             <td><code>registry_test.go</code></td>
-            <td>The registry contract: <code>List</code> shows the shipped workflows · the source declares every registered workflow (<code>zz_generated.go</code> staleness guard)</td>
-            <td><code>TestListShowsRegisteredWorkflows</code> · <code>TestRegistrationMatchesSource</code></td>
+            <td>The registry read contract: <code>List</code> shows the shipped workflows (no hardcoding)</td>
+            <td><code>TestListShowsRegisteredWorkflows</code></td>
           </tr>
           <tr>
             <td><code>spec_test.go</code></td>
@@ -616,7 +621,7 @@
           <tr>
             <td><a href="#package-dbos">dbos</a> →</td>
             <td>lifecycle.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>ctxOrErr</code> · registry.go · <code>List</code> · dispatch.go · <code>Enqueue</code>/<code>dispatch</code> · status.go · <code>listByID</code> · executions.go · steps.go · <code>Steps</code> · detail.go · <code>Detail</code> · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code> · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.GetWorkflowSteps</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types · SQLite driver</td>
+            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.ListRegisteredWorkflows</code> · <code>dbos.GetWorkflowSteps</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types · SQLite driver</td>
           </tr>
           <tr>
             <td><a href="#package-workflows">workflows</a> ←</td>

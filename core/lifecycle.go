@@ -26,6 +26,10 @@ import (
 // launched.
 var ErrNotLaunched = errors.New("core: not launched")
 
+// QueueName is the single DBOS queue: Launch registers it, and every
+// dispatch (Enqueue) and resume (Resume) goes through it.
+const QueueName = "flowdeck"
+
 // coreState is the DBOS component of this package — the process-wide
 // singleton: the DBOS context, the boot/launch flags and the path graph
 // (built from the workflows package's embedded source, by
@@ -123,30 +127,6 @@ func Launch() error {
 	return nil
 }
 
-// warnUnregistered compares the possible-paths graph (built from the
-// embedded source — no imports involved) with the DBOS registry (built by
-// the workflow files' init). A name the source declares but the registry
-// lacks means workflows/zz_generated.go is stale — the subpackage's
-// registration never ran.
-func warnUnregistered(c dbos.Context, paths *graph.PathGraph) {
-	if paths == nil {
-		return
-	}
-	registered := map[string]bool{}
-	for _, e := range dbos.ListRegisteredWorkflows(c) {
-		name := e.Name
-		if name == "" {
-			name = e.FQN
-		}
-		registered[name] = true
-	}
-	for name := range paths.ByName {
-		if !registered[name] {
-			slog.Warn("workflow declared in source but not registered — run 'go generate ./workflows'", "workflow", name)
-		}
-	}
-}
-
 // Shutdown tears down the core: it closes the DBOS context and resets the
 // singleton, so a later Boot starts clean. Production exits after this;
 // tests use it to re-Boot in isolation.
@@ -200,4 +180,28 @@ func Ready() error {
 		return ErrNotLaunched
 	}
 	return nil
+}
+
+// warnUnregistered compares the possible-paths graph (built from the
+// embedded source — no imports involved) with the DBOS registry (built by
+// the workflow files' init). A name the source declares but the registry
+// lacks means workflows/zz_generated.go is stale — the subpackage's
+// registration never ran.
+func warnUnregistered(c dbos.Context, paths *graph.PathGraph) {
+	if paths == nil {
+		return
+	}
+	registered := map[string]bool{}
+	for _, e := range dbos.ListRegisteredWorkflows(c) {
+		name := e.Name
+		if name == "" {
+			name = e.FQN
+		}
+		registered[name] = true
+	}
+	for name := range paths.ByName {
+		if !registered[name] {
+			slog.Warn("workflow declared in source but not registered — run 'go generate ./workflows'", "workflow", name)
+		}
+	}
 }
