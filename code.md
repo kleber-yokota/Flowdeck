@@ -12,7 +12,9 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    cycle-free. Every package edge is a permanent tax: it is read by every
    future change and by every doc line that describes it. Files inside a
    package are rearranged for free — a split changes nothing outside the
-   file. Split files freely; create packages reluctantly.
+   file. Split files freely; create packages reluctantly — a refactor may
+   still draw one (step 6): the edge names an intention, and every break
+   is repaired in the same change.
 
 2. **One file, one responsibility, named for the behavior it owns.**
    Files are named for the thing they own (the handler, the entity, the
@@ -88,6 +90,7 @@ Rules:
 | Navigation is a lookup, not a search | routing index + behavior naming + uniform recipes |
 | Docs cannot drift from the code | the map is a byproduct of the change, at the same granularity as the files |
 | Errors stay local | one responsibility per file + test mirror: a red test or a missed call site names exactly one file |
+| A contract bends only where the change repairs it | every draw and break is named for the intention it serves, repaired at every break point in the same green sequence |
 | The N+1th change costs the same as the Nth | recipes amortize: the layout decision is made once, at the kind level |
 | Structure replaces memory | a clean-context actor acts correctly from the index — no history, no tribal knowledge |
 
@@ -107,15 +110,23 @@ way tests are the first line of the correctness budget.
 4. A file now holds two responsibilities? Split it — as its own green step.
 5. Does the index know where this lives? Update it — as the last step of the
    same change.
-6. An explicit refactor is a structure change: it may move contracts (a
+6. An explicit refactor is a structure change: it may split files, draw
+   packages (a new edge, a new folder), and move or break contracts (a
    package edge, the Port surface, a read model) and process (a batched
-   query, a state that rides on the read) — the goal is the improvement,
-   done in green steps (principle 5). A change that is *not* about structure
-   adds no package, no folder layer, no naming convention.
+   query, a state that rides on the read). The rules of the structure
+   change: each draw and break names the intention it serves, and every
+   break point — call sites, tests, the map — is repaired in the same
+   green sequence (principle 5). The goal is the improvement, not the
+   move: a break left unfixed is not green, it is debt. A change that is
+   *not* about structure adds no package, no folder layer, no naming
+   convention.
 
 ## What this forbids
 
-- Package sprawl (a permanent tax per edge).
+- Package sprawl (a permanent tax per edge, paid without a named
+  intention).
+- A break without its repair (a contract moved, and a call site, a
+  test, or a map row left at the old address).
 - Catch-all layer folders (`utils/`, `misc/`, `helpers/`).
 - Bucket files (N unrelated things in one file).
 - Doc updates as a separate chore.
