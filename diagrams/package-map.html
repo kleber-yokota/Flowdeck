@@ -89,7 +89,7 @@
       <path class="edge" d="M 600 540 L 10 540 L 10 300 L 170 300" marker-end="url(#ah)"></path>
       <text class="lbl" x="300" y="532">STEP · STATE</text>
       <!-- cmd/svgdump → core/graph -->
-      <path class="edge" d="M 135 490 L 135 460" marker-end="url(#ah)"></path>
+      <path class="edge" d="M 135 490 L 135 476" marker-end="url(#ah)"></path>
       <text class="lbl" x="146" y="481">NEW</text>
       <!-- cmd/svgdump → web/graph -->
       <path class="edge" d="M 230 525 L 600 525" marker-end="url(#ah)"></path>
@@ -146,13 +146,14 @@
         <text x="670" y="325" text-anchor="middle" class="fn">form dispatch (values) · POST /resume</text>
       </g>
       <g class="node leaf">
-        <a href="#package-graph" aria-label="core/graph package"><rect x="40" y="380" width="190" height="80"></rect></a>
+        <a href="#package-graph" aria-label="core/graph package"><rect x="40" y="380" width="190" height="96"></rect></a>
         <text x="120" y="404" text-anchor="middle">core/graph</text>
         <rect class="badge-bg" x="172" y="386" width="52" height="14"></rect>
         <text class="fan" x="198" y="396" text-anchor="middle">FAN-IN 4</text>
-        <text x="135" y="422" text-anchor="middle" class="fn">block.go · graph.go · parse.go · build.go</text>
-        <text x="135" y="438" text-anchor="middle" class="fn">paths.go · names.go · spec.go</text>
-        <text x="135" y="452" text-anchor="middle" class="fn">New · Of · Spec · buildGraph · readPaths</text>
+        <text x="135" y="422" text-anchor="middle" class="fn">block.go · graph.go · parse.go</text>
+        <text x="135" y="438" text-anchor="middle" class="fn">build.go · paths.go · names.go</text>
+        <text x="135" y="454" text-anchor="middle" class="fn">spec.go · sanitize.go</text>
+        <text x="135" y="470" text-anchor="middle" class="fn">New · Of · Spec</text>
       </g>
       <g class="node leaf">
         <a href="#package-status" aria-label="core/status package"><rect x="270" y="380" width="190" height="80"></rect></a>
@@ -173,13 +174,14 @@
         <text x="805" y="452" text-anchor="middle" class="fn">ListWorkflows · RegisterWorkflow</text>
       </g>
       <g class="node">
-        <a href="#package-webgraph" aria-label="web/graph package"><rect x="600" y="500" width="280" height="74"></rect></a>
+        <a href="#package-webgraph" aria-label="web/graph package"><rect x="600" y="500" width="280" height="90"></rect></a>
         <text x="740" y="524" text-anchor="middle">web/graph</text>
         <rect class="badge-bg" x="804" y="506" width="70" height="14"></rect>
         <text class="fan" x="839" y="516" text-anchor="middle">FAN-IN 2</text>
-        <text x="740" y="542" text-anchor="middle" class="fn">graph.go · block.go · block_fork.go · block_svg.go</text>
-        <text x="740" y="556" text-anchor="middle" class="fn">BlockToSVG · ExecutedPathToSVG</text>
-        <text x="740" y="569" text-anchor="middle" class="fn">blockLayout · graphLayout · 1.25× scale</text>
+        <text x="740" y="542" text-anchor="middle" class="fn">graph.go · block.go · block_fork.go</text>
+        <text x="740" y="556" text-anchor="middle" class="fn">block_svg.go · svg.go</text>
+        <text x="740" y="570" text-anchor="middle" class="fn">BlockToSVG · ExecutedPathToSVG</text>
+        <text x="740" y="584" text-anchor="middle" class="fn">blockLayout · graphLayout · 1.25× scale</text>
       </g>
       <g class="node">
         <a href="#package-gen" aria-label="cmd/svgdump package"><rect x="40" y="490" width="190" height="70"></rect></a>
@@ -414,8 +416,8 @@
         <tbody>
           <tr>
             <td><code>lifecycle.go</code></td>
-            <td>The singleton lifecycle: env <code>init</code> (context from <code>DBOS_APP_NAME</code>/<code>DBOS_SYSTEM_DATABASE_URL</code>), the <code>boot</code> (register + launch), <code>SetWorkflowsSource</code> (the graph source), <code>Ctx</code> (the context the workflow registrations run on), <code>Ready</code> (health), <code>Shutdown</code></td>
-            <td><code>init</code> · <code>boot</code> · <code>SetWorkflowsSource</code> · <code>Launch</code> · <code>warnUnregistered</code> · <code>Ctx</code> · <code>Ready</code> · <code>Shutdown</code> · <code>coreState</code></td>
+            <td>The singleton lifecycle: env <code>init</code> (context from <code>DBOS_APP_NAME</code>/<code>DBOS_SYSTEM_DATABASE_URL</code>), the <code>boot</code> (register + launch), <code>SetWorkflowsSource</code> (the graph source), <code>Ctx</code> (the context the workflow registrations run on) + its read guard (booted + launched → the live context, else <code>ErrNotLaunched</code>), <code>Ready</code> (health), <code>Shutdown</code></td>
+            <td><code>init</code> · <code>boot</code> · <code>SetWorkflowsSource</code> · <code>Launch</code> · <code>warnUnregistered</code> · <code>Ctx</code> · <code>ctxOrErr</code> · <code>Ready</code> · <code>Shutdown</code> · <code>coreState</code></td>
           </tr>
           <tr>
             <td><code>registry.go</code></td>
@@ -435,7 +437,7 @@
           <tr>
             <td><code>status.go</code></td>
             <td>Status reading from DBOS + <code>mapState</code></td>
-            <td><code>Status</code> · <code>ctxOrErr</code> · <code>listByID</code> · <code>mapState</code></td>
+            <td><code>Status</code> · <code>listByID</code> · <code>mapState</code> · <code>ErrUnknownExecution</code></td>
           </tr>
           <tr>
             <td><code>executions.go</code></td>
@@ -556,7 +558,7 @@
           </tr>
           <tr>
             <td><a href="#package-dbos">dbos</a> →</td>
-            <td>lifecycle.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code> · registry.go · <code>List</code> · dispatch.go · <code>Enqueue</code>/<code>dispatch</code> · status.go · <code>ctxOrErr</code> · <code>listByID</code> · executions.go · steps.go · <code>Steps</code> · detail.go · <code>Detail</code> · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code> · sqlite_driver.go</td>
+            <td>lifecycle.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>ctxOrErr</code> · registry.go · <code>List</code> · dispatch.go · <code>Enqueue</code>/<code>dispatch</code> · status.go · <code>listByID</code> · executions.go · steps.go · <code>Steps</code> · detail.go · <code>Detail</code> · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code> · sqlite_driver.go</td>
             <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · <code>ctx.Enqueue</code> · <code>dbos.ListWorkflows</code> · <code>dbos.GetWorkflowSteps</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code> · status types · SQLite driver</td>
           </tr>
           <tr>
@@ -843,8 +845,13 @@
           </tr>
           <tr>
             <td><code>spec.go</code></td>
-            <td>Parameter spec (phase 5): the workflow inputs — one per parameter/field of the struct input (<code>Param</code>, with the default value) + step defaults (<code>StepSpec</code>) — parsed from the same registrations — plus the dispatch sanitization (<code>form values → clean input</code>, the map for a struct input)</td>
-            <td><code>Spec</code> · <code>Param</code> · <code>StepSpec</code> · <code>specsFromRegistrations</code> · <code>inputsOf</code> · <code>(Spec).Sanitize</code> · <code>ErrInvalidInput</code></td>
+            <td>Parameter spec (phase 5): the workflow inputs — one per parameter/field of the struct input (<code>Param</code>, with the default value) + step defaults (<code>StepSpec</code>) — parsed from the same registrations</td>
+            <td><code>Spec</code> · <code>Param</code> · <code>StepSpec</code> · <code>specsFromRegistrations</code> · <code>inputsOf</code></td>
+          </tr>
+          <tr>
+            <td><code>sanitize.go</code></td>
+            <td>The dispatch sanitization (form values → clean input, the map for a struct input)</td>
+            <td><code>(Spec).Sanitize</code> · <code>checkFields</code> · <code>convert</code> · <code>ErrInvalidInput</code></td>
           </tr>
           <tr>
             <td><code>parse_test.go</code></td>
@@ -1034,8 +1041,13 @@
           </tr>
           <tr>
             <td><code>dashboard_test.go</code></td>
-            <td>Dashboard + workflows partial: registry · empty · no store · links · vendored HTMX · 404/405 (asserts <code>List</code>)</td>
-            <td><code>TestRoot*</code> · <code>TestWorkflowsPartial*</code> · <code>TestStatic*</code> · <code>TestUnknownPathReturns404</code> · <code>TestPostRootReturns405</code></td>
+            <td>Dashboard + workflows partial: registry · empty · no store · links (asserts <code>List</code>)</td>
+            <td><code>TestRoot*</code> · <code>TestWorkflowsPartial*</code></td>
+          </tr>
+          <tr>
+            <td><code>router_test.go</code></td>
+            <td>The router wiring: the vendored HTMX static · 404 unknown path · 405 wrong method (asserts <code>New</code>)</td>
+            <td><code>TestStatic*</code> · <code>TestUnknownPathReturns404</code> · <code>TestPostRootReturns405</code></td>
           </tr>
           <tr>
             <td><code>health_test.go</code></td>
@@ -1162,13 +1174,18 @@
           </tr>
           <tr>
             <td><code>block_svg.go</code></td>
-            <td>Block-DAG SVG emission: the level-ramp outlines · the type symbols (∥ async · ◉ child · … wait · the loop arc) · the edges · the 1.25×</td>
+            <td>Block-DAG SVG emission: the level-ramp outlines · the type symbols (∥ async · ◉ child · … wait · the loop arc) · the edges</td>
             <td><code>outlinePadded</code> · <code>svg</code> · <code>levelClass</code></td>
           </tr>
           <tr>
             <td><code>graph.go</code></td>
-            <td>Executed-path layout + SVG (status colors; the child row renders the child's name + the child's live badge) and the shared SVG emission (scale 1.25 · <code>num</code> · marker defs)</td>
-            <td><code>ExecutedPathToSVG</code> · <code>graphLayout</code> · <code>newGraphLayout</code> · <code>measure</code> · <code>place</code> · <code>svg</code> · <code>num</code> · <code>graphScale</code></td>
+            <td>Executed-path layout + SVG (status colors; the child row renders the child's name + the child's live badge)</td>
+            <td><code>ExecutedPathToSVG</code> · <code>graphLayout</code> · <code>newGraphLayout</code> · <code>measure</code> · <code>place</code> · <code>svg</code></td>
+          </tr>
+          <tr>
+            <td><code>svg.go</code></td>
+            <td>The shared SVG emission of both emitters: the 1.25× scale · the coordinate format · the arrow marker</td>
+            <td><code>graphScale</code> · <code>num</code> · <code>arrowDefs</code></td>
           </tr>
           <tr>
             <td><code>block_test.go</code></td>
