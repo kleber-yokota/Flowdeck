@@ -1,6 +1,6 @@
 // block_svg.go emits the block-DAG SVG: the outline geometry (the L0 root
-// outline clears the inner blocks), the boxes with their kind symbols, the
-// edges, and the 1.25x scale.
+// outline clears the inner blocks), the boxes with their kind symbols and
+// the edges.
 package graph
 
 import (
@@ -32,7 +32,7 @@ func (l *blockLayout) svg() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg class="block-graph" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="block graph"><g transform="scale(%s)">`,
 		w, h, w, h, strconv.FormatFloat(graphScale, 'f', -1, 64))
-	b.WriteString(`<defs><marker id="flowdeck-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path class="g-arrow" d="M0,0 L10,5 L0,10 Z"/></marker></defs>`)
+	b.WriteString(arrowDefs)
 	for _, o := range l.outlines {
 		fmt.Fprintf(&b, `<rect class="g-block %s" x="%s" y="%s" width="%s" height="%s" rx="8"/>`,
 			levelClass(o.level), num(o.x), num(o.y), num(o.w), num(o.h))

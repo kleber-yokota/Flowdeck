@@ -55,7 +55,6 @@ const (
 	graphRowGap    = 24.0
 	graphMargin    = 12.0
 	graphCanvasPad = 2.0  // room for the outline stroke beyond the L0 outline
-	graphScale     = 1.25 // the svg is emitted 1.25× the content canvas (readability)
 	graphSymW      = 20.0 // the child/wait symbol zone on the box's right
 )
 
@@ -159,7 +158,7 @@ func (g *graphLayout) svg() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, `<svg class="paths-graph" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s"><g transform="scale(%s)">`,
 		w, h, w, h, g.label, strconv.FormatFloat(graphScale, 'f', -1, 64))
-	b.WriteString(`<defs><marker id="flowdeck-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path class="g-arrow" d="M0,0 L10,5 L0,10 Z"/></marker></defs>`)
+	b.WriteString(arrowDefs)
 	for _, e := range g.edges {
 		fmt.Fprintf(&b, `<line class="g-edge" x1="%s" y1="%s" x2="%s" y2="%s" marker-end="url(#flowdeck-arrow)"/>`,
 			num(e[0].x+e[0].w/2), num(e[0].y), num(e[1].x-e[1].w/2-1), num(e[1].y))
@@ -208,9 +207,4 @@ func ExecutedPathToSVG(steps []core.Step) template.HTML {
 	g := newGraphLayout(roots)
 	g.label = "executed path"
 	return template.HTML(g.svg())
-}
-
-// num formats a layout coordinate (one decimal is enough for px).
-func num(f float64) string {
-	return strconv.FormatFloat(f, 'f', 1, 64)
 }
