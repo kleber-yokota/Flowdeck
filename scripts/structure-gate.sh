@@ -18,6 +18,8 @@
 # SIGNAL (printed for the agent; never fails):
 #   coupling     goimportmaps    Ca / Ce / I per package (thresholds live in
 #                                .goimportmaps.yaml)
+#   density      go list + git   files × imports per package (the split and
+#                                the responsibility readings)
 #
 # Not gateable yet:
 #   plimsoll     god-struct load line (methods / exported fields per type) —
@@ -94,5 +96,27 @@ fi
 # 6 · coupling metrics — SIGNAL: printed, never fails
 echo "coupling     Ca / Ce / I per package (signal)"
 goimportmaps ./... --metrics 2>&1 || true
+
+# 7 · package density — SIGNAL: printed, never fails
+#    files   = production .go files directly in the package directory
+#    imports = unique production imports of the package
+#    Reading: many files + few imports → the package can be split into
+#    subpackages; few files + many imports → responsibility is concentrated
+#    in the files (read the file before touching it).
+echo "density      files × imports per package (signal)"
+mod=$(go list -m | awk '{print $1}')
+go list -f '{{.ImportPath}}|{{range .Imports}}{{.}} {{end}}' ./... |
+  while IFS='|' read -r path imports; do
+    dir=${path#"$mod"/}
+    [ "$dir" = "$path" ] && dir=""
+    if [ -z "$dir" ]; then
+      files=$(git ls-files '*.go' | grep -v '_test\.go$' | grep -cv '/')
+    else
+      nf=$(echo "$dir" | awk -F'/' '{print NF + 1}')
+      files=$(git ls-files "$dir" | grep -v '_test\.go$' | awk -F'/' -v n="$nf" 'NF == n' | grep -c '\.go$')
+    fi
+    imp=$(echo "$imports" | tr ' ' '\n' | grep -c '[^ ]')
+    printf '  %-24s files=%-3d imports=%d\n' "$path" "$files" "$imp"
+  done
 
 exit $fail
