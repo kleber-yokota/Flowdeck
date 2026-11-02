@@ -4,8 +4,10 @@ import (
 	"strings"
 )
 
-// sequence/loop block's children extend every open path, an if forks). Empty
-// sequences and duplicates are dropped.
+// readPaths returns every sequence of step names through the block: the
+// stored tree read back (a node appends its name to every open path, a
+// sequence/loop block's children extend every open path, an if forks).
+// Empty sequences and duplicates are dropped.
 func readPaths(b *Block) [][]string {
 	return dedupePaths(readBlock(b, [][]string{{}}))
 }

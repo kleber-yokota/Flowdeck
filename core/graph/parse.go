@@ -162,6 +162,3 @@ func pathsFromRegistrations(regs map[string]string, funcs map[string]*ast.FuncDe
 	}
 	return out
 }
-
-// possiblePaths returns every sequence of steps that can run in the
-// function: the stored block tree read back (each RunAsStep adds a step to

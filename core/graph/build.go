@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+// possiblePaths returns every sequence of steps that can run in the
+// function: the stored block tree read back (each RunAsStep adds a step to
 // every open path, each if forks). Empty sequences and duplicates are
 // dropped.
 func possiblePaths(body *ast.BlockStmt) [][]string {
@@ -226,6 +228,3 @@ func childNode(call *ast.CallExpr) (string, NodeKind, bool) {
 	}
 	return name, NodeChild, true
 }
-
-// readPaths returns every sequence of step names through the block: the
-// stored tree read back (a node appends its name to every open path, a
