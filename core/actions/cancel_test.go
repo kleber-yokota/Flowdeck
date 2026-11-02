@@ -1,4 +1,4 @@
-package core_test
+package actions_test
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
@@ -22,7 +22,7 @@ import (
 // ErrUnknownExecution (the web maps it to a 404).
 func TestCancelUnknownExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
+	if _, err := actions.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Cancel unknown: got %v, want ErrUnknownExecution", err)
 	}
 }
@@ -31,14 +31,14 @@ func TestCancelUnknownExecution(t *testing.T) {
 // ErrNotCancellable (the web maps it to a 400).
 func TestCancelOfNotLiveRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	if _, err := core.Cancel(ex.ID); !errors.Is(err, core.ErrNotCancellable) {
+	if _, err := actions.Cancel(ex.ID); !errors.Is(err, actions.ErrNotCancellable) {
 		t.Fatalf("Cancel: got %v, want ErrNotCancellable", err)
 	}
 }
@@ -63,7 +63,7 @@ func TestCancelQueuedRun(t *testing.T) {
 	if st != status.Queued {
 		t.Fatalf("state: got %s, want queued", st)
 	}
-	ack, err := core.Cancel(id)
+	ack, err := actions.Cancel(id)
 	if err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestCancelQueuedRun(t *testing.T) {
 // CANCELLED). The ACK is the same id, now cancelled.
 func TestCancelRunningRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("pause", nil)
+	ex, err := actions.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestCancelRunningRun(t *testing.T) {
 	if st != status.Running {
 		t.Fatalf("state: got %s, want running", st)
 	}
-	ack, err := core.Cancel(ex.ID)
+	ack, err := actions.Cancel(ex.ID)
 	if err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}

@@ -1,4 +1,4 @@
-package core_test
+package actions_test
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
@@ -20,7 +20,7 @@ import (
 // ErrUnknownExecution (the web maps it to a 404).
 func TestResumeUnknownExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Resume("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
+	if _, err := actions.Resume("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Resume unknown: got %v, want ErrUnknownExecution", err)
 	}
 }
@@ -29,14 +29,14 @@ func TestResumeUnknownExecution(t *testing.T) {
 // ErrNotResumable (the web maps it to a 400).
 func TestResumeOfNotFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
+	if _, err := actions.Resume(ex.ID); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume: got %v, want ErrNotResumable", err)
 	}
 }
@@ -61,7 +61,7 @@ func TestResumeOfQueuedRun(t *testing.T) {
 	if st != status.Queued {
 		t.Fatalf("state: got %s, want queued", st)
 	}
-	if _, err := core.Resume(h.GetWorkflowID()); !errors.Is(err, core.ErrNotResumable) {
+	if _, err := actions.Resume(h.GetWorkflowID()); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume of queued: got %v, want ErrNotResumable", err)
 	}
 }
@@ -71,14 +71,14 @@ func TestResumeOfQueuedRun(t *testing.T) {
 // then finishes normally.
 func TestResumeOfRunningRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("pause", nil)
+	ex, err := actions.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	if _, err := testcore.PollState(t, ex.ID, status.Running); err != nil {
 		t.Fatalf("poll to running: %v", err)
 	}
-	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
+	if _, err := actions.Resume(ex.ID); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume of running: got %v, want ErrNotResumable", err)
 	}
 	// The running run is untouched: it finishes with success.
@@ -99,10 +99,10 @@ func TestResumeOfCancelledRun(t *testing.T) {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	id := h.GetWorkflowID()
-	if _, err := core.Cancel(id); err != nil {
+	if _, err := actions.Cancel(id); err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
-	if _, err := core.Resume(id); !errors.Is(err, core.ErrNotResumable) {
+	if _, err := actions.Resume(id); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume of cancelled: got %v, want ErrNotResumable", err)
 	}
 }
@@ -116,7 +116,7 @@ func TestResumeOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
 	t.Cleanup(func() { testcore.FlakyFail = false })
 	testcore.FlakyFail = true
-	ex, err := core.Enqueue("resume-test", "FlowDeck")
+	ex, err := actions.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestResumeOfFailedRun(t *testing.T) {
 	if st != status.Error {
 		t.Fatalf("failing run state: got %s, want error", st)
 	}
-	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
+	if _, err := actions.Resume(ex.ID); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume of failed run: got %v, want ErrNotResumable", err)
 	}
 }

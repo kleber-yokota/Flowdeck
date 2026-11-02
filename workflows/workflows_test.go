@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -40,7 +40,7 @@ func needCore(t *testing.T) {
 // web sanitized against the spec) and polls until the run is terminal.
 func runToSuccess(t *testing.T, name string, payload any) reads.Execution {
 	t.Helper()
-	ex, err := core.Enqueue(name, payload)
+	ex, err := actions.Enqueue(name, payload)
 	if err != nil {
 		t.Fatalf("Enqueue %s: %v", name, err)
 	}

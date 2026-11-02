@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -19,7 +19,7 @@ import (
 // never completes; the wait row does).
 func TestStepsOfKitchenRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("kitchen", "FlowDeck")
+	ex, err := actions.Enqueue("kitchen", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

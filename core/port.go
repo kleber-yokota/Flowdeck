@@ -3,6 +3,7 @@
 package core
 
 import (
+	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
 	"flowdeck/core/reads"
@@ -77,11 +78,11 @@ func NewPort() Port {
 		Graph:      g,
 		Executions: reads.Executions,
 		Spec:       registry.Spec,
-		Enqueue:    Enqueue,
+		Enqueue:    actions.Enqueue,
 		Status:     reads.Status,
 		Steps:      reads.Steps,
 		Detail:     reads.Detail,
-		Resume:     Resume,
-		Cancel:     Cancel,
+		Resume:     actions.Resume,
+		Cancel:     actions.Cancel,
 	}
 }

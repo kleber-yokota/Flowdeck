@@ -1,20 +1,33 @@
-package core_test
+package actions_test
 
 import (
 	"errors"
+	"os"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
+
+	// The workflow files register themselves in the env-driven DBOS
+	// context (their init) — the actions act on the runs they dispatch.
+	_ "flowdeck/workflows"
 )
+
+// TestMain brings the env-driven core up for the tests: the paths graph
+// from the workflows tree on disk, and the executor when the env context
+// exists (the mock tests run without it).
+func TestMain(m *testing.M) {
+	testcore.Setup("../../workflows")
+	os.Exit(m.Run())
+}
 
 // Enqueue (the dispatch) returns the new execution (id + state +
 // created_at) — the dispatch ACK the web renders as the "queued" row.
 func TestEnqueueReturnsExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("hello-world", nil)
+	ex, err := actions.Enqueue("hello-world", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -33,7 +46,7 @@ func TestEnqueueReturnsExecution(t *testing.T) {
 // ErrUnknownWorkflow (the web maps it to a 400).
 func TestEnqueueUnknownWorkflow(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, registry.ErrUnknownWorkflow) {
+	if _, err := actions.Enqueue("no-such-workflow", nil); !errors.Is(err, registry.ErrUnknownWorkflow) {
 		t.Fatalf("Enqueue unknown: got %v, want ErrUnknownWorkflow", err)
 	}
 }
@@ -43,7 +56,7 @@ func TestEnqueueUnknownWorkflow(t *testing.T) {
 // value (the decide workflow branches on it: base + left, no right).
 func TestEnqueueWithValuesTakesBranch(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("decide", "left")
+	ex, err := actions.Enqueue("decide", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

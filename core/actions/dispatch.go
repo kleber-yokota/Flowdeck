@@ -1,4 +1,8 @@
-package core
+// Package actions is the actions on the executions of the core: the
+// Enqueue (the dispatch — the run goes onto the DBOS queue), the Resume
+// (a failed run re-enqueues by id) and the Cancel (a live run cancels by
+// id). The actions act on runs; the reads observe them.
+package actions
 
 import (
 	"fmt"

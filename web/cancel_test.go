@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -114,7 +114,7 @@ func TestCancelUnknownIs404(t *testing.T) {
 // ErrNotCancellable).
 func TestCancelOfNotLiveIs400(t *testing.T) {
 	canceller := func(id string) (reads.Execution, error) {
-		return reads.Execution{}, core.ErrNotCancellable
+		return reads.Execution{}, actions.ErrNotCancellable
 	}
 	d := testPort()
 	d.Cancel = canceller

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 // filter by id — the test database may hold runs from other tests).
 func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("hello-world", "one")
+	ex, err := actions.Enqueue("hello-world", "one")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

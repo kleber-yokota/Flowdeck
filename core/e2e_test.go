@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -19,7 +19,7 @@ import (
 // time (a job claimed by a process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 // and the failed step (phase 3, DETAIL).
 func TestE2EDetailOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("failing-test", nil)
+	ex, err := actions.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -59,14 +59,14 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
 	t.Cleanup(func() { testcore.FlakyFail = false })
 	testcore.FlakyFail = true
-	ex, err := core.Enqueue("resume-test", "FlowDeck")
+	ex, err := actions.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
 		t.Fatalf("poll to failed: %v", err)
 	}
-	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
+	if _, err := actions.Resume(ex.ID); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume of failed run: got %v, want ErrNotResumable", err)
 	}
 }
@@ -74,7 +74,7 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 // The executed path of a branched run on Postgres (phase 4, STEP 3).
 func TestE2EStepsOfBranchedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("decide", "left")
+	ex, err := actions.Enqueue("decide", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

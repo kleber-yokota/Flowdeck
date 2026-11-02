@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/registry"
@@ -23,9 +23,9 @@ func fail(w http.ResponseWriter, op string, err error) {
 		http.Error(w, "unknown workflow", http.StatusNotFound)
 	case errors.Is(err, reads.ErrUnknownExecution):
 		http.Error(w, "unknown execution", http.StatusNotFound)
-	case errors.Is(err, core.ErrNotResumable):
+	case errors.Is(err, actions.ErrNotResumable):
 		http.Error(w, "run cannot be resumed", http.StatusBadRequest)
-	case errors.Is(err, core.ErrNotCancellable):
+	case errors.Is(err, actions.ErrNotCancellable):
 		http.Error(w, "run cannot be cancelled", http.StatusBadRequest)
 	case errors.Is(err, boot.ErrNotLaunched):
 		http.Error(w, "core not ready", http.StatusServiceUnavailable)

@@ -2,7 +2,7 @@ package reads_test
 
 import (
 	"errors"
-	"flowdeck/core"
+	"flowdeck/core/actions"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -18,7 +18,7 @@ import (
 // workflow_id).
 func TestDetailShowsInputValues(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestDetailShowsInputValues(t *testing.T) {
 // stored by DBOS).
 func TestDetailShowsStructInputValues(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("schedule", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
+	ex, err := actions.Enqueue("schedule", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestDetailShowsStructInputValues(t *testing.T) {
 
 func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := core.Enqueue("failing-test", nil)
+	ex, err := actions.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
