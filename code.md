@@ -174,4 +174,4 @@ grep; in a behavior layout, it is a name.
 | The last-step map update | the last task of every set (the SVG goes through the `diagram-design` skill) |
 | The clean-context actors | `agent-diagram.md` · `agent-write-task.md` · `agent-task.md` |
 | The uniform recipe (workflow) | `workflows/<name>/` + `go generate ./workflows` |
-| The complexity budget (function size) | `AGENTS.md` (gocyclo / gocognit baseline) |
+| The load lines (complexity · nesting · cycles · import contract) | `scripts/structure-gate.sh` + `.goimportmaps.yaml` |
