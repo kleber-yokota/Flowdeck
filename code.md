@@ -14,7 +14,12 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    package are rearranged for free — a combine or a split changes nothing
    outside the package. Split files freely; create packages reluctantly —
    a refactor may still draw, move, or redraw one (step 6): the edge names
-   an intention, and every break is repaired in the same change.
+   an intention, and every break is repaired in the same change. A package
+   split into subfolders groups them by purpose — the conversation each
+   subfolder owns (an execution, a catalog, a boot) — never by technical
+   role (controller, service, model): the top-level package is the
+   technical boundary (HTTP, DB, SVG), the subfolder is the index of the
+   purpose.
    The rule descends to the file level: references between files are
    unidirectional against a named owner — the shared thing (state, data,
    model) lives in the one file that owns it, and the other files reference
