@@ -10,14 +10,15 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/registry"
 	"flowdeck/core/status"
 )
 
 // The workflow page (full page, opened from the list) has the dispatch
 // button and the executions list that receives the ACK rows.
 func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
+	fakeLister := func() []registry.Workflow {
+		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
 	d := testPort()
 	d.List = fakeLister
@@ -47,7 +48,7 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 // executed) is on the left and the generated paths graph is on the right.
 func TestWorkflowPageColumnsLayout(t *testing.T) {
 	d := testPort()
-	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
+	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = fakeGraph("wf-alpha", [][]string{{"one", "two"}})
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
@@ -75,7 +76,7 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 		}},
 	}
 	d := testPort()
-	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
+	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = &graph.PathGraph{ByName: map[string]*graph.WorkflowGraph{"wf-alpha": wg}}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
@@ -102,7 +103,7 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 // the same row).
 func TestWorkflowPageRendersLinearGraph(t *testing.T) {
 	d := testPort()
-	d.List = func() []core.Workflow { return []core.Workflow{{Name: "wf-alpha"}} }
+	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = fakeGraph("wf-alpha", [][]string{{"fetch", "parse", "store"}})
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
@@ -126,8 +127,8 @@ func TestWorkflowPageRendersLinearGraph(t *testing.T) {
 // linking to its detail page, newest first. Live badges poll; terminal
 // ones do not.
 func TestWorkflowPageListsExecutions(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
+	fakeLister := func() []registry.Workflow {
+		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
 	newer := time.Date(2026, 5, 13, 13, 40, 0, 0, time.Local)
 	older := time.Date(2026, 5, 13, 13, 30, 0, 0, time.Local)
@@ -172,8 +173,8 @@ func TestWorkflowPageListsExecutions(t *testing.T) {
 
 // The runs listing comes from the core: core down is a clean 503.
 func TestWorkflowPageCoreDownIs503(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
+	fakeLister := func() []registry.Workflow {
+		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
 	downExecutions := func(name string) ([]core.Execution, error) {
 		return nil, boot.ErrNotLaunched

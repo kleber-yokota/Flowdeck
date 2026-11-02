@@ -10,6 +10,7 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/boot"
+	"flowdeck/core/registry"
 	"flowdeck/core/status"
 )
 
@@ -130,7 +131,7 @@ func inputValues(raw any, workflow string) []InputValue {
 // inputOf is the input name of the workflow (the first input — the simple
 // case; a struct input is displayed field by field, the name is unused).
 func inputOf(workflow string) (string, bool) {
-	spec, ok := specOf(workflow)
+	spec, ok := registry.SpecOf(workflow)
 	if !ok || len(spec.Inputs) == 0 {
 		return "", false
 	}

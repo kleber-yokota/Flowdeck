@@ -1,4 +1,7 @@
-package core
+// Package registry is the registration read of the core: the List (the
+// registered workflows — the web listing's source) and the Spec (the
+// parameter spec the dispatch form renders and sanitizes against).
+package registry
 
 import (
 	"errors"

@@ -6,6 +6,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/internal/testcore"
+	"flowdeck/core/registry"
 	"flowdeck/core/status"
 )
 
@@ -32,7 +33,7 @@ func TestEnqueueReturnsExecution(t *testing.T) {
 // ErrUnknownWorkflow (the web maps it to a 400).
 func TestEnqueueUnknownWorkflow(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, core.ErrUnknownWorkflow) {
+	if _, err := core.Enqueue("no-such-workflow", nil); !errors.Is(err, registry.ErrUnknownWorkflow) {
 		t.Fatalf("Enqueue unknown: got %v, want ErrUnknownWorkflow", err)
 	}
 }

@@ -1,18 +1,19 @@
-package core_test
+package registry_test
 
 import (
 	"errors"
-	"flowdeck/core"
 	"testing"
+
+	"flowdeck/core/registry"
 )
 
 // Phase 5, BOOT: the core exposes the spec of a registered workflow —
 // the input and the steps' default values, parsed from the source at boot
 // (the web renders them on top of the workflow page).
 func TestSpecOfRegisteredWorkflow(t *testing.T) {
-	spec, err := core.Spec("decide")
+	spec, err := registry.Spec("decide")
 	if err != nil {
-		t.Fatalf("core.Spec(decide): %v", err)
+		t.Fatalf("registry.Spec(decide): %v", err)
 	}
 	if len(spec.Inputs) != 1 {
 		t.Fatalf("decide inputs: got %v, want 1", spec.Inputs)
@@ -34,7 +35,7 @@ func TestSpecOfRegisteredWorkflow(t *testing.T) {
 // Spec of a name that is not in the source errors with ErrUnknownWorkflow
 // (the web maps it to a 404).
 func TestSpecOfUnknownWorkflow(t *testing.T) {
-	if _, err := core.Spec("no-such-workflow"); !errors.Is(err, core.ErrUnknownWorkflow) {
+	if _, err := registry.Spec("no-such-workflow"); !errors.Is(err, registry.ErrUnknownWorkflow) {
 		t.Fatalf("Spec unknown: got %v, want ErrUnknownWorkflow", err)
 	}
 }

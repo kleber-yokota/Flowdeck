@@ -1,4 +1,4 @@
-package core
+package registry
 
 import (
 	"fmt"
@@ -12,16 +12,17 @@ import (
 // of the workflow page and sanitizes the dispatch's form values against
 // them before the enqueue (phase 5, EXECUTE).
 func Spec(name string) (graph.Spec, error) {
-	spec, ok := specOf(name)
+	spec, ok := SpecOf(name)
 	if !ok {
 		return graph.Spec{}, fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
 	}
 	return spec, nil
 }
 
-// specOf is the lookup of a workflow's spec (no source set yet, or the
-// name is not in the source).
-func specOf(name string) (graph.Spec, bool) {
+// SpecOf is the lookup of a workflow's spec (false when no source is set
+// yet, or the name is not in the source) — the reads use it to render the
+// stored input against the default values.
+func SpecOf(name string) (graph.Spec, bool) {
 	g := boot.Paths()
 	if g == nil {
 		return graph.Spec{}, false

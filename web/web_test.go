@@ -13,6 +13,7 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/registry"
 	"flowdeck/core/status"
 
 	// The workflow files register themselves in the env-driven core DBOS
@@ -24,7 +25,7 @@ import (
 // Shared stubs: every test file builds its httptest server from these,
 // overriding only the one core operation under test.
 
-func emptyLister() []core.Workflow { return nil }
+func emptyLister() []registry.Workflow { return nil }
 
 func okExecutions(name string) ([]core.Execution, error) { return nil, nil }
 

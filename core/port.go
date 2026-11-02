@@ -5,6 +5,7 @@ package core
 import (
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/registry"
 	"flowdeck/core/status"
 )
 
@@ -16,7 +17,7 @@ type Port struct {
 	// Registry: which workflows exist and what they could do.
 	// List returns the workflows registered in the core (single source of
 	// truth); the web knows nothing about specific workflows.
-	List func() []Workflow
+	List func() []registry.Workflow
 	// Graph is the possible-paths graph (name → the block model: the stored
 	// tree, the read-back paths, the steps) — the boot map: map lookup, no
 	// re-parse, no DB. Never nil: empty before Boot.
@@ -71,10 +72,10 @@ func NewPort() Port {
 		g = &graph.PathGraph{} // not booted yet: the empty graph — Of returns nil
 	}
 	return Port{
-		List:       List,
+		List:       registry.List,
 		Graph:      g,
 		Executions: Executions,
-		Spec:       Spec,
+		Spec:       registry.Spec,
 		Enqueue:    Enqueue,
 		Status:     Status,
 		Steps:      Steps,

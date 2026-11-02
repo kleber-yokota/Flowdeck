@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/registry"
 
 	// The workflow files register themselves in the env-driven DBOS
 	// context (their init) — this test asserts the registry matches the
@@ -35,7 +35,7 @@ func TestRegistrationMatchesSource(t *testing.T) {
 		t.Fatalf("build graph from source: %v", err)
 	}
 	registered := map[string]bool{}
-	for _, w := range core.List() {
+	for _, w := range registry.List() {
 		registered[w.Name] = true
 	}
 	for name := range g.ByName {

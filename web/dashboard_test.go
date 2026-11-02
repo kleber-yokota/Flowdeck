@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/registry"
 )
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
@@ -33,8 +33,8 @@ func TestRootRendersDashboardWithHTMX(t *testing.T) {
 // No hardcoding: the partial lists exactly what the lister (the core) returns,
 // and the base page knows nothing about specific workflows.
 func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{
+	fakeLister := func() []registry.Workflow {
+		return []registry.Workflow{
 			{Name: "wf-alpha"},
 			{Name: "wf-beta"},
 		}
@@ -97,8 +97,8 @@ func TestWorkflowsPartialNoStore(t *testing.T) {
 // The partial links each registered workflow to its page (zero hardcoding
 // in the base page): the dispatch button lives on that page.
 func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
-	fakeLister := func() []core.Workflow {
-		return []core.Workflow{{Name: "wf-alpha"}}
+	fakeLister := func() []registry.Workflow {
+		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
 	d := testPort()
 	d.List = fakeLister

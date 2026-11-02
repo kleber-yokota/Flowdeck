@@ -6,6 +6,7 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/boot"
+	"flowdeck/core/registry"
 )
 
 // Enqueue puts a run of the named workflow onto the DBOS queue and returns
@@ -21,12 +22,12 @@ func Enqueue(name string, payload any) (Execution, error) {
 	if err != nil {
 		return Execution{}, err
 	}
-	for _, w := range List() {
+	for _, w := range registry.List() {
 		if w.Name == name {
 			return dispatch(c, name, payload)
 		}
 	}
-	return Execution{}, fmt.Errorf("%w: %s", ErrUnknownWorkflow, name)
+	return Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
 }
 
 // dispatch puts payload on the queue under name and returns the new

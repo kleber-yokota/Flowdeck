@@ -6,6 +6,7 @@ import (
 
 	"flowdeck/core"
 	corengraph "flowdeck/core/graph"
+	"flowdeck/core/registry"
 	"flowdeck/web/graph"
 )
 
@@ -67,11 +68,11 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 
 // registered reports whether name is in the registered list (the core
 // registry, no hardcoding).
-func registered(name string, ws []core.Workflow) (core.Workflow, bool) {
+func registered(name string, ws []registry.Workflow) (registry.Workflow, bool) {
 	for _, wf := range ws {
 		if wf.Name == name {
 			return wf, true
 		}
 	}
-	return core.Workflow{}, false
+	return registry.Workflow{}, false
 }

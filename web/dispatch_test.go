@@ -13,6 +13,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/graph"
+	"flowdeck/core/registry"
 )
 
 // POST /run is the dispatch (phase 2): it enqueues in the core and returns
@@ -122,7 +123,7 @@ func TestRunForwardsCleanValues(t *testing.T) {
 // A workflow that is not in the core registry is a clean 404.
 func TestRunUnknownWorkflowIs404(t *testing.T) {
 	enqueue := func(name string, payload any) (core.Execution, error) {
-		return core.Execution{}, fmt.Errorf("%w: %s", core.ErrUnknownWorkflow, name)
+		return core.Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
 	}
 	d := testPort()
 	d.Enqueue = enqueue

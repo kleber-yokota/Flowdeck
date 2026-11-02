@@ -9,6 +9,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/registry"
 )
 
 // fail maps a core error onto the HTTP error response: 404 for a workflow
@@ -17,7 +18,7 @@ import (
 // a logged 500 for anything unexpected.
 func fail(w http.ResponseWriter, op string, err error) {
 	switch {
-	case errors.Is(err, core.ErrUnknownWorkflow):
+	case errors.Is(err, registry.ErrUnknownWorkflow):
 		http.Error(w, "unknown workflow", http.StatusNotFound)
 	case errors.Is(err, core.ErrUnknownExecution):
 		http.Error(w, "unknown execution", http.StatusNotFound)
