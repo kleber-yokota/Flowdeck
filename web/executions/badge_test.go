@@ -1,15 +1,15 @@
-package web
+package executions
 
 import (
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/internal/webtest"
 )
 
 // GET /status is the poll half of the dispatch (phase 2): it returns the
@@ -24,12 +24,12 @@ func TestStatusBadgeRendersState(t *testing.T) {
 		status.Cancelled: `class="badge cancelled terminal"`,
 	} {
 		t.Run(string(state), func(t *testing.T) {
-			d := testPort()
+			d := webtest.TestPort()
 			d.Status = stateStatuser(state)
-			srv := httptest.NewServer(New(d, okReady))
+			srv := testServer(t, d)
 			defer srv.Close()
 
-			code, body := get(t, srv.URL+"/status/abc")
+			code, body := webtest.Get(t, srv.URL+"/status/abc")
 			if code != http.StatusOK {
 				t.Fatalf("status: got %d want %d", code, http.StatusOK)
 			}
@@ -67,12 +67,12 @@ func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
 		status.Cancelled: true,
 	} {
 		t.Run(string(state), func(t *testing.T) {
-			d := testPort()
+			d := webtest.TestPort()
 			d.Status = stateStatuser(state)
-			srv := httptest.NewServer(New(d, okReady))
+			srv := testServer(t, d)
 			defer srv.Close()
 
-			code, body := get(t, srv.URL+"/status/abc")
+			code, body := webtest.Get(t, srv.URL+"/status/abc")
 			if code != http.StatusOK {
 				t.Fatalf("status: got %d want %d", code, http.StatusOK)
 			}
@@ -90,9 +90,9 @@ func TestStatusBadgeFragmentIsSingleCompleteElement(t *testing.T) {
 
 // The poll fragment is dynamic: it must never be cached by the browser.
 func TestStatusBadgeNoStore(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Status = stateStatuser(status.Queued)
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/status/abc")
@@ -113,12 +113,12 @@ func TestStatusUnknownExecutionIs404(t *testing.T) {
 	statuser := func(workflowID string) (status.State, error) {
 		return "", reads.ErrUnknownExecution
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Status = statuser
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	if code, _ := get(t, srv.URL+"/status/ghost"); code != http.StatusNotFound {
+	if code, _ := webtest.Get(t, srv.URL+"/status/ghost"); code != http.StatusNotFound {
 		t.Fatalf("status: got %d want %d", code, http.StatusNotFound)
 	}
 }
@@ -128,12 +128,17 @@ func TestStatusCoreDownIs503(t *testing.T) {
 	statuser := func(workflowID string) (status.State, error) {
 		return "", boot.ErrNotLaunched
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Status = statuser
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	if code, _ := get(t, srv.URL+"/status/abc"); code != http.StatusServiceUnavailable {
+	if code, _ := webtest.Get(t, srv.URL+"/status/abc"); code != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", code, http.StatusServiceUnavailable)
 	}
+}
+
+// stateStatuser builds a statuser stub that always returns the given state.
+func stateStatuser(state status.State) func(string) (status.State, error) {
+	return func(workflowID string) (status.State, error) { return state, nil }
 }

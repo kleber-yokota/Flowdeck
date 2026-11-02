@@ -2,197 +2,26 @@ package web
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
-	"time"
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
-	"flowdeck/core/reads"
-	"flowdeck/core/registry"
-	"flowdeck/core/status"
-
-	// The workflow files register themselves in the env-driven core DBOS
-	// context (their init) — the same single blank import main.go carries;
-	// workflows/zz_generated.go pulls in every subpackage.
-	_ "flowdeck/workflows"
 )
-
-// Shared stubs: every test file builds its httptest server from these,
-// overriding only the one core operation under test.
-
-func emptyLister() []registry.Workflow { return nil }
-
-func okExecutions(name string) ([]reads.Execution, error) { return nil, nil }
-
-// okSpec is the spec stub: a string input and one step with a default.
-func okSpec(name string) (graph.Spec, error) {
-	return graph.Spec{Inputs: []graph.Param{{Name: "msg", Type: "string"}}}, nil
-}
 
 // okReady is the ready stub: the core is up.
 func okReady() error { return nil }
 
-// The ACK execution of okEnqueuer: id + queued state + created_at.
-func okEnqueuer(name string, payload any) (reads.Execution, error) {
-	return reads.Execution{
-		ID:        "00000000-0000-0000-0000-000000000001",
-		State:     status.Queued,
-		CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-	}, nil
-}
-
-func okStatuser(workflowID string) (status.State, error) {
-	return status.Queued, nil
-}
-
-// okSteps returns the executed path of a clean run: the terminal state
-// (the poll stops) and a single successful step (phase 4, STEP 3 stub).
-func okSteps(workflowID string) (reads.RunPath, error) {
-	return reads.RunPath{
-		State: status.Success,
-		Steps: []reads.Step{{Name: "greet", State: status.Success}},
-	}, nil
-}
-
-// okDetail is the detail-page stub: the unknown execution (the 404 twin of
-// the booted detail tests).
-func okDetail(id string) (reads.DetailPath, error) {
-	return reads.DetailPath{}, reads.ErrUnknownExecution
-}
-
-// okResumer is the resume stub: the ACK is the same id, enqueued again.
-func okResumer(id string) (reads.Execution, error) {
-	return reads.Execution{ID: id, State: status.Queued}, nil
-}
-
-// okCanceller is the cancel stub: the ACK is the same id, now cancelled.
-func okCanceller(id string) (reads.Execution, error) {
-	return reads.Execution{ID: id, State: status.Cancelled}, nil
-}
-
-// testPort builds the base stub port — the shared stubs above (and the
-// empty graph); each test overrides only the core operation under test.
-func testPort() core.Port {
-	return core.Port{
-		List:       emptyLister,
-		Graph:      &graph.PathGraph{},
-		Executions: okExecutions,
-		Spec:       okSpec,
-		Enqueue:    okEnqueuer,
-		Status:     okStatuser,
-		Steps:      okSteps,
-		Detail:     okDetail,
-		Resume:     okResumer,
-		Cancel:     okCanceller,
-	}
-}
-
-// fakeGraph builds a possible-paths graph holding the given paths under
-// name (the stub for the graph component in the unit tests).
-func fakeGraph(name string, paths [][]string) *graph.PathGraph {
-	root := &graph.Block{ID: "b0", Level: 0, Type: graph.BlockSequence}
-	var children []graph.Child
-	var steps []string
-	seen := map[string]bool{}
-	for _, p := range paths {
-		for _, s := range p {
-			if !seen[s] {
-				seen[s] = true
-				children = append(children, graph.Child{Node: &graph.Node{Name: s, Kind: graph.NodeStep}})
-				steps = append(steps, s)
-			}
-		}
-	}
-	root.Children = children
-	byName := map[string]*graph.WorkflowGraph{}
-	if len(children) > 0 {
-		byName[name] = &graph.WorkflowGraph{Root: root, Steps: steps}
-	}
-	return &graph.PathGraph{ByName: byName}
-}
-
-// stateStatuser builds a statuser stub that always returns the given state.
-func stateStatuser(state status.State) func(string) (status.State, error) {
-	return func(workflowID string) (status.State, error) { return state, nil }
-}
-
-// get issues a GET and returns the status code and the body as a string.
-func get(t *testing.T, url string) (int, string) {
+// bootedTestServer builds the full-stack server of a booted core (no
+// stubs): the env-driven core (core.init + the workflow files' init, see
+// .env.test), this package's TestMain started the executor and built the
+// paths graph from the workflows tree, and New wires every route.
+func bootedTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	resp, err := http.Get(url)
-	if err != nil {
-		t.Fatalf("GET %s: %v", url, err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
-	}
-	return resp.StatusCode, string(body)
-}
-
-// post issues a POST and returns the open response (the caller reads and
-// closes it).
-func post(t *testing.T, url string) (*http.Response, error) {
-	t.Helper()
-	return http.Post(url, "application/octet-stream", nil)
-}
-
-// readAll reads the whole response body.
-func readAll(t *testing.T, resp *http.Response) string {
-	t.Helper()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
-	}
-	return string(body)
-}
-
-// postForm posts a urlencoded form and returns the open response (the
-// caller closes it).
-func postForm(t *testing.T, url string, form url.Values) (*http.Response, error) {
-	t.Helper()
-	return http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
-}
-
-// executionID extracts the workflow ID from an execution row (the dispatch
-// ACK).
-func executionID(t *testing.T, row string) string {
-	t.Helper()
-	const prefix = `href="/executions/`
-	idx := strings.Index(row, prefix)
-	if idx < 0 {
-		t.Fatalf("row without an execution link: %q", row)
-	}
-	start := idx + len(prefix)
-	end := start + strings.Index(row[start:], `"`)
-	return row[start:end]
-}
-
-// containsAll reports whether s contains every frag.
-func containsAll(s string, frags ...string) bool {
-	for _, frag := range frags {
-		if !strings.Contains(s, frag) {
-			return false
-		}
-	}
-	return true
-}
-
-// containsAny reports whether s contains at least one frag.
-func containsAny(s string, frags ...string) bool {
-	for _, frag := range frags {
-		if strings.Contains(s, frag) {
-			return true
-		}
-	}
-	return false
+	needCore(t)
+	return httptest.NewServer(New(core.NewPort(), boot.Ready))
 }
 
 // TestMain brings the env-driven core up for the booted tests: the paths
@@ -220,4 +49,28 @@ func needCore(t *testing.T) {
 	if boot.Ctx() == nil {
 		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
 	}
+}
+
+// fakeGraph builds a possible-paths graph holding the given paths under
+// name (the stub for the graph component in the unit tests).
+func fakeGraph(name string, paths [][]string) *graph.PathGraph {
+	root := &graph.Block{ID: "b0", Level: 0, Type: graph.BlockSequence}
+	var children []graph.Child
+	var steps []string
+	seen := map[string]bool{}
+	for _, p := range paths {
+		for _, s := range p {
+			if !seen[s] {
+				seen[s] = true
+				children = append(children, graph.Child{Node: &graph.Node{Name: s, Kind: graph.NodeStep}})
+				steps = append(steps, s)
+			}
+		}
+	}
+	root.Children = children
+	byName := map[string]*graph.WorkflowGraph{}
+	if len(children) > 0 {
+		byName[name] = &graph.WorkflowGraph{Root: root, Steps: steps}
+	}
+	return &graph.PathGraph{ByName: byName}
 }

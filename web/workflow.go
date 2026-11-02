@@ -7,6 +7,7 @@ import (
 	"flowdeck/core"
 	corengraph "flowdeck/core/graph"
 	"flowdeck/core/registry"
+	"flowdeck/web/executions"
 	"flowdeck/web/graph"
 	"flowdeck/web/render"
 )
@@ -17,7 +18,7 @@ import (
 // paths (the block diagram of the graph).
 type workflowPage struct {
 	Name       string
-	Executions []badge
+	Executions []executions.Badge
 	Spec       corengraph.Spec
 	Graph      template.HTML
 	Title      string
@@ -54,9 +55,9 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Fail(w, "executions", err)
 		return
 	}
-	rows := make([]badge, 0, len(exs))
+	rows := make([]executions.Badge, 0, len(exs))
 	for _, e := range exs {
-		rows = append(rows, row(e))
+		rows = append(rows, executions.Row(e))
 	}
 	render.Page(w, "workflow.html", workflowPage{
 		Name:       wf.Name,

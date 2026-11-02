@@ -1,8 +1,7 @@
-package web
+package executions
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/internal/webtest"
 )
 
 // The detail page (phase 3, DETAIL) renders the badge, the retry rows
@@ -30,12 +30,12 @@ func TestExecutionDetailRendersFailure(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Error},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-failed")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-failed")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -75,12 +75,12 @@ func TestExecutionDetailBadgePollsWhenRunning(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Running},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-live")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-live")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -114,12 +114,12 @@ func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Success},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-ok")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-ok")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -144,10 +144,10 @@ func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
 
 // A run the core does not know is a clean 404.
 func TestExecutionDetailUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := testServer(t, webtest.TestPort())
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/executions/ghost"); status != http.StatusNotFound {
+	if status, _ := webtest.Get(t, srv.URL+"/executions/ghost"); status != http.StatusNotFound {
 		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
 	}
 }
@@ -157,12 +157,12 @@ func TestExecutionDetailCoreDownIs503(t *testing.T) {
 	downDetail := func(id string) (reads.DetailPath, error) {
 		return reads.DetailPath{}, boot.ErrNotLaunched
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = downDetail
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/executions/abc"); status != http.StatusServiceUnavailable {
+	if status, _ := webtest.Get(t, srv.URL+"/executions/abc"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
 	}
 }

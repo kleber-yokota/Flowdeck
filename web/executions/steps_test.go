@@ -1,8 +1,7 @@
-package web
+package executions
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -10,22 +9,23 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/internal/webtest"
 )
 
 // The steps partial (phase 4, STEP 3, polling): a live run returns the
 // executed-path SVG with the hx attributes that keep the 2s poll running.
 func TestStepsPartialPollsWhenRunning(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Steps = func(id string) (reads.RunPath, error) {
 		return reads.RunPath{State: status.Running, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Success},
 		}}, nil
 	}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-live/steps")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-live/steps")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -45,17 +45,17 @@ func TestStepsPartialPollsWhenRunning(t *testing.T) {
 // A terminal run stops the poll: the fragment has no hx attributes and
 // shows the path that ran.
 func TestStepsPartialTerminalStopsPolling(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Steps = func(id string) (reads.RunPath, error) {
 		return reads.RunPath{State: status.Success, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "store", State: status.Success},
 		}}, nil
 	}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-done/steps")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-done/steps")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -74,17 +74,17 @@ func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 // A failed step is colored with the failed state (the node's class), the
 // successful steps keep the success color.
 func TestStepsPartialColorsTheFailedStep(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Steps = func(id string) (reads.RunPath, error) {
 		return reads.RunPath{State: status.Error, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Error},
 		}}, nil
 	}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-failed/steps")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-failed/steps")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -98,7 +98,7 @@ func TestStepsPartialColorsTheFailedStep(t *testing.T) {
 
 // The fragment keeps the steps in execution order (step_id asc).
 func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Steps = func(id string) (reads.RunPath, error) {
 		return reads.RunPath{State: status.Success, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
@@ -106,10 +106,10 @@ func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 			{Name: "store", State: status.Success},
 		}}, nil
 	}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-order/steps")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-order/steps")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -126,24 +126,24 @@ func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 
 // A run the core does not know is a clean 404 (the Steps read maps it).
 func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Steps = func(id string) (reads.RunPath, error) { return reads.RunPath{}, reads.ErrUnknownExecution }
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/executions/ghost/steps"); status != http.StatusNotFound {
+	if status, _ := webtest.Get(t, srv.URL+"/executions/ghost/steps"); status != http.StatusNotFound {
 		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
 	}
 }
 
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Steps = func(id string) (reads.RunPath, error) { return reads.RunPath{}, boot.ErrNotLaunched }
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/executions/abc/steps"); status != http.StatusServiceUnavailable {
+	if status, _ := webtest.Get(t, srv.URL+"/executions/abc/steps"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
 	}
 }
@@ -163,12 +163,12 @@ func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Running, Steps: []reads.Step{{Name: "greet", State: status.Success}}},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-live")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-live")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -199,12 +199,12 @@ func TestExecutionDetailPageTerminalExecutedPath(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Success, Steps: []reads.Step{{Name: "greet", State: status.Success}}},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/executions/run-ok")
+	status, body := webtest.Get(t, srv.URL+"/executions/run-ok")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}

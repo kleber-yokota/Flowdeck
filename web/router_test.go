@@ -5,14 +5,16 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"flowdeck/web/internal/webtest"
 )
 
 // The vendored assets are served from the embedded FS — no CDN at runtime.
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/static/htmx.min.js")
+	status, body := webtest.Get(t, srv.URL+"/static/htmx.min.js")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -23,7 +25,7 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 }
 
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
@@ -37,7 +39,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)

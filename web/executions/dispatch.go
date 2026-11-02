@@ -1,4 +1,4 @@
-package web
+package executions
 
 import (
 	"net/http"
@@ -33,7 +33,7 @@ func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Fail(w, "enqueue", err)
 		return
 	}
-	render.Partial(w, "execution.html", row(ex))
+	render.Partial(w, "execution.html", Row(ex))
 }
 
 // formValues reads the form values posted to the dispatch (an empty POST

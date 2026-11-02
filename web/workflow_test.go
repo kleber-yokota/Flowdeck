@@ -12,6 +12,7 @@ import (
 	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
+	"flowdeck/web/internal/webtest"
 )
 
 // The workflow page (full page, opened from the list) has the dispatch
@@ -20,12 +21,12 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 	fakeLister := func() []registry.Workflow {
 		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = fakeLister
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows/wf-alpha")
+	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -47,13 +48,13 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 // The workflow page layout (phase 4): the executions list (what was
 // executed) is on the left and the generated paths graph is on the right.
 func TestWorkflowPageColumnsLayout(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = fakeGraph("wf-alpha", [][]string{{"one", "two"}})
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows/wf-alpha")
+	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -75,13 +76,13 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 			}},
 		}},
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = &graph.PathGraph{ByName: map[string]*graph.WorkflowGraph{"wf-alpha": wg}}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows/wf-alpha")
+	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -102,13 +103,13 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 // A workflow without an if renders a single linear row (all the nodes on
 // the same row).
 func TestWorkflowPageRendersLinearGraph(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = fakeGraph("wf-alpha", [][]string{{"fetch", "parse", "store"}})
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows/wf-alpha")
+	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -138,13 +139,13 @@ func TestWorkflowPageListsExecutions(t *testing.T) {
 			{ID: "run-older", State: status.Queued, CreatedAt: older},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = fakeLister
 	d.Executions = listExecutions
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows/wf-alpha")
+	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -179,23 +180,23 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 	downExecutions := func(name string) ([]reads.Execution, error) {
 		return nil, boot.ErrNotLaunched
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = fakeLister
 	d.Executions = downExecutions
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/workflows/wf-alpha"); status != http.StatusServiceUnavailable {
+	if status, _ := webtest.Get(t, srv.URL+"/workflows/wf-alpha"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
 	}
 }
 
 // A page for a workflow that is not in the core registry is a clean 404.
 func TestWorkflowPageUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
-	if status, _ := get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
+	if status, _ := webtest.Get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
 		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
 	}
 }

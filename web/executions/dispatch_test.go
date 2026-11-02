@@ -1,11 +1,10 @@
-package web
+package executions
 
 import (
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -14,13 +13,14 @@ import (
 	"flowdeck/core/graph"
 	"flowdeck/core/reads"
 	"flowdeck/core/registry"
+	"flowdeck/web/internal/webtest"
 )
 
 // POST /run is the dispatch (phase 2): it enqueues in the core and returns
 // the execution row fragment: "queued" badge + the visible workflow ID
 // (the ACK) — the browser prepends it to the executions list.
 func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := testServer(t, webtest.TestPort())
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
@@ -61,11 +61,11 @@ func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
 // Phase 5, EXECUTE: the web sanitizes the values against the spec before
 // the enqueue — a field that is not in the spec is a clean 400.
 func TestRunUnknownFieldIs400(t *testing.T) {
-	d := testPort()
-	srv := httptest.NewServer(New(d, okReady))
+	d := webtest.TestPort()
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	resp, err := postForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"x"}, "bogus": {"y"}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"x"}, "bogus": {"y"}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -78,14 +78,14 @@ func TestRunUnknownFieldIs400(t *testing.T) {
 // Phase 5, EXECUTE: a value that does not convert to the input's type is a
 // clean 400 (the spec says int, the form posts "x").
 func TestRunBadIntIs400(t *testing.T) {
-	d := testPort()
+	d := webtest.TestPort()
 	d.Spec = func(name string) (graph.Spec, error) {
 		return graph.Spec{Inputs: []graph.Param{{Name: "n", Type: "int"}}}, nil
 	}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	resp, err := postForm(t, srv.URL+"/run/wf-alpha", url.Values{"n": {"x"}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/wf-alpha", url.Values{"n": {"x"}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -99,15 +99,15 @@ func TestRunBadIntIs400(t *testing.T) {
 // sanitized input, not the raw form map) — the ACK row is rendered.
 func TestRunForwardsCleanValues(t *testing.T) {
 	var payload any
-	d := testPort()
+	d := webtest.TestPort()
 	d.Enqueue = func(name string, p any) (reads.Execution, error) {
 		payload = p
-		return okEnqueuer(name, p)
+		return webtest.AckEnqueuer(name, p)
 	}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	resp, err := postForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"left"}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"left"}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -125,9 +125,9 @@ func TestRunUnknownWorkflowIs404(t *testing.T) {
 	enqueue := func(name string, payload any) (reads.Execution, error) {
 		return reads.Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Enqueue = enqueue
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/ghost", "application/octet-stream", nil)
@@ -145,9 +145,9 @@ func TestRunEnqueueFailureIs500(t *testing.T) {
 	enqueue := func(name string, payload any) (reads.Execution, error) {
 		return reads.Execution{}, errors.New("boom")
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Enqueue = enqueue
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
@@ -167,7 +167,7 @@ func TestRunPostWithFormValuesTakesBranch(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -175,16 +175,16 @@ func TestRunPostWithFormValuesTakesBranch(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("dispatch: %d", resp.StatusCode)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	// The run completes taking the branch the value picked.
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -193,7 +193,7 @@ func TestRunPostWithFormValuesTakesBranch(t *testing.T) {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	code, steps := get(t, srv.URL+"/executions/"+id+"/steps")
+	code, steps := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 	if code != http.StatusOK {
 		t.Fatalf("steps: %d", code)
 	}

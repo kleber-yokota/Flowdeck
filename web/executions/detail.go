@@ -1,4 +1,4 @@
-package web
+package executions
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ import (
 // values, the attempts, and — on failure — the error and the failed step.
 type executionDetail struct {
 	reads.ExecutionDetail
-	Badge   badge
+	Badge   Badge
 	Retries []retry
 	Steps   stepsView
 	Title   string
@@ -50,7 +50,7 @@ func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) 
 	}
 	render.Page(w, "execution-detail.html", executionDetail{
 		ExecutionDetail: d.ExecutionDetail,
-		Badge:           badgeFor(id, d.ExecutionDetail.State),
+		Badge:           BadgeFor(id, d.ExecutionDetail.State),
 		Retries:         retriesFor(d.Attempts),
 		Steps:           newStepsView(id, d.RunPath),
 		Title:           "Execution " + id,

@@ -1,4 +1,4 @@
-package web
+package executions
 
 import (
 	"html/template"

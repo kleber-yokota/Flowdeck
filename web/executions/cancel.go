@@ -1,4 +1,4 @@
-package web
+package executions
 
 import (
 	"net/http"
@@ -17,5 +17,5 @@ func handleCancel(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Fail(w, "cancel", err)
 		return
 	}
-	render.Partial(w, "badge.html", badgeFor(ex.ID, ex.State))
+	render.Partial(w, "badge.html", BadgeFor(ex.ID, ex.State))
 }

@@ -1,10 +1,8 @@
-// Package web is FlowDeck's HTMX presentation layer: it renders the
-// dashboard (the workflows list, from the core registry), the workflow
-// pages (the spec form, the possible paths), the dispatch (POST /run), the
-// badge (the 2s poll), the execution detail (badge + executed path +
-// resume/cancel), and the healthz. It talks to the core through core.Port
-// and to the graphs through core/graph and web/graph — it never touches
-// DBOS/Postgres.
+// Package web is the wiring of FlowDeck's HTMX presentation layer: the
+// router (the catalog routes and the execution routes each register
+// themselves in their subpackage), the healthz, the static assets, and
+// the middlewares. It talks to the core through core.Port and to the
+// graphs through core/graph and web/graph — it never touches DBOS/Postgres.
 package web
 
 import (
@@ -13,6 +11,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/executions"
 )
 
 // staticFS holds the vendored HTMX and the stylesheet (served as-is, no
@@ -32,10 +31,12 @@ func init() {
 	static = sub
 }
 
-// New wires the router: every route is wired here and nowhere else (the
-// handlers in this package), the domain conversation goes through the
-// injected Port, and the healthz goes through the injected readiness check
-// (core.Ready in production — the same single contact).
+// New wires the router: the catalog routes (the dashboard and the
+// workflow pages) and the execution routes (the dispatch, the badge, the
+// detail, the steps, the resume and the cancel) each register themselves
+// (their own subpackage), the healthz goes through the injected readiness
+// check (core.Ready in production — the same single contact), and the
+// static assets are served as-is.
 func New(p core.Port, ready func() error) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
@@ -47,24 +48,7 @@ func New(p core.Port, ready func() error) http.Handler {
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		handleWorkflowPage(w, r, p)
 	})
-	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		handleRunDispatch(w, r, p)
-	})
-	mux.HandleFunc("GET /status/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleBadge(w, r, p)
-	})
-	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleExecutionDetail(w, r, p)
-	})
-	mux.HandleFunc("GET /executions/{id}/steps", func(w http.ResponseWriter, r *http.Request) {
-		handleExecutionSteps(w, r, p)
-	})
-	mux.HandleFunc("POST /resume/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleResume(w, r, p)
-	})
-	mux.HandleFunc("POST /cancel/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleCancel(w, r, p)
-	})
+	executions.Register(mux, p)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		handleHealthz(w, ready)
 	})

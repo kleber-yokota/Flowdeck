@@ -1,14 +1,14 @@
-package web
+package executions
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/internal/webtest"
 )
 
 // Phase 5, RESUME: a failed run shows the Resume button — the re-enqueue
@@ -30,12 +30,12 @@ func TestExecutionDetailShowsResumeOnFailed(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Error},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	code, body := get(t, srv.URL+"/executions/run-failed")
+	code, body := webtest.Get(t, srv.URL+"/executions/run-failed")
 	if code != http.StatusOK {
 		t.Fatalf("status: got %d want %d", code, http.StatusOK)
 	}
@@ -63,12 +63,12 @@ func TestExecutionDetailNoResumeOnSuccess(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Success},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	code, body := get(t, srv.URL+"/executions/run-ok")
+	code, body := webtest.Get(t, srv.URL+"/executions/run-ok")
 	if code != http.StatusOK {
 		t.Fatalf("status: got %d want %d", code, http.StatusOK)
 	}
@@ -83,7 +83,7 @@ func TestResumeUnknownIs404(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
+	resp, err := webtest.Post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
 	if err != nil {
 		t.Fatalf("POST /resume: %v", err)
 	}
@@ -99,19 +99,19 @@ func TestResumeOfSuccessIs400(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/run/hello-world")
+	resp, err := webtest.Post(t, srv.URL+"/run/hello-world")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -121,7 +121,7 @@ func TestResumeOfSuccessIs400(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	resume, err := post(t, srv.URL+"/resume/"+id)
+	resume, err := webtest.Post(t, srv.URL+"/resume/"+id)
 	if err != nil {
 		t.Fatalf("POST /resume: %v", err)
 	}

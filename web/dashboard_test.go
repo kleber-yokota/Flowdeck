@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"flowdeck/core/registry"
+	"flowdeck/web/internal/webtest"
 )
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/")
+	status, body := webtest.Get(t, srv.URL+"/")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -39,12 +40,12 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 			{Name: "wf-beta"},
 		}
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = fakeLister
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows")
+	status, body := webtest.Get(t, srv.URL+"/workflows")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -55,7 +56,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 	}
 
 	// The full page does not hardcode workflow names
-	_, page := get(t, srv.URL+"/")
+	_, page := webtest.Get(t, srv.URL+"/")
 	for _, hard := range []string{"wf-alpha", "wf-beta"} {
 		if strings.Contains(page, hard) {
 			t.Errorf("page hardcodes %q", hard)
@@ -64,10 +65,10 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 }
 
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows")
+	status, body := webtest.Get(t, srv.URL+"/workflows")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
@@ -78,7 +79,7 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The fragment is dynamic: it must never be cached by the browser.
 func TestWorkflowsPartialNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(testPort(), okReady))
+	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/workflows")
@@ -100,19 +101,19 @@ func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
 	fakeLister := func() []registry.Workflow {
 		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.List = fakeLister
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
-	status, body := get(t, srv.URL+"/workflows")
+	status, body := webtest.Get(t, srv.URL+"/workflows")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
 	if !strings.Contains(body, `href="/workflows/wf-alpha"`) {
 		t.Errorf("partial does not link to the workflow page: %q", body)
 	}
-	_, page := get(t, srv.URL+"/")
+	_, page := webtest.Get(t, srv.URL+"/")
 	if strings.Contains(page, `href="/workflows/`) {
 		t.Error("page hardcodes workflow links")
 	}

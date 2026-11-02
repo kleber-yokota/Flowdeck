@@ -1,8 +1,7 @@
-package web
+package executions
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/internal/webtest"
 )
 
 // The web cancels a run from the execution page (the cancel sequence): the
@@ -33,12 +33,12 @@ func TestExecutionDetailCancelOnLiveRun(t *testing.T) {
 			RunPath: reads.RunPath{State: status.Running},
 		}, nil
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Detail = detailer
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	code, body := get(t, srv.URL+"/executions/run-live")
+	code, body := webtest.Get(t, srv.URL+"/executions/run-live")
 	if code != http.StatusOK {
 		t.Fatalf("status: got %d want %d", code, http.StatusOK)
 	}
@@ -70,12 +70,12 @@ func TestExecutionDetailNoCancelOnTerminal(t *testing.T) {
 					RunPath: reads.RunPath{State: st},
 				}, nil
 			}
-			d := testPort()
+			d := webtest.TestPort()
 			d.Detail = detailer
-			srv := httptest.NewServer(New(d, okReady))
+			srv := testServer(t, d)
 			defer srv.Close()
 
-			code, body := get(t, srv.URL+"/executions/run-terminal")
+			code, body := webtest.Get(t, srv.URL+"/executions/run-terminal")
 			if code != http.StatusOK {
 				t.Fatalf("status: got %d want %d", code, http.StatusOK)
 			}
@@ -95,12 +95,12 @@ func TestCancelUnknownIs404(t *testing.T) {
 	canceller := func(id string) (reads.Execution, error) {
 		return reads.Execution{}, reads.ErrUnknownExecution
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Cancel = canceller
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/cancel/ghost")
+	resp, err := webtest.Post(t, srv.URL+"/cancel/ghost")
 	if err != nil {
 		t.Fatalf("POST /cancel: %v", err)
 	}
@@ -116,12 +116,12 @@ func TestCancelOfNotLiveIs400(t *testing.T) {
 	canceller := func(id string) (reads.Execution, error) {
 		return reads.Execution{}, actions.ErrNotCancellable
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Cancel = canceller
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/cancel/run-settled")
+	resp, err := webtest.Post(t, srv.URL+"/cancel/run-settled")
 	if err != nil {
 		t.Fatalf("POST /cancel: %v", err)
 	}
@@ -136,12 +136,12 @@ func TestCancelCoreDownIs503(t *testing.T) {
 	canceller := func(id string) (reads.Execution, error) {
 		return reads.Execution{}, boot.ErrNotLaunched
 	}
-	d := testPort()
+	d := webtest.TestPort()
 	d.Cancel = canceller
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/cancel/run-live")
+	resp, err := webtest.Post(t, srv.URL+"/cancel/run-live")
 	if err != nil {
 		t.Fatalf("POST /cancel: %v", err)
 	}
@@ -159,21 +159,21 @@ func TestCancelBootedRunRendersCancelledBadge(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/run/pause")
+	resp, err := webtest.Post(t, srv.URL+"/run/pause")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("dispatch pause: %d, %s", resp.StatusCode, ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	// The run is live (queued/running): the detail page offers the Cancel
 	// button.
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, body := get(t, srv.URL+"/executions/"+id)
+		code, body := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(body, `hx-post="/cancel/`) {
 			break
 		}
@@ -183,11 +183,11 @@ func TestCancelBootedRunRendersCancelledBadge(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	c, err := post(t, srv.URL+"/cancel/"+id)
+	c, err := webtest.Post(t, srv.URL+"/cancel/"+id)
 	if err != nil {
 		t.Fatalf("POST /cancel: %v", err)
 	}
-	ackBody := readAll(t, c)
+	ackBody := webtest.ReadAll(t, c)
 	c.Body.Close()
 	if c.StatusCode != http.StatusOK {
 		t.Fatalf("cancel: %d, %s", c.StatusCode, ackBody)
@@ -197,7 +197,7 @@ func TestCancelBootedRunRendersCancelledBadge(t *testing.T) {
 	}
 
 	// The detail page keeps the static cancelled badge (no 2s poll).
-	code, body := get(t, srv.URL+"/executions/"+id)
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id)
 	if code != http.StatusOK {
 		t.Fatalf("detail: %d", code)
 	}

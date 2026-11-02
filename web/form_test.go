@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"flowdeck/web/internal/webtest"
 )
 
 // Phase 5, DISPLAY: the top of the workflow page is the parameter form —
@@ -14,7 +16,7 @@ func TestWorkflowPageShowsParameters(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	code, body := get(t, srv.URL+"/workflows/pipeline")
+	code, body := webtest.Get(t, srv.URL+"/workflows/pipeline")
 	if code != http.StatusOK {
 		t.Fatalf("pipeline page: %d", code)
 	}
@@ -46,7 +48,7 @@ func TestWorkflowPageHasNoStepDefaultsList(t *testing.T) {
 	defer srv.Close()
 
 	for _, name := range []string{"pipeline", "decide"} {
-		code, body := get(t, srv.URL+"/workflows/"+name)
+		code, body := webtest.Get(t, srv.URL+"/workflows/"+name)
 		if code != http.StatusOK {
 			t.Fatalf("%s page: %d", name, code)
 		}

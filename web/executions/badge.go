@@ -1,4 +1,4 @@
-package web
+package executions
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ import (
 // badge is the data for badge.html (the 2s poll fragment) and for the
 // execution rows: the state's class and label, the terminal flag (the poll
 // stops) and, on the rows, the first execution date.
-type badge struct {
+type Badge struct {
 	WorkflowID string
 	Class      string
 	Label      string
@@ -31,8 +31,8 @@ var badgeLabels = map[status.State]string{
 }
 
 // badgeFor builds the badge of a state (the poll fragment).
-func badgeFor(id string, st status.State) badge {
-	return badge{
+func BadgeFor(id string, st status.State) Badge {
+	return Badge{
 		WorkflowID: id,
 		Class:      string(st),
 		Label:      badgeLabels[st],
@@ -42,8 +42,8 @@ func badgeFor(id string, st status.State) badge {
 
 // row builds the execution row (badge + first execution date + id) — the
 // dispatch ACK and the rows of the workflow page.
-func row(ex reads.Execution) badge {
-	b := badgeFor(ex.ID, ex.State)
+func Row(ex reads.Execution) Badge {
+	b := BadgeFor(ex.ID, ex.State)
 	b.CreatedAt = ex.CreatedAt
 	return b
 }
@@ -58,5 +58,5 @@ func handleBadge(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Fail(w, "status", err)
 		return
 	}
-	render.Partial(w, "badge.html", badgeFor(id, st))
+	render.Partial(w, "badge.html", BadgeFor(id, st))
 }
