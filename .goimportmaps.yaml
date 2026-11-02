@@ -47,9 +47,9 @@ forbidden:
 metrics:
   enabled: true
   coupling:
-    max_efferent: 15      # baseline: core (15) · main (15)
-    max_afferent: 14      # baseline: core (14) · dbos (13)
+    max_efferent: 16      # baseline: main (16) — the boot wiring (flag · env · boot · core · web · workflows)
+    max_afferent: 18      # baseline: core/boot (18) — the subpackages hang off it; dbos (17)
     max_instability: 1.0  # main and the cmd/ tools are structurally 1.0
-    warn_efferent: 12     # today's hotspot: web · workflows (12)
+    warn_efferent: 11     # today's hotspot: core/boot · web/internal/webtest · web/render (11)
     warn_afferent: 9      # today's second hub: workflows/steps (9)
-    warn_instability: 0.9 # today's hotspot: web · workflows (0.92)
+    warn_instability: 0.9 # today's hotspot: workflows (0.92)
