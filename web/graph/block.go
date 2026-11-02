@@ -2,35 +2,15 @@
 // (a row of steps) and the possible paths (the block-DAG from
 // core/graph.WorkflowGraph, no execution data).
 //
-// The block layout (block.go · block_fork.go) measures and places the
-// boxes, outlines, and edges; block_svg.go emits the SVG. The geometry is
-// a function of the graph alone (the constants are shared with the
-// executed path in graph.go, so the two graphs read as one family).
+// The block layout (block.go · block_layout.go) measures and places the
+// boxes, outlines, and edges; block_svg.go emits the SVG (the entry). The
+// shared geometry (metrics.go) and the shared svg emission (svg.go) keep
+// the two graphs reading as one family.
 package graph
 
 import (
-	"html/template"
-
 	"flowdeck/core/graph"
 )
-
-// BlockToSVG renders the block tree (the possible-paths model) as the
-// block-DAG SVG. A nil tree (or an empty root) is the empty SVG.
-func BlockToSVG(wg *graph.WorkflowGraph) template.HTML {
-	if wg == nil || wg.Root == nil {
-		return template.HTML("")
-	}
-	l := &blockLayout{}
-	rootBB, rootFirst, rootLast := l.layoutColumn(wg.Root.Children, 0, graphMargin, true)
-	_ = rootFirst
-	_ = rootLast
-	// The root outline (the L0 sequence), a bit larger than the inner
-	// outlines so it never shares an edge with a block that fills the
-	// canvas (a trailing loop).
-	l.outlines = append(l.outlines, outlinePadded(rootBB, 0, false, graphRootPad))
-	l.canvas()
-	return template.HTML(l.svg())
-}
 
 // blockBox is a positioned node box.
 type blockBox struct {
@@ -96,107 +76,6 @@ func (b *bbox) fold(o *bbox) {
 	if o.has {
 		b.add(o.minX, o.minY, o.maxX, o.maxY)
 	}
-}
-
-// layoutColumn lays out the children (a vertical stack) centered at cx,
-// starting at top. When connect is true, each child connects to the
-// main-flow cursor (prev/forkPending). It returns the extent's bounding
-// box (a block's extent is its outline, a node's is its box) and the
-// first/last boxes.
-func (l *blockLayout) layoutColumn(children []graph.Child, cx, top float64, connect bool) (bb *bbox, first, last *blockBox) {
-	bb = &bbox{}
-	i := 0
-	for i < len(children) {
-		var itemBB *bbox
-		var itemFirst, itemLast *blockBox
-		if isAsyncNode(children[i]) {
-			j := i
-			for j < len(children) && isAsyncNode(children[j]) {
-				j++
-			}
-			itemBB, itemFirst, itemLast = l.placeAsyncRun(children[i:j], cx, top, connect)
-			i = j
-		} else {
-			itemBB, itemFirst, itemLast = l.placeChild(children[i], cx, top, connect)
-			i++
-		}
-		bb.fold(itemBB)
-		if first == nil {
-			first = itemFirst
-		}
-		last = itemLast
-		top = itemBB.maxY + graphRowGap
-	}
-	return bb, first, last
-}
-
-// isAsyncNode reports whether the child is an async node (a Go construct).
-func isAsyncNode(c graph.Child) bool {
-	return c.Node != nil && c.Node.Kind == graph.NodeAsync
-}
-
-// placeChild places one child (a node, an if fork, or a block) and returns
-// its bounding box and first/last boxes.
-func (l *blockLayout) placeChild(c graph.Child, cx, top float64, connect bool) (bb *bbox, first, last *blockBox) {
-	if c.Node != nil {
-		return l.placeNodeChild(c.Node, cx, top, connect)
-	}
-	if c.Block.Type == graph.BlockIf {
-		return l.placeIfChild(c.Block, cx, top, connect)
-	}
-	return l.placeBlockChild(c.Block, cx, top, connect)
-}
-
-// placeNodeChild places a single node box and connects it to the main flow.
-func (l *blockLayout) placeNodeChild(n *graph.Node, cx, top float64, connect bool) (bb *bbox, first, last *blockBox) {
-	box := l.placeNode(n, cx, top, nodeBoxW(n.Name, n.Kind))
-	if connect {
-		l.connectTo(box, box)
-	}
-	bb = &bbox{}
-	bb.add(box.x, box.y, box.x+box.w, box.y+box.h)
-	return bb, box, box
-}
-
-// placeIfChild places the if's branches (side by side) and wires the fork's
-// incoming/outgoing arrows.
-func (l *blockLayout) placeIfChild(b *graph.Block, cx, top float64, connect bool) (bb *bbox, first, last *blockBox) {
-	branchBB, branchFirsts, branchLasts := l.layoutIf(b, cx, top)
-	if connect {
-		if l.prev != nil {
-			l.forkIn(l.prev, branchFirsts)
-		}
-		l.forkPending = append(l.forkPending, branchLasts...)
-		l.prev = nil
-	}
-	return branchBB, firstOf(branchFirsts), lastOf(branchLasts)
-}
-
-// placeBlockChild places a sequence/loop/join block (recurses) and draws
-// its outline. It returns the outline's bounding box — the block's
-// visible extent, so the row gap to the next item is measured from the
-// outline, not from the content.
-func (l *blockLayout) placeBlockChild(b *graph.Block, cx, top float64, connect bool) (bb *bbox, first, last *blockBox) {
-	contentBB, subFirst, subLast := l.layoutColumn(b.Children, cx, top, connect)
-	o := outlineOf(contentBB, b.Level, b.Type == graph.BlockLoop)
-	l.outlines = append(l.outlines, o)
-	bb = &bbox{}
-	bb.add(o.x, o.y, o.x+o.w, o.y+o.h)
-	return bb, subFirst, subLast
-}
-
-func firstOf(boxes []*blockBox) *blockBox {
-	if len(boxes) > 0 {
-		return boxes[0]
-	}
-	return nil
-}
-
-func lastOf(boxes []*blockBox) *blockBox {
-	if len(boxes) > 0 {
-		return boxes[len(boxes)-1]
-	}
-	return nil
 }
 
 // connectTo draws the arrow into first (from each forkPending box, or from
@@ -288,5 +167,21 @@ func (l *blockLayout) canvas() {
 	for i := range l.asyncMarks {
 		l.asyncMarks[i].x -= shiftX
 		l.asyncMarks[i].y -= shiftY
+	}
+}
+
+// outlineOf is the padded outline of a content's bounding box (the
+// inner-block padding).
+func outlineOf(bb *bbox, level int, isLoop bool) blockOutline {
+	return outlinePadded(bb, level, isLoop, graphPadX)
+}
+
+// outlinePadded is the outline of a bounding box, padded: the L0 root
+// outline (a bit larger) clears the inner blocks.
+func outlinePadded(bb *bbox, level int, isLoop bool, pad float64) blockOutline {
+	return blockOutline{
+		x: bb.minX - pad, y: bb.minY - pad,
+		w: (bb.maxX - bb.minX) + 2*pad, h: (bb.maxY - bb.minY) + 2*pad,
+		level: level, isLoop: isLoop,
 	}
 }

@@ -1,6 +1,5 @@
-// block_svg.go emits the block-DAG SVG: the outline geometry (the L0 root
-// outline clears the inner blocks), the boxes with their kind symbols and
-// the edges.
+// block_svg.go is the block-DAG entry and SVG emission: BlockToSVG, the
+// boxes with their kind symbols, the edges, and the loop symbols.
 package graph
 
 import (
@@ -13,16 +12,22 @@ import (
 	"flowdeck/core/graph"
 )
 
-func outlineOf(bb *bbox, level int, isLoop bool) blockOutline {
-	return outlinePadded(bb, level, isLoop, graphPadX)
-}
-
-func outlinePadded(bb *bbox, level int, isLoop bool, pad float64) blockOutline {
-	return blockOutline{
-		x: bb.minX - pad, y: bb.minY - pad,
-		w: (bb.maxX - bb.minX) + 2*pad, h: (bb.maxY - bb.minY) + 2*pad,
-		level: level, isLoop: isLoop,
+// BlockToSVG renders the block tree (the possible-paths model) as the
+// block-DAG SVG. A nil tree (or an empty root) is the empty SVG.
+func BlockToSVG(wg *graph.WorkflowGraph) template.HTML {
+	if wg == nil || wg.Root == nil {
+		return template.HTML("")
 	}
+	l := &blockLayout{}
+	rootBB, rootFirst, rootLast := l.layoutColumn(wg.Root.Children, 0, graphMargin, true)
+	_ = rootFirst
+	_ = rootLast
+	// The root outline (the L0 sequence), a bit larger than the inner
+	// outlines so it never shares an edge with a block that fills the
+	// canvas (a trailing loop).
+	l.outlines = append(l.outlines, outlinePadded(rootBB, 0, false, graphRootPad))
+	l.canvas()
+	return template.HTML(l.svg())
 }
 
 // svg emits the block-DAG SVG: the outlines under the boxes, the boxes with

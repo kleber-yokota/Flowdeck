@@ -1,7 +1,3 @@
-// Package graph is the SVG layout of the paths graphs: the possible-paths
-// map (phase 4, STEP 2) and the executed path of a run (phase 4, STEP 3)
-// share the same drawing — one rect per step and one arrow per
-// continuation, the if forks the branches.
 package graph
 
 import (
@@ -45,19 +41,6 @@ type graphNode struct {
 	children []graphNode
 }
 
-// The graph metrics (px): 14px monospace text, ~0.6x the font per char.
-const (
-	graphCharW     = 8.4
-	graphPadX      = 14.0 // the inner block outline padding
-	graphRootPad   = 20.0 // the root (L0) outline padding: it clears the inner outlines
-	graphNodeH     = 36.0
-	graphColGap    = 44.0
-	graphRowGap    = 24.0
-	graphMargin    = 12.0
-	graphCanvasPad = 2.0  // room for the outline stroke beyond the L0 outline
-	graphSymW      = 20.0 // the child/wait symbol zone on the box's right
-)
-
 func newGraphLayout(roots []pathNode) *graphLayout {
 	g := &graphLayout{}
 	colW, rowH := g.measure(roots)
@@ -73,7 +56,7 @@ func (g *graphLayout) measure(roots []pathNode) (colW, rowH float64) {
 	leaves := 0
 	var m func(n pathNode, depth int)
 	m = func(n pathNode, depth int) {
-		w := graphCharW*float64(len(n.Step)) + 2*graphPadX
+		w := baseBoxW(n.Step)
 		if w > maxW {
 			maxW = w
 		}
@@ -110,7 +93,7 @@ func (g *graphLayout) place(roots []pathNode, colW, rowH float64) []graphNode {
 		node := graphNode{
 			step:  n.Step,
 			state: n.State,
-			w:     graphCharW*float64(len(n.Step)) + 2*graphPadX,
+			w:     baseBoxW(n.Step),
 			x:     graphMargin + float64(depth)*colW,
 		}
 		node.x += node.w / 2

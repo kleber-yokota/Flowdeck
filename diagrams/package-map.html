@@ -179,8 +179,8 @@
         <text x="740" y="524" text-anchor="middle">web/graph</text>
         <rect class="badge-bg" x="804" y="506" width="70" height="14"></rect>
         <text class="fan" x="839" y="516" text-anchor="middle">FAN-IN 2</text>
-        <text x="740" y="542" text-anchor="middle" class="fn">graph.go · block.go · block_fork.go</text>
-        <text x="740" y="556" text-anchor="middle" class="fn">block_svg.go · svg.go</text>
+        <text x="740" y="542" text-anchor="middle" class="fn">graph.go · block.go · block_layout.go</text>
+        <text x="740" y="556" text-anchor="middle" class="fn">block_svg.go · metrics.go · svg.go</text>
         <text x="740" y="570" text-anchor="middle" class="fn">BlockToSVG · ExecutedPathToSVG</text>
         <text x="740" y="584" text-anchor="middle" class="fn">blockLayout · graphLayout · 1.25× scale</text>
       </g>
@@ -254,7 +254,7 @@
           </tr>
           <tr>
             <td><code>web/graph → core/graph</code></td>
-            <td><code>block.go</code> · <code>BlockToSVG</code></td>
+            <td><code>block_svg.go</code> · <code>BlockToSVG</code> · <code>block_layout.go</code> · <code>block.go</code> · <code>metrics.go</code></td>
             <td><code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code> · <code>graph.Node</code> · <code>graph.NodeKind</code> · <code>graph.BlockType</code> (the stored block model)</td>
           </tr>
           <tr>
@@ -1226,23 +1226,28 @@
         <tbody>
           <tr>
             <td><code>block.go</code></td>
-            <td>Block-DAG layout: main-flow cursor · nodes boxed · async runs side-by-side · canvas (rows from the visible extents; the root outline clears the inner blocks)</td>
-            <td><code>BlockToSVG</code> · <code>blockLayout</code> · <code>layoutColumn</code> · <code>placeChild</code> · <code>placeAsyncRun</code> · <code>connectTo</code> · <code>canvas</code></td>
+            <td>The block-DAG model + node placement: the measured boxes · async runs side-by-side (the ∥ marks) · the outline geometry (the root outline clears the inner blocks) · canvas</td>
+            <td><code>blockLayout</code> · <code>placeNode</code> · <code>placeAsyncRun</code> · <code>connectTo</code> · <code>outlineOf</code> · <code>outlinePadded</code> · <code>canvas</code></td>
           </tr>
           <tr>
-            <td><code>block_fork.go</code></td>
-            <td>If-fork: equal-width branches · the skip branch forks as arrows · the width metrics · the fork wiring (the incoming arrows)</td>
-            <td><code>layoutIf</code> · <code>forkMaxWidth</code> · <code>ifBranches</code> · <code>measureContentWidth</code> · <code>nodeBoxW</code> · <code>forkIn</code></td>
+            <td><code>block_layout.go</code></td>
+            <td>The recursive block-DAG layout: the main-flow cursor (the vertical stack · the child dispatch) · if-fork (equal-width branches · the skip branch forks as arrows · the width metrics · the fork wiring)</td>
+            <td><code>layoutColumn</code> · <code>placeChild</code> · <code>layoutIf</code> · <code>forkMaxWidth</code> · <code>ifBranches</code> · <code>measureContentWidth</code> · <code>forkIn</code></td>
           </tr>
           <tr>
             <td><code>block_svg.go</code></td>
-            <td>Block-DAG SVG emission: the level-ramp outlines · the type symbols (∥ async · ◉ child · … wait · the loop arc) · the edges</td>
-            <td><code>outlinePadded</code> · <code>svg</code> · <code>levelClass</code></td>
+            <td>Block-DAG entry + SVG emission: the root outline (clears the inner blocks) · the level-ramp outlines · the type symbols (∥ async · ◉ child · … wait · the loop arc) · the edges</td>
+            <td><code>BlockToSVG</code> · <code>svg</code> · <code>levelClass</code></td>
           </tr>
           <tr>
             <td><code>graph.go</code></td>
             <td>Executed-path layout + SVG (status colors; the child row renders the child's name + the child's live badge)</td>
             <td><code>ExecutedPathToSVG</code> · <code>graphLayout</code> · <code>newGraphLayout</code> · <code>measure</code> · <code>place</code> · <code>svg</code></td>
+          </tr>
+          <tr>
+            <td><code>metrics.go</code></td>
+            <td>The shared geometry of the two graphs: the char width · the paddings and gaps · the canvas pad · the box widths (base + the child/wait symbol zone)</td>
+            <td><code>baseBoxW</code> · <code>nodeBoxW</code></td>
           </tr>
           <tr>
             <td><code>svg.go</code></td>
@@ -1283,7 +1288,7 @@
           </tr>
           <tr>
             <td><a href="#package-graph">core/graph</a> →</td>
-            <td>block.go · <code>BlockToSVG</code></td>
+            <td><code>block_svg.go</code> · <code>BlockToSVG</code> · <code>metrics.go</code> · <code>nodeBoxW</code></td>
             <td><code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code> · <code>graph.Node</code> · <code>graph.NodeKind</code> · <code>graph.BlockType</code> (the stored block model)</td>
           </tr>
           <tr>
