@@ -1,0 +1,41 @@
+# The import contract — the machine-readable twin of the package map's
+# contacts table (diagrams/package-map.html).
+#
+# Rules are regexes matched against the full import path:
+#   source  regex of the importing package
+#   imports regexes of the forbidden imports
+# Gate: scripts/structure-gate.sh (step 5) — `goimportmaps check ./...`.
+# Adding a contact that is not listed here (or that is forbidden below)
+# fails CI; fix the code or redraw the contact, never both silently.
+
+forbidden:
+  # core is the contract under web: it never reaches sideways or up.
+  - source: ^flowdeck/core$
+    imports:
+      - ^flowdeck/web
+      - ^flowdeck/workflows
+  # the leaves import nothing internal (a verified fact in the map).
+  - source: ^flowdeck/core/(graph|status)$
+    imports:
+      - ^flowdeck
+  # web renders; it does not execute — no workflow code.
+  - source: ^flowdeck/web
+    imports:
+      - ^flowdeck/workflows
+  # workflows execute; they do not render — no web.
+  - source: ^flowdeck/workflows
+    imports:
+      - ^flowdeck/web
+
+# Coupling thresholds for the metrics SIGNAL (`goimportmaps ./... --metrics`).
+# The signal never fails; it flags packages drifting past these lines so the
+# agent sees a fan-out or instability drift before it becomes a god package.
+metrics:
+  enabled: true
+  coupling:
+    max_efferent: 18      # today's max is core (15)
+    max_afferent: 15
+    max_instability: 1.0  # main and the cmd/ tools are legitimately 1.0
+    warn_efferent: 12
+    warn_afferent: 10
+    warn_instability: 0.9
