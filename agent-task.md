@@ -22,13 +22,32 @@ The surface of the execution is exactly:
   code files under "Files")
 - `tasks/fact.md` — the live fact file of the set (Fact · Evidence ·
   Validated)
+- `code.md` — the structural law the run follows
 
-Nothing else is read, nothing outside is changed. No refactors, no new
-abstractions, no drive-by fixes. The context is clean: every run starts from
-zero — the files are read in their **current state** (no git history, no
-archaeology, no previous conversation). The last task of the set references
+Nothing else is read, nothing outside is changed. A refactor — a file
+split, a package drawn, a contract moved or broken — happens only when the
+task file declares it, and then it runs under `code.md` step 6: every
+draw and break names the intention it serves, and every break point it
+causes (call sites, tests, the map) is repaired in the same green sequence.
+Otherwise: no refactors, no new abstractions, no drive-by fixes. The
+context is clean: every run starts from zero — the files are read in their
+**current state** (no git history, no archaeology, no previous
+conversation). The last task of the set references
 `diagrams/package-map.html` in its own Files — the map is touched there and
 only there.
+
+## Structure (code.md binds the run)
+
+The run reads `code.md` once and follows it without being asked:
+
+- **Files** — one file, one responsibility, named for the behavior it
+  owns; a file over 300 lines splits, as its own green step.
+- **Moves** — a move is preferred over an in-place edit: it is trivially
+  green, and it is the shape that keeps the next change small.
+- **Packages** — the run adds none: a package edge appears only in an
+  explicit refactor task (`code.md` step 6).
+- **Tests** — one file, one intention, named for the intention; the kinds
+  follow the table (unit · contract · e2e · harness · spike · fact-pin).
 
 ## Trust (anti-reread — the rules that keep the run short)
 
