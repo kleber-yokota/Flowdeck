@@ -1,6 +1,9 @@
+// Package core is the DBOS side of FlowDeck: the Port (the single contract
+// the web talks to) and its implementation.
 package core
 
 import (
+	"flowdeck/core/boot"
 	"flowdeck/core/graph"
 	"flowdeck/core/status"
 )
@@ -63,9 +66,7 @@ type Port struct {
 // captured at this call — wire the port after Boot; before it, the port
 // carries the empty graph (Of returns nil).
 func NewPort() Port {
-	theCore.mu.RLock()
-	g := theCore.paths
-	theCore.mu.RUnlock()
+	g := boot.Paths()
 	if g == nil {
 		g = &graph.PathGraph{} // not booted yet: the empty graph — Of returns nil
 	}

@@ -1,11 +1,11 @@
-// Package core is the DBOS side of FlowDeck — the process-wide singleton
-// that owns the DBOS context and the single queue: the lifecycle (the
-// env-driven init · Launch · Shutdown · Ready · Ctx), the registry read
-// (List), the dispatch (Enqueue), the run reads (Status · Executions ·
-// Detail · Steps), the parameter spec (Spec), resume (Resume), cancel
-// (Cancel) — and the Port, the single contact the web talks to. The
-// workflow packages register their workflows on it via Ctx.
-package core
+// Package boot is the DBOS root of the core: the process-wide singleton
+// that owns the DBOS context and the single queue — the env-driven init
+// (the context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL), Launch
+// (the executor, the queue registration, the registry verification),
+// Shutdown, the readiness contact (Ready) and Ctx (the contact the
+// workflow files use to register their workflows). The paths graph
+// (SetWorkflowsSource) is the boot map the whole core reads from it.
+package boot
 
 import (
 	"context"
@@ -158,15 +158,24 @@ func Ctx() dbos.Context {
 	return theCore.dbosCtx
 }
 
-// ctxOrErr returns the live DBOS context, or ErrNotLaunched — the read
-// guard of every query (the core must be booted and launched).
-func ctxOrErr() (dbos.Context, error) {
+// CtxOrErr returns the live DBOS context, or ErrNotLaunched — the read
+// guard of every query in the core (the core must be booted and launched).
+func CtxOrErr() (dbos.Context, error) {
 	theCore.mu.RLock()
 	defer theCore.mu.RUnlock()
 	if !theCore.booted || !theCore.launched || theCore.dbosCtx == nil {
 		return nil, ErrNotLaunched
 	}
 	return theCore.dbosCtx, nil
+}
+
+// Paths returns the possible-paths graph (nil before SetWorkflowsSource,
+// and nil after Shutdown). The graph is immutable once built — the
+// readers map-lookup it directly.
+func Paths() *graph.PathGraph {
+	theCore.mu.RLock()
+	defer theCore.mu.RUnlock()
+	return theCore.paths
 }
 
 // Ready reports whether the core is booted and launched — the health

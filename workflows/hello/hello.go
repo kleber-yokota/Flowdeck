@@ -5,7 +5,7 @@ package hello
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/workflows/steps"
 )
 
@@ -14,11 +14,11 @@ import (
 const defaultMsg = "FlowDeck"
 
 // Registers the hello-world workflow in the core DBOS context — the
-// context is up since core's init (dependency order: core before this
+// context is up since boot's init (dependency order: core before this
 // package). With no env (unit tests, tools) the context is nil and the
 // registration is skipped.
 func init() {
-	if c := core.Ctx(); c != nil {
+	if c := boot.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, HelloWorld,
 			dbos.WithWorkflowName("hello-world"),
 			dbos.WithMaxRecoveryAttempts(3),

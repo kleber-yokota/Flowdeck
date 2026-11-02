@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 )
 
 // fail maps a core error onto the HTTP error response: 404 for a workflow
@@ -24,7 +25,7 @@ func fail(w http.ResponseWriter, op string, err error) {
 		http.Error(w, "run cannot be resumed", http.StatusBadRequest)
 	case errors.Is(err, core.ErrNotCancellable):
 		http.Error(w, "run cannot be cancelled", http.StatusBadRequest)
-	case errors.Is(err, core.ErrNotLaunched):
+	case errors.Is(err, boot.ErrNotLaunched):
 		http.Error(w, "core not ready", http.StatusServiceUnavailable)
 	default:
 		slog.Error(op, "err", err)

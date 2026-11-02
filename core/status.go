@@ -6,6 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -34,7 +35,7 @@ func listByID(c dbos.Context, workflowID string) ([]dbos.WorkflowStatus, error) 
 // and swaps the badge. Nothing is executed here — the DBOS executor owns
 // the run, this only observes its durable state in the system database.
 func Status(workflowID string) (status.State, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return "", err
 	}

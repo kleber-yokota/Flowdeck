@@ -1,6 +1,6 @@
 // Package workflows holds the durable workflows: one subpackage per
 // workflow (workflows/<name>/ — its own folder, its own file, its own init
-// registering on the core DBOS context, core.Ctx()) and the shared step
+// registering on the core DBOS context, boot.Ctx()) and the shared step
 // functions (workflows/steps/, the leaf of the tree: imported by the
 // workflow subpackages, no workflow in it).
 //

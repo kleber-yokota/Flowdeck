@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/graph"
 	"flowdeck/core/status"
 )
@@ -175,7 +176,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 		return []core.Workflow{{Name: "wf-alpha"}}
 	}
 	downExecutions := func(name string) ([]core.Execution, error) {
-		return nil, core.ErrNotLaunched
+		return nil, boot.ErrNotLaunched
 	}
 	d := testPort()
 	d.List = fakeLister

@@ -7,7 +7,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/workflows/steps"
 )
 
@@ -18,7 +18,7 @@ const defaultMsg = "FlowDeck"
 // Registers the loop workflow in the core DBOS context. With no env (unit
 // tests, tools) the context is nil and the registration is skipped.
 func init() {
-	if c := core.Ctx(); c != nil {
+	if c := boot.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, Loop,
 			dbos.WithWorkflowName("loop"),
 			dbos.WithMaxRecoveryAttempts(3),

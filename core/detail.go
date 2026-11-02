@@ -9,6 +9,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -52,7 +53,7 @@ type DetailPath struct {
 // status, retries, error, the stored input) and the step rows (SELECT
 // STEPS · id: the step that errored, on failure, and the executed path).
 func Detail(workflowID string) (DetailPath, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return DetailPath{}, err
 	}

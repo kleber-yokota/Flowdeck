@@ -5,7 +5,7 @@ package decide
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/workflows/steps"
 )
 
@@ -14,11 +14,11 @@ import (
 const defaultMsg = "FlowDeck"
 
 // Registers the decide workflow in the core DBOS context — the context is
-// up since core's init (dependency order: core before this package). With
+// up since boot's init (dependency order: core before this package). With
 // no env (unit tests, tools) the context is nil and the registration is
 // skipped.
 func init() {
-	if c := core.Ctx(); c != nil {
+	if c := boot.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, Decide,
 			dbos.WithWorkflowName("decide"),
 			dbos.WithMaxRecoveryAttempts(3),

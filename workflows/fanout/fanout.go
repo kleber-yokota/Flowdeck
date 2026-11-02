@@ -7,7 +7,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 )
 
 // defaultMsg is the default value of the fanout workflow's msg input (the
@@ -17,7 +17,7 @@ const defaultMsg = "FlowDeck"
 // Registers the fanout workflow in the core DBOS context. With no env (unit
 // tests, tools) the context is nil and the registration is skipped.
 func init() {
-	if c := core.Ctx(); c != nil {
+	if c := boot.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, Fanout,
 			dbos.WithWorkflowName("fanout"),
 			dbos.WithMaxRecoveryAttempts(3),

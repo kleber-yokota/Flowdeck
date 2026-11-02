@@ -6,6 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -19,7 +20,7 @@ var ErrNotResumable = errors.New("core: run cannot be resumed")
 // restarts from the last completed step. The ACK is the row read back:
 // the same id, now enqueued again.
 func Resume(workflowID string) (Execution, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return Execution{}, err
 	}
@@ -30,7 +31,7 @@ func Resume(workflowID string) (Execution, error) {
 	if st != status.Error {
 		return Execution{}, fmt.Errorf("%w: state %s", ErrNotResumable, st)
 	}
-	if _, err := dbos.ResumeWorkflow[any](c, workflowID, dbos.WithResumeQueue(QueueName)); err != nil {
+	if _, err := dbos.ResumeWorkflow[any](c, workflowID, dbos.WithResumeQueue(boot.QueueName)); err != nil {
 		return Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
 	}
 	return resumeAck(c, workflowID)

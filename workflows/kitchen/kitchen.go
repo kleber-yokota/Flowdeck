@@ -9,7 +9,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/workflows/pipeline"
 	"flowdeck/workflows/steps"
 )
@@ -21,7 +21,7 @@ const defaultMsg = "FlowDeck"
 // Registers the kitchen workflow in the core DBOS context. With no env (unit
 // tests, tools) the context is nil and the registration is skipped.
 func init() {
-	if c := core.Ctx(); c != nil {
+	if c := boot.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, Kitchen,
 			dbos.WithWorkflowName("kitchen"),
 			dbos.WithMaxRecoveryAttempts(3),

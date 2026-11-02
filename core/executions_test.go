@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"flowdeck/core"
+	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
 	"testing"
 )
@@ -10,12 +11,12 @@ import (
 // the run I enqueued is in the list, with its final state (the assertions
 // filter by id — the test database may hold runs from other tests).
 func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("hello-world", "one")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
 	list, err := core.Executions("hello-world")
@@ -39,7 +40,7 @@ func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 
 // Executions of a name with no runs is empty (no error).
 func TestExecutionsUnknownWorkflowIsEmpty(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	list, err := core.Executions("no-such-workflow")
 	if err != nil {
 		t.Fatalf("Executions: %v", err)

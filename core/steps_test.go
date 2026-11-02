@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
 )
 
@@ -16,12 +17,12 @@ import (
 // RunWorkflow dispatch: the row's name is the child workflow's name and it
 // never completes; the wait row does).
 func TestStepsOfKitchenRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("kitchen", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
 	path, err := core.Steps(ex.ID)
@@ -73,7 +74,7 @@ func TestStepsOfKitchenRun(t *testing.T) {
 // A run the core does not know errors with ErrUnknownExecution (the web
 // maps it to a 404).
 func TestStepsOfUnknownExecution(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	if _, err := core.Steps("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
 		t.Fatalf("Steps unknown: got %v, want ErrUnknownExecution", err)
 	}

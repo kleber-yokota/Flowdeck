@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 )
 
 // The health endpoint mirrors the core: 200 when the core is up,
@@ -17,7 +17,7 @@ func TestHealthz(t *testing.T) {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
 
-	down := httptest.NewServer(New(testPort(), func() error { return core.ErrNotLaunched }))
+	down := httptest.NewServer(New(testPort(), func() error { return boot.ErrNotLaunched }))
 	defer down.Close()
 	if status, _ := get(t, down.URL+"/healthz"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)

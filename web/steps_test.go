@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -138,7 +139,7 @@ func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) { return core.RunPath{}, core.ErrNotLaunched }
+	d.Steps = func(id string) (core.RunPath, error) { return core.RunPath{}, boot.ErrNotLaunched }
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 

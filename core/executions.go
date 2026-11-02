@@ -6,6 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -22,7 +23,7 @@ type Execution struct {
 // LIST: GET /workflows/{name} → LIST(name) → the web renders one row per
 // run: workflow ID + badge).
 func Executions(name string) ([]Execution, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return nil, err
 	}

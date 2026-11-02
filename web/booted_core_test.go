@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 )
 
 // The booted-core tests (no stubs): the core is up from the environment
@@ -18,7 +19,7 @@ import (
 func bootedTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	needCore(t)
-	return httptest.NewServer(New(core.NewPort(), core.Ready))
+	return httptest.NewServer(New(core.NewPort(), boot.Ready))
 }
 
 // The workflow pages of a booted core (phase 1 + 4, STEP 2): the registry

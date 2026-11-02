@@ -3,6 +3,7 @@ package core_test
 import (
 	"errors"
 	"flowdeck/core"
+	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ import (
 // the run used (the input is written once at enqueue, immutable per
 // workflow_id).
 func TestDetailShowsInputValues(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -32,7 +33,7 @@ func TestDetailShowsInputValues(t *testing.T) {
 // A struct input shows one value per field (the map the core enqueued,
 // stored by DBOS).
 func TestDetailShowsStructInputValues(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("schedule", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -53,12 +54,12 @@ func TestDetailShowsStructInputValues(t *testing.T) {
 }
 
 func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	st, err := pollState(t, ex.ID, status.Error)
+	st, err := testcore.PollState(t, ex.ID, status.Error)
 	if err != nil {
 		t.Fatalf("poll to error: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 // A run the core does not know errors with ErrUnknownExecution (the web
 // maps it to a 404).
 func TestDetailOfUnknownExecution(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	if _, err := core.Detail("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
 		t.Fatalf("Detail unknown: got %v, want ErrUnknownExecution", err)
 	}

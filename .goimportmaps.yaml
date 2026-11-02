@@ -14,10 +14,21 @@ forbidden:
     imports:
       - ^flowdeck/web
       - ^flowdeck/workflows
+  # the core subpackages (boot · registry · reads · actions) implement the
+  # Port behind the scenes: they never import the core root back (the root
+  # imports them — the direction of the Port).
+  - source: ^flowdeck/core/(boot|registry|reads|actions)(/.*)?$
+    imports:
+      - ^flowdeck/core$
   # the leaves import nothing internal (a verified fact in the map).
   - source: ^flowdeck/core/(graph|status)$
     imports:
       - ^flowdeck
+  # the web subpackages (executions · catalog · render) hang off the web
+  # root (it wires them): they never import the root back.
+  - source: ^flowdeck/web/
+    imports:
+      - ^flowdeck/web$
   # web renders; it does not execute — no workflow code.
   - source: ^flowdeck/web
     imports:

@@ -7,6 +7,8 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
+	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
 )
 
@@ -18,7 +20,7 @@ import (
 // The cancel of an id that is not known by the core errors with
 // ErrUnknownExecution (the web maps it to a 404).
 func TestCancelUnknownExecution(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	if _, err := core.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
 		t.Fatalf("Cancel unknown: got %v, want ErrUnknownExecution", err)
 	}
@@ -27,12 +29,12 @@ func TestCancelUnknownExecution(t *testing.T) {
 // The cancel of a run that is not live (here: success) errors with
 // ErrNotCancellable (the web maps it to a 400).
 func TestCancelOfNotLiveRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
 	if _, err := core.Cancel(ex.ID); !errors.Is(err, core.ErrNotCancellable) {
@@ -44,11 +46,11 @@ func TestCancelOfNotLiveRun(t *testing.T) {
 // polls (worker concurrency 0), so the queued state is deterministic — the
 // executor never claims it. The ACK is the same id, now cancelled.
 func TestCancelQueuedRun(t *testing.T) {
-	needCore(t)
-	if _, err := dbos.RegisterQueue(core.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
+	testcore.NeedCore(t)
+	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := core.Ctx().Enqueue(core.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -79,12 +81,12 @@ func TestCancelQueuedRun(t *testing.T) {
 // the step — the running step completes in-process but the row stays
 // CANCELLED). The ACK is the same id, now cancelled.
 func TestCancelRunningRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	st, err := pollState(t, ex.ID, status.Running)
+	st, err := testcore.PollState(t, ex.ID, status.Running)
 	if err != nil {
 		t.Fatalf("poll to running: %v", err)
 	}

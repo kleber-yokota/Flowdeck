@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/graph"
 )
 
@@ -18,14 +19,13 @@ func Spec(name string) (graph.Spec, error) {
 	return spec, nil
 }
 
-// specOf is the locked lookup of a workflow's spec (no source set yet, or
-// the name is not in the source).
+// specOf is the lookup of a workflow's spec (no source set yet, or the
+// name is not in the source).
 func specOf(name string) (graph.Spec, bool) {
-	theCore.mu.RLock()
-	defer theCore.mu.RUnlock()
-	if theCore.paths == nil {
+	g := boot.Paths()
+	if g == nil {
 		return graph.Spec{}, false
 	}
-	spec, ok := theCore.paths.Specs[name]
+	spec, ok := g.Specs[name]
 	return spec, ok
 }

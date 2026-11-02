@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -132,7 +133,7 @@ func TestCancelOfNotLiveIs400(t *testing.T) {
 // A core that is down maps to a clean 503.
 func TestCancelCoreDownIs503(t *testing.T) {
 	canceller := func(id string) (core.Execution, error) {
-		return core.Execution{}, core.ErrNotLaunched
+		return core.Execution{}, boot.ErrNotLaunched
 	}
 	d := testPort()
 	d.Cancel = canceller

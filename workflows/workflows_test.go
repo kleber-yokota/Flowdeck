@@ -7,17 +7,18 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
-// The workflows run through the env-driven core: core.init() created the
+// The workflows run through the env-driven core: boot.init() created the
 // DBOS context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL (see
 // .env.test), this package's inits registered the workflows, and the
 // TestMain starts the executor once — the same lifecycle as production.
 func TestMain(m *testing.M) {
-	core.SetWorkflowsSource(os.DirFS("."))
-	if c := core.Ctx(); c != nil {
-		if err := core.Launch(); err != nil {
+	boot.SetWorkflowsSource(os.DirFS("."))
+	if c := boot.Ctx(); c != nil {
+		if err := boot.Launch(); err != nil {
 			fmt.Fprintln(os.Stderr, "workflows_test: launch:", err)
 			os.Exit(1)
 		}
@@ -29,7 +30,7 @@ func TestMain(m *testing.M) {
 // vars were not exported before the test binary started).
 func needCore(t *testing.T) {
 	t.Helper()
-	if core.Ctx() == nil {
+	if boot.Ctx() == nil {
 		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
 	}
 }

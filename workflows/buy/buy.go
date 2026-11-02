@@ -8,7 +8,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/boot"
 )
 
 // defaultMsg is the default value of the buy workflow's msg input
@@ -16,11 +16,11 @@ import (
 const defaultMsg = "FlowDeck"
 
 // Registers the buy workflow in the core DBOS context — the context is up
-// since core's init (dependency order: core before this package). With no
+// since boot's init (dependency order: core before this package). With no
 // env (unit tests, tools) the context is nil and the registration is
 // skipped.
 func init() {
-	if c := core.Ctx(); c != nil {
+	if c := boot.Ctx(); c != nil {
 		dbos.RegisterWorkflow(c, Buy,
 			dbos.WithWorkflowName("buy"),
 			dbos.WithMaxRecoveryAttempts(3),

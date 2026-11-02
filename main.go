@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/web"
 
 	_ "flowdeck/workflows" // the workflow files register themselves in the core DBOS context (init); zz_generated.go pulls in every subpackage
@@ -91,19 +92,19 @@ func run() error {
 	// SIGINT + SIGTERM (docker compose stop) → clean shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	defer core.Shutdown(cfg.coreTimeout)
+	defer boot.Shutdown(cfg.coreTimeout)
 
 	// The possible-paths graph (phase 4, STEP 1): parse the embedded
 	// workflows source (each file's RegisterWorkflow + the workflow funcs),
 	// once, before the web serves it.
-	if err := core.SetWorkflowsSource(workflowsSource); err != nil {
+	if err := boot.SetWorkflowsSource(workflowsSource); err != nil {
 		return err
 	}
 
 	// The core DBOS context is up since core's init (env), and the workflow
 	// files registered their workflows there in their init — Launch starts
 	// the executor.
-	if err := core.Launch(); err != nil {
+	if err := boot.Launch(); err != nil {
 		return err
 	}
 	slog.Info("core DBOS is up")
@@ -118,7 +119,7 @@ func run() error {
 	// and dispatches through it (enqueue → DBOS queue)
 	srv := &http.Server{
 		Addr:              cfg.httpAddr,
-		Handler:           web.New(core.NewPort(), core.Ready),
+		Handler:           web.New(core.NewPort(), boot.Ready),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      10 * time.Second,

@@ -5,6 +5,8 @@ import (
 	"sort"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/boot"
 )
 
 // ErrUnknownWorkflow is returned when the name is not in the registry — by
@@ -22,9 +24,7 @@ type Workflow struct {
 // It returns nil if the core is not booted (or is shutting down): the web
 // then renders its "No workflows registered" empty state.
 func List() []Workflow {
-	theCore.mu.RLock()
-	c := theCore.dbosCtx
-	theCore.mu.RUnlock()
+	c := boot.Ctx()
 	if c == nil {
 		return nil
 	}

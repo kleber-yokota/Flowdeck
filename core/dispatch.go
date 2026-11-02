@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+	"flowdeck/core/boot"
 )
 
 // Enqueue puts a run of the named workflow onto the DBOS queue and returns
@@ -15,7 +17,7 @@ import (
 // payload is the zero payload (a dispatch without a form — the SDK decodes
 // the stored "null" back into the zero value at run time).
 func Enqueue(name string, payload any) (Execution, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return Execution{}, err
 	}
@@ -31,7 +33,7 @@ func Enqueue(name string, payload any) (Execution, error) {
 // execution (id + state + created_at) — the dispatch ACK: the web renders
 // the "queued" row with it, and nothing is executed by the webserver.
 func dispatch(ctx dbos.Context, name string, payload any) (Execution, error) {
-	handle, err := ctx.Enqueue(ctx, QueueName, name, payload)
+	handle, err := ctx.Enqueue(ctx, boot.QueueName, name, payload)
 	if err != nil {
 		return Execution{}, fmt.Errorf("core: enqueue %s: %w", name, err)
 	}

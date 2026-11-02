@@ -6,6 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -20,7 +21,7 @@ var ErrNotCancellable = errors.New("core: run cannot be cancelled")
 // stops at the next step), and the ACK reads the row back — the same id,
 // now cancelled.
 func Cancel(workflowID string) (Execution, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return Execution{}, err
 	}

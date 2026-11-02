@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -125,7 +126,7 @@ func TestStatusUnknownExecutionIs404(t *testing.T) {
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStatusCoreDownIs503(t *testing.T) {
 	statuser := func(workflowID string) (status.State, error) {
-		return "", core.ErrNotLaunched
+		return "", boot.ErrNotLaunched
 	}
 	d := testPort()
 	d.Status = statuser

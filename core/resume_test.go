@@ -7,6 +7,8 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
+	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
 )
 
@@ -16,7 +18,7 @@ import (
 // Resume of an id that is not known by the core errors with
 // ErrUnknownExecution (the web maps it to a 404).
 func TestResumeUnknownExecution(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	if _, err := core.Resume("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
 		t.Fatalf("Resume unknown: got %v, want ErrUnknownExecution", err)
 	}
@@ -25,12 +27,12 @@ func TestResumeUnknownExecution(t *testing.T) {
 // Resume of a run that is not failed (here: success) errors with
 // ErrNotResumable (the web maps it to a 400).
 func TestResumeOfNotFailedRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
 	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
@@ -43,11 +45,11 @@ func TestResumeOfNotFailedRun(t *testing.T) {
 // queue no executor worker polls (worker concurrency 0), so the queued
 // state is deterministic — the executor never claims it.
 func TestResumeOfQueuedRun(t *testing.T) {
-	needCore(t)
-	if _, err := dbos.RegisterQueue(core.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
+	testcore.NeedCore(t)
+	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := core.Ctx().Enqueue(core.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -67,19 +69,19 @@ func TestResumeOfQueuedRun(t *testing.T) {
 // maps it to a 400): only failed runs are resumable. The run (the pause)
 // then finishes normally.
 func TestResumeOfRunningRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Running); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Running); err != nil {
 		t.Fatalf("poll to running: %v", err)
 	}
 	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
 		t.Fatalf("Resume of running: got %v, want ErrNotResumable", err)
 	}
 	// The running run is untouched: it finishes with success.
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
 }
@@ -87,11 +89,11 @@ func TestResumeOfRunningRun(t *testing.T) {
 // The resume of a cancelled run errors with ErrNotResumable (the web maps
 // it to a 400): only failed runs are resumable.
 func TestResumeOfCancelledRun(t *testing.T) {
-	needCore(t)
-	if _, err := dbos.RegisterQueue(core.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
+	testcore.NeedCore(t)
+	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := core.Ctx().Enqueue(core.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -110,14 +112,14 @@ func TestResumeOfCancelledRun(t *testing.T) {
 // flaky test workflow provides the deterministic failed run with a known
 // stored input.
 func TestResumeOfFailedRun(t *testing.T) {
-	needCore(t)
-	t.Cleanup(func() { flakyFail = false })
-	flakyFail = true
+	testcore.NeedCore(t)
+	t.Cleanup(func() { testcore.FlakyFail = false })
+	testcore.FlakyFail = true
 	ex, err := core.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	st, err := pollState(t, ex.ID, status.Error)
+	st, err := testcore.PollState(t, ex.ID, status.Error)
 	if err != nil {
 		t.Fatalf("poll to failed: %v (state %s)", err, st)
 	}

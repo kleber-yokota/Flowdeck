@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
 )
 
@@ -16,12 +17,12 @@ import (
 // engine. Packages run with -p 1 so only one executor polls the queue at a
 // time (a job claimed by a process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if st, err := pollState(t, ex.ID, status.Success); err != nil {
+	if st, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v (state %s)", err, st)
 	}
 }
@@ -29,12 +30,12 @@ func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 // A failing run on Postgres: the retries run out, and Detail shows the error
 // and the failed step (phase 3, DETAIL).
 func TestE2EDetailOfFailedRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	st, err := pollState(t, ex.ID, status.Error)
+	st, err := testcore.PollState(t, ex.ID, status.Error)
 	if err != nil {
 		t.Fatalf("poll to error: %v (state %s)", err, st)
 	}
@@ -54,14 +55,14 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 // Postgres is not resumable today (the SDK's ResumeWorkflow is a no-op on
 // ERROR rows — bug.md); the Postgres twin of the unit test above.
 func TestE2EResumeOfFailedRun(t *testing.T) {
-	needCore(t)
-	t.Cleanup(func() { flakyFail = false })
-	flakyFail = true
+	testcore.NeedCore(t)
+	t.Cleanup(func() { testcore.FlakyFail = false })
+	testcore.FlakyFail = true
 	ex, err := core.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Error); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
 		t.Fatalf("poll to failed: %v", err)
 	}
 	if _, err := core.Resume(ex.ID); !errors.Is(err, core.ErrNotResumable) {
@@ -71,15 +72,15 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 
 // The executed path of a branched run on Postgres (phase 4, STEP 3).
 func TestE2EStepsOfBranchedRun(t *testing.T) {
-	needCore(t)
+	testcore.NeedCore(t)
 	ex, err := core.Enqueue("decide", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	if got := mustStepNames(t, ex); len(got) != 2 || got[0] != "base" || got[1] != "left" {
+	if got := testcore.MustStepNames(t, ex); len(got) != 2 || got[0] != "base" || got[1] != "left" {
 		t.Fatalf("decide left steps: got %v", got)
 	}
 }

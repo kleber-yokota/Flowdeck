@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -154,7 +155,7 @@ func TestExecutionDetailUnknownIs404(t *testing.T) {
 // A core that is down maps to a clean 503.
 func TestExecutionDetailCoreDownIs503(t *testing.T) {
 	downDetail := func(id string) (core.DetailPath, error) {
-		return core.DetailPath{}, core.ErrNotLaunched
+		return core.DetailPath{}, boot.ErrNotLaunched
 	}
 	d := testPort()
 	d.Detail = downDetail

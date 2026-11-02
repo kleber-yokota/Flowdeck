@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 )
 
 // E2E (against the real Postgres 18 of the e2e job): the full stack on the
@@ -20,7 +21,7 @@ import (
 // time.
 func TestE2EDispatchRunsToSuccess(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := post(t, srv.URL+"/run/hello-world")
@@ -51,7 +52,7 @@ func TestE2EDispatchRunsToSuccess(t *testing.T) {
 // the left, the executed path shows it).
 func TestE2EFormDispatchTakesBranch(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
@@ -88,7 +89,7 @@ func TestE2EFormDispatchTakesBranch(t *testing.T) {
 // is a clean 404 on Postgres.
 func TestE2EResumeUnknownIs404(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
@@ -106,7 +107,7 @@ func TestE2EResumeUnknownIs404(t *testing.T) {
 // terminal state, and the detail page shows the badge of the finished run.
 func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := post(t, srv.URL+"/run/pipeline")
@@ -149,7 +150,7 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 // as the zero value: the decide run branches to the right.
 func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"   "}})
@@ -187,7 +188,7 @@ func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 // it renders.
 func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	const raw = `<script>alert('xss')</script>`
@@ -230,7 +231,7 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 // the execution detail shows the stored input values the run used.
 func TestE2EScheduleDispatchShowsInputValues(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	// The form of the schedule workflow: one item per input, prefilled

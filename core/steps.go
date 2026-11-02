@@ -6,6 +6,7 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 )
 
@@ -136,7 +137,7 @@ type RunPath struct {
 // path is what ran. The row mapping (stepRows, the batched child query) is
 // the one the detail page's read (DetailPath) shares.
 func Steps(workflowID string) (RunPath, error) {
-	c, err := ctxOrErr()
+	c, err := boot.CtxOrErr()
 	if err != nil {
 		return RunPath{}, err
 	}
