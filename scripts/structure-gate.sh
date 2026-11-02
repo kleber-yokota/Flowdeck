@@ -21,7 +21,7 @@
 #   density      go list + git   files × imports per package (the split and
 #                                the responsibility readings)
 #
-The readings and the ignored packages: review.md
+# The readings and the ignored packages: review.md
 #
 # Not gateable yet:
 #   plimsoll     god-struct load line (methods / exported fields per type) —
