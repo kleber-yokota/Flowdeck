@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/catalog"
 	"flowdeck/web/executions"
 )
 
@@ -39,15 +40,7 @@ func init() {
 // static assets are served as-is.
 func New(p core.Port, ready func() error) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
-		handleDashboard(w)
-	})
-	mux.HandleFunc("GET /workflows", func(w http.ResponseWriter, _ *http.Request) {
-		handleWorkflowsList(w, p)
-	})
-	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
-		handleWorkflowPage(w, r, p)
-	})
+	catalog.Register(mux, p)
 	executions.Register(mux, p)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		handleHealthz(w, ready)

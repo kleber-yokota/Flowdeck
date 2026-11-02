@@ -8,7 +8,6 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
-	"flowdeck/core/graph"
 )
 
 // okReady is the ready stub: the core is up.
@@ -49,28 +48,4 @@ func needCore(t *testing.T) {
 	if boot.Ctx() == nil {
 		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
 	}
-}
-
-// fakeGraph builds a possible-paths graph holding the given paths under
-// name (the stub for the graph component in the unit tests).
-func fakeGraph(name string, paths [][]string) *graph.PathGraph {
-	root := &graph.Block{ID: "b0", Level: 0, Type: graph.BlockSequence}
-	var children []graph.Child
-	var steps []string
-	seen := map[string]bool{}
-	for _, p := range paths {
-		for _, s := range p {
-			if !seen[s] {
-				seen[s] = true
-				children = append(children, graph.Child{Node: &graph.Node{Name: s, Kind: graph.NodeStep}})
-				steps = append(steps, s)
-			}
-		}
-	}
-	root.Children = children
-	byName := map[string]*graph.WorkflowGraph{}
-	if len(children) > 0 {
-		byName[name] = &graph.WorkflowGraph{Root: root, Steps: steps}
-	}
-	return &graph.PathGraph{ByName: byName}
 }

@@ -1,9 +1,8 @@
-package web
+package catalog
 
 import (
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestRootRendersDashboardWithHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := testServer(t, webtest.TestPort())
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/")
@@ -42,7 +41,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 	}
 	d := webtest.TestPort()
 	d.List = fakeLister
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows")
@@ -65,7 +64,7 @@ func TestWorkflowsPartialListsCoreRegistry(t *testing.T) {
 }
 
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := testServer(t, webtest.TestPort())
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows")
@@ -79,7 +78,7 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The fragment is dynamic: it must never be cached by the browser.
 func TestWorkflowsPartialNoStore(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := testServer(t, webtest.TestPort())
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/workflows")
@@ -103,7 +102,7 @@ func TestWorkflowsPartialLinksToWorkflowPages(t *testing.T) {
 	}
 	d := webtest.TestPort()
 	d.List = fakeLister
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows")

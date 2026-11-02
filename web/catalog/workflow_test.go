@@ -1,8 +1,7 @@
-package web
+package catalog
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +22,7 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 	}
 	d := webtest.TestPort()
 	d.List = fakeLister
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
@@ -51,7 +50,7 @@ func TestWorkflowPageColumnsLayout(t *testing.T) {
 	d := webtest.TestPort()
 	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = fakeGraph("wf-alpha", [][]string{{"one", "two"}})
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
@@ -79,7 +78,7 @@ func TestWorkflowPageRendersForkedGraph(t *testing.T) {
 	d := webtest.TestPort()
 	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = &graph.PathGraph{ByName: map[string]*graph.WorkflowGraph{"wf-alpha": wg}}
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
@@ -106,7 +105,7 @@ func TestWorkflowPageRendersLinearGraph(t *testing.T) {
 	d := webtest.TestPort()
 	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
 	d.Graph = fakeGraph("wf-alpha", [][]string{{"fetch", "parse", "store"}})
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
@@ -142,7 +141,7 @@ func TestWorkflowPageListsExecutions(t *testing.T) {
 	d := webtest.TestPort()
 	d.List = fakeLister
 	d.Executions = listExecutions
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
@@ -183,7 +182,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 	d := webtest.TestPort()
 	d.List = fakeLister
 	d.Executions = downExecutions
-	srv := httptest.NewServer(New(d, okReady))
+	srv := testServer(t, d)
 	defer srv.Close()
 
 	if status, _ := webtest.Get(t, srv.URL+"/workflows/wf-alpha"); status != http.StatusServiceUnavailable {
@@ -193,7 +192,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 
 // A page for a workflow that is not in the core registry is a clean 404.
 func TestWorkflowPageUnknownIs404(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := testServer(t, webtest.TestPort())
 	defer srv.Close()
 
 	if status, _ := webtest.Get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
