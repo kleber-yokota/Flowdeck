@@ -15,6 +15,13 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    outside the package. Split files freely; create packages reluctantly —
    a refactor may still draw, move, or redraw one (step 6): the edge names
    an intention, and every break is repaired in the same change.
+   The rule descends to the file level: references between files are
+   unidirectional against a named owner — the shared thing (state, data,
+   model) lives in the one file that owns it, and the other files reference
+   the owner. A mutual reference between two files is debt in waiting, not
+   a layout: it is broken by extracting the shared part to its owner
+   (step 6), and it blocks the package draw the pair would otherwise
+   receive (step 1).
 
 2. **One file, one responsibility, named for the behavior it owns.**
    Files are named for the thing they own (the handler, the entity, the
@@ -106,16 +113,21 @@ way tests are the first line of the correctness budget.
    infer it: a new package appears when a second consumer of the contract
    appears (a new import edge with its own needs), not when a file holds two
    responsibilities — intent splits are file splits (principle 1 · one file,
-   one intention · the 300-line rule).
+   one intention · the 300-line rule). Before any draw, read the reference
+   DAG of the cluster: a pair of files that references each other is not
+   drawable — the cycle break (step 6) is the preceding green step, and the
+   draw is the one that follows it.
 2. Does an existing file own it? Extend the file.
 3. No file owns it? Create a file named for the behavior + its test.
 4. A file now holds two responsibilities? Split it — as its own green step.
 5. Does the index know where this lives? Update it — as the last step of the
    same change.
 6. An explicit refactor is a structure change: it combines and splits
-   files, draws or moves folders and subfolders (packages), redraws or
-   moves boundaries (a package edge, the Port surface, a read model), and
-   improves performance (a batched query, a state that rides on the read).
+   files, breaks mutual file references (the shared part is extracted to
+   its owner, so references stay unidirectional), draws or moves folders
+   and subfolders (packages), redraws or moves boundaries (a package edge,
+   the Port surface, a read model), and improves performance (a batched
+   query, a state that rides on the read).
    Its reasons, and only these: performance · the ease of the code (it
    reads easier, it changes easier) · the intention (every file is
    oriented to the intention it owns — a boundary out of step with the
@@ -134,6 +146,8 @@ way tests are the first line of the correctness budget.
   test, or a map row left at the old address).
 - Catch-all layer folders (`utils/`, `misc/`, `helpers/`).
 - Bucket files (N unrelated things in one file).
+- A package drawn over a cycle (an edge whose cluster still holds a mutual
+  file reference — the break is the preceding step, not the following one).
 - Doc updates as a separate chore.
 - Two layout recipes for one kind of entity.
 - A test file that asserts two intentions (the parser and the spec in one
