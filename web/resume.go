@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/render"
 )
 
 // handleResume re-enqueues a failed run by id (phase 5, RESUME) — the same
@@ -12,8 +13,8 @@ func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
 	ex, err := p.Resume(id)
 	if err != nil {
-		fail(w, "resume", err)
+		render.Fail(w, "resume", err)
 		return
 	}
-	partial(w, "badge.html", badgeFor(ex.ID, ex.State))
+	render.Partial(w, "badge.html", badgeFor(ex.ID, ex.State))
 }

@@ -5,6 +5,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/reads"
+	"flowdeck/web/render"
 )
 
 // executionDetail is the data for the execution detail full page: the
@@ -44,10 +45,10 @@ func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) 
 	id := r.PathValue("id")
 	d, err := p.Detail(id)
 	if err != nil {
-		fail(w, "detail", err)
+		render.Fail(w, "detail", err)
 		return
 	}
-	page(w, "execution-detail.html", executionDetail{
+	render.Page(w, "execution-detail.html", executionDetail{
 		ExecutionDetail: d.ExecutionDetail,
 		Badge:           badgeFor(id, d.ExecutionDetail.State),
 		Retries:         retriesFor(d.Attempts),

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/render"
 )
 
 // handleRunDispatch is the dispatch (phase 2): it reads the form (the web
@@ -14,7 +15,7 @@ func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
 	name := r.PathValue("name")
 	spec, err := p.Spec(name)
 	if err != nil {
-		fail(w, "workflow spec", err)
+		render.Fail(w, "workflow spec", err)
 		return
 	}
 	values, err := formValues(r)
@@ -29,10 +30,10 @@ func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
 	}
 	ex, err := p.Enqueue(name, input)
 	if err != nil {
-		fail(w, "enqueue", err)
+		render.Fail(w, "enqueue", err)
 		return
 	}
-	partial(w, "execution.html", row(ex))
+	render.Partial(w, "execution.html", row(ex))
 }
 
 // formValues reads the form values posted to the dispatch (an empty POST

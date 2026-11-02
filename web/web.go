@@ -9,43 +9,22 @@ package web
 
 import (
 	"embed"
-	"html/template"
 	"io/fs"
 	"net/http"
 
 	"flowdeck/core"
 )
 
-// staticFS holds the two static trees: the templates (rendered by Go
-// templates) and the vendored HTMX (served as-is).
+// staticFS holds the vendored HTMX and the stylesheet (served as-is, no
+// CDN at runtime). The templates live in web/render (their own embed).
 //
-//go:embed all:templates static
+//go:embed static
 var staticFS embed.FS
 
-// templates is the template set (templates/, one named template per file
-// — rendered per request, no template cache).
-var templates *template.Template
-
-// static is the static filesystem (static/, the vendored HTMX and the
-// stylesheet — served as-is, no CDN at runtime).
+// static is the static filesystem (served as-is, no CDN at runtime).
 var static fs.FS
 
 func init() {
-	entries, err := fs.ReadDir(staticFS, "templates")
-	if err != nil {
-		panic("web: templates: " + err.Error())
-	}
-	templates = template.New("web")
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		b, err := staticFS.ReadFile("templates/" + e.Name())
-		if err != nil {
-			panic("web: templates/" + e.Name() + ": " + err.Error())
-		}
-		template.Must(templates.New(e.Name()).Parse(string(b)))
-	}
 	sub, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		panic("web: static fs: " + err.Error())

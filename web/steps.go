@@ -7,6 +7,7 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/reads"
 	"flowdeck/web/graph"
+	"flowdeck/web/render"
 )
 
 // stepsView is the data for the steps partial (the executed path, polled
@@ -34,8 +35,8 @@ func handleExecutionSteps(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
 	path, err := p.Steps(id)
 	if err != nil {
-		fail(w, "steps", err)
+		render.Fail(w, "steps", err)
 		return
 	}
-	partial(w, "steps.html", newStepsView(id, path))
+	render.Partial(w, "steps.html", newStepsView(id, path))
 }

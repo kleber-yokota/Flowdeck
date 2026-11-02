@@ -7,6 +7,7 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/render"
 )
 
 // badge is the data for badge.html (the 2s poll fragment) and for the
@@ -54,8 +55,8 @@ func handleBadge(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")
 	st, err := p.Status(id)
 	if err != nil {
-		fail(w, "status", err)
+		render.Fail(w, "status", err)
 		return
 	}
-	partial(w, "badge.html", badgeFor(id, st))
+	render.Partial(w, "badge.html", badgeFor(id, st))
 }

@@ -8,6 +8,7 @@ import (
 	corengraph "flowdeck/core/graph"
 	"flowdeck/core/registry"
 	"flowdeck/web/graph"
+	"flowdeck/web/render"
 )
 
 // workflowPage is the data for the workflow full page: the dispatch (the
@@ -39,7 +40,7 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	// core trusts the caller).
 	spec, err := p.Spec(name)
 	if err != nil {
-		fail(w, "workflow spec", err)
+		render.Fail(w, "workflow spec", err)
 		return
 	}
 	// The possible paths: the block diagram of the graph (rendered in this
@@ -50,14 +51,14 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	}
 	exs, err := p.Executions(name)
 	if err != nil {
-		fail(w, "executions", err)
+		render.Fail(w, "executions", err)
 		return
 	}
 	rows := make([]badge, 0, len(exs))
 	for _, e := range exs {
 		rows = append(rows, row(e))
 	}
-	page(w, "workflow.html", workflowPage{
+	render.Page(w, "workflow.html", workflowPage{
 		Name:       wf.Name,
 		Executions: rows,
 		Spec:       spec,

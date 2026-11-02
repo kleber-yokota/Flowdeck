@@ -1,9 +1,17 @@
-package web
+// Package render is the rendering of FlowDeck's web: the templates
+// (embedded — one named template per file, rendered per request, no
+// template cache), the two render paths (the full page, which the browser
+// may cache, and the HTMX partial, which it must never cache), and the
+// mapping of the core's errors onto the HTTP error responses.
+package render
 
 import (
 	"bytes"
+	"embed"
 	"errors"
+
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 
@@ -13,11 +21,36 @@ import (
 	"flowdeck/core/registry"
 )
 
-// fail maps a core error onto the HTTP error response: 404 for a workflow
+// templates is the template set (templates/, one named template per file).
+var templates *template.Template
+
+//
+//go:embed templates
+var templatesFS embed.FS
+
+func init() {
+	entries, err := fs.ReadDir(templatesFS, "templates")
+	if err != nil {
+		panic("render: templates: " + err.Error())
+	}
+	templates = template.New("web")
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		b, err := templatesFS.ReadFile("templates/" + e.Name())
+		if err != nil {
+			panic("render: templates/" + e.Name() + ": " + err.Error())
+		}
+		template.Must(templates.New(e.Name()).Parse(string(b)))
+	}
+}
+
+// Fail maps a core error onto the HTTP error response: 404 for a workflow
 // or execution the core does not know, 400 for a run the core rejects
-// (a run that cannot be resumed), 503 while the core is not launched, and
-// a logged 500 for anything unexpected.
-func fail(w http.ResponseWriter, op string, err error) {
+// (a run that cannot be resumed or cancelled), 503 while the core is not
+// launched, and a logged 500 for anything unexpected.
+func Fail(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, registry.ErrUnknownWorkflow):
 		http.Error(w, "unknown workflow", http.StatusNotFound)
@@ -35,16 +68,16 @@ func fail(w http.ResponseWriter, op string, err error) {
 	}
 }
 
-// page renders a full HTML page (a normal navigation, so the browser may
+// Page renders a full HTML page (a normal navigation, so the browser may
 // cache the document as usual).
-func page(w http.ResponseWriter, name string, data any) {
+func Page(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	render(templates, w, name, data)
 }
 
-// partial renders an HTMX fragment: the content is dynamic, so it must
+// Partial renders an HTMX fragment: the content is dynamic, so it must
 // never be cached by the browser.
-func partial(w http.ResponseWriter, name string, data any) {
+func Partial(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	render(templates, w, name, data)
