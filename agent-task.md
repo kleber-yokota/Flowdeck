@@ -24,11 +24,14 @@ The surface of the execution is exactly:
   Validated)
 - `code.md` — the structural law the run follows
 
-Nothing else is read, nothing outside is changed. A refactor — a file
-split, a package drawn, a contract moved or broken — happens only when the
-task file declares it, and then it runs under `code.md` step 6: every
-draw and break names the intention it serves, and every break point it
-causes (call sites, tests, the map) is repaired in the same green sequence.
+Nothing else is read, nothing outside is changed. A refactor — files
+combined or split, folders and subfolders drawn or moved, boundaries
+redrawn or contracts broken, performance improved — happens only when the
+task file declares it for a named reason (performance · the ease of the
+code · the intention the boundary now serves), and then it runs under
+`code.md` step 6: every draw, break, and move names the intention it
+serves, and every break point it causes (call sites, tests, the map) is
+repaired in the same green sequence.
 Otherwise: no refactors, no new abstractions, no drive-by fixes. The
 context is clean: every run starts from zero — the files are read in their
 **current state** (no git history, no archaeology, no previous
@@ -44,8 +47,8 @@ The run reads `code.md` once and follows it without being asked:
   owns; a file over 300 lines splits, as its own green step.
 - **Moves** — a move is preferred over an in-place edit: it is trivially
   green, and it is the shape that keeps the next change small.
-- **Packages** — the run adds none: a package edge appears only in an
-  explicit refactor task (`code.md` step 6).
+- **Packages** — the run adds none: a package edge is drawn or moved only
+  in an explicit refactor task (`code.md` step 6).
 - **Tests** — one file, one intention, named for the intention; the kinds
   follow the table (unit · contract · e2e · harness · spike · fact-pin).
 

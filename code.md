@@ -11,10 +11,10 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    Packages (modules imported by others) are drawn once, kept few, kept
    cycle-free. Every package edge is a permanent tax: it is read by every
    future change and by every doc line that describes it. Files inside a
-   package are rearranged for free — a split changes nothing outside the
-   file. Split files freely; create packages reluctantly — a refactor may
-   still draw one (step 6): the edge names an intention, and every break
-   is repaired in the same change.
+   package are rearranged for free — a combine or a split changes nothing
+   outside the package. Split files freely; create packages reluctantly —
+   a refactor may still draw, move, or redraw one (step 6): the edge names
+   an intention, and every break is repaired in the same change.
 
 2. **One file, one responsibility, named for the behavior it owns.**
    Files are named for the thing they own (the handler, the entity, the
@@ -110,16 +110,19 @@ way tests are the first line of the correctness budget.
 4. A file now holds two responsibilities? Split it — as its own green step.
 5. Does the index know where this lives? Update it — as the last step of the
    same change.
-6. An explicit refactor is a structure change: it may split files, draw
-   packages (a new edge, a new folder), and move or break contracts (a
-   package edge, the Port surface, a read model) and process (a batched
-   query, a state that rides on the read). The rules of the structure
-   change: each draw and break names the intention it serves, and every
-   break point — call sites, tests, the map — is repaired in the same
-   green sequence (principle 5). The goal is the improvement, not the
-   move: a break left unfixed is not green, it is debt. A change that is
-   *not* about structure adds no package, no folder layer, no naming
-   convention.
+6. An explicit refactor is a structure change: it combines and splits
+   files, draws or moves folders and subfolders (packages), redraws or
+   moves boundaries (a package edge, the Port surface, a read model), and
+   improves performance (a batched query, a state that rides on the read).
+   Its reasons, and only these: performance · the ease of the code (it
+   reads easier, it changes easier) · the intention (every file is
+   oriented to the intention it owns — a boundary out of step with the
+   intention is redrawn). The rules of the structure change: each draw,
+   break, and move names the intention it serves, and every break point —
+   call sites, tests, the map — is repaired in the same green sequence
+   (principle 5). The goal is the improvement, not the move: a break left
+   unfixed is not green, it is debt. A change that is *not* about structure
+   adds no package, no folder layer, no naming convention.
 
 ## What this forbids
 
