@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowDeck · core spoke</title>
+<style>
+:root{
+  --bg:#0b0c0e; --panel:#101216; --panel2:#14171c;
+  --line:#b8bcc4; --line2:#8f96a3; --ink:#e8e6e1; --dim:#9aa0ab;
+  --acc:#ff9142; --success:#46d19a; --ext:#8f96a3; --test:#9aa0ab;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,sans-serif}
+.frame{max-width:1120px;margin:0 auto;padding:28px 20px 40px}
+h1{font-size:1.35rem;letter-spacing:.14em;text-transform:uppercase;margin:0}
+h1 span{color:var(--acc);font-weight:400}
+.desc{color:var(--dim);font-size:.8rem;margin:8px 0 0;line-height:1.5}
+.desc code{font-family:ui-monospace,monospace;font-size:.74rem;color:var(--ink)}
+nav{margin-top:12px;font-size:.75rem;color:var(--dim);line-height:1.8}
+nav a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+nav a:hover,nav a:focus{color:var(--acc);border-color:var(--acc)}
+nav span{color:var(--acc);letter-spacing:.08em;font-size:.65rem}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:.7rem;margin:14px 0 0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:2px solid var(--line2);display:inline-block;flex:none}
+.sw.cmd{border-color:var(--acc)}
+.sw.leaf{border-color:var(--success)}
+.sw.test{border:2px dashed var(--test);background:none}
+.sw.ext{border:2px dashed var(--ext);background:none}
+svg{width:100%;height:auto;display:block;margin-top:10px}
+.arrow{fill:var(--line2)}
+.edge{fill:none;stroke:var(--line2);stroke-width:1.4}
+.edge.test{stroke:var(--test);stroke-dasharray:4 3;opacity:.65}
+.edge.build{stroke:var(--test);stroke-dasharray:2 3;opacity:.65}
+.edge-label rect{fill:var(--bg)}
+.edge-label text{fill:var(--dim);font:600 9px ui-monospace,monospace;letter-spacing:.06em}
+a{cursor:pointer}
+.node{fill:var(--panel);stroke:var(--line2);stroke-width:1.5}
+.node.cmd{stroke:var(--acc)}
+.node.leaf{stroke:var(--success);stroke-width:1.2}
+.node.ext{stroke:var(--ext);stroke-dasharray:5 3;fill:transparent}
+.node.test{stroke:var(--test);stroke-dasharray:4 3}
+.stub{fill:transparent;stroke:var(--line2);stroke-dasharray:5 3}
+text.name,text.node-sub,text.node-fn,text.badge-t{text-anchor:middle;pointer-events:none}
+text.name{fill:var(--ink);font:600 15px ui-monospace,monospace}
+text.node-sub{fill:var(--dim);font:400 10px ui-monospace,monospace}
+text.node-fn{fill:var(--dim);font:400 9px ui-monospace,monospace}
+.badge{fill:rgba(255,145,66,.14);stroke:var(--acc)}
+.badge-t{fill:var(--acc);font:700 9px ui-monospace,monospace;letter-spacing:.08em}
+a:hover .node,a:focus .node,a:hover .stub,a:focus .stub{stroke:var(--acc);stroke-width:2.5}
+section{margin-top:34px}
+h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--line2);padding-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h2 .badge{font:700 9px ui-monospace,monospace;color:var(--acc);letter-spacing:.08em;border:1px solid var(--acc);padding:2px 6px;text-transform:none;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:10px}
+th{color:var(--dim);text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;padding:8px 16px;border-bottom:1px solid #262a31}
+td{padding:8px 16px;border-bottom:1px solid #1c1f24;vertical-align:top}
+td code{font-family:ui-monospace,monospace;font-size:.76rem;color:var(--ink)}
+tr:last-child td{border-bottom:none}
+td a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
+.role{padding:10px 16px 0;color:var(--dim);font-size:.82rem;line-height:1.5}
+.role a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+.role a:hover,.role a:focus{color:var(--acc);border-color:var(--acc)}
+.pkg{margin-top:34px;border:1px solid var(--line2);background:var(--panel)}
+.pkg h2{margin:0;border:none;border-bottom:1px solid var(--line2);padding:12px 16px;background:var(--panel2)}
+.foot{margin-top:26px;color:var(--dim);font-size:.72rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media print{
+  .frame{max-width:none}
+  nav{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="frame">
+<header>
+    <h1>FlowDeck <span>core spoke</span></h1>
+    <p class="desc">The core group — 8 packages. Mini map: intra-group edges + boundaries to the neighbours (stubs link to their spoke). Full edge table: package-map.html#edges.</p>
+    <nav><a href="package-map.html">← package map (hub)</a> · <a href="package-map-web.html">web</a> · <a href="package-map-entry.html">entry</a></nav>
+  </header>
+  <section id="graph">
+    <h2>core group <span class="badge">MINI MAP</span></h2>
+    <svg viewBox="0 0 920 680" role="img" aria-labelledby="mini-core-title mini-core-desc" aria-describedby="mini-core-desc" id="mini-core">
+<title id="mini-core-title">core group — mini map</title>
+<desc id="mini-core-desc">Mini map of the core group: the group's packages and their import edges to neighbouring packages (stubs link to their spoke). Full edge table: package-map.html#edges.</desc>
+<defs><marker id="mini-core-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,4.5 L0,9 Z" class="arrow"/></marker></defs>
+<path class="edge" d="M 460 76 L 460 140" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 400 76 L 400 96 L 170 96 L 170 140" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 430 76 L 430 108 L 42 108 L 42 340 L 40 340" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 170 196 L 170 300" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 200 196 L 200 214 L 6 214 L 6 620 L 60 620" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 620 168 L 590 168" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 460 220 L 460 300" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 430 220 L 430 236 L 312 236 L 312 470 L 330 470" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 380 220 L 380 252 L 54 252 L 54 500 L 40 500" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 356 220 L 356 268 L 190 268 L 190 300" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 500 220 L 500 248 L 750 248 L 750 300" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 560 220 L 560 264 L 616 264 L 616 510 L 620 510" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 330 340 L 300 340" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 340 380 L 340 390 L 190 390 L 190 460" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 590 340 L 620 340" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 560 300 L 560 290 L 890 290 L 890 450 L 780 450 L 780 460" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 560 380 L 560 396 L 340 396 L 340 456 L 300 456 L 300 560 L 316 560 L 316 580" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 170 460 L 170 380" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 260 460 L 260 428 L 750 428 L 750 380" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 280 460 L 280 444 L 700 444 L 700 460" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 170 540 L 170 580" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 660 300 L 660 276 L 150 276 L 150 300" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 660 380 L 660 456 L 592 456 L 592 480 L 590 480" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 850 380 L 850 396 L 910 396 L 910 656 L 320 656" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 300 370 L 318 370 L 324 370 L 324 486 L 330 486" marker-end="url(#mini-core-arrow)"/>
+<path class="edge" d="M 40 360 L 30 360 L 30 600 L 60 600" marker-end="url(#mini-core-arrow)"/>
+<path class="edge test" d="M 750 580 L 750 548 L 18 548 L 18 370 L 40 370" marker-end="url(#mini-core-arrow)"/>
+<path class="edge test" d="M 620 630 L 320 630" marker-end="url(#mini-core-arrow)"/>
+<path class="edge test" d="M 620 600 L 600 600 L 600 572 L 66 572 L 66 540 L 40 540" marker-end="url(#mini-core-arrow)"/>
+<path class="edge test" d="M 700 580 L 700 540" marker-end="url(#mini-core-arrow)"/>
+<a href="package-map-entry.html#package-main" id="mini-main" aria-label="main"><g><rect class="stub" x="330" y="20" width="260" height="56" rx="4"/><text class="name" x="460" y="46" text-anchor="middle">main</text><text class="node-sub" x="460" y="62" text-anchor="middle">entry (spoke)</text></g></a>
+<a href="package-map-entry.html#package-workflows" id="mini-workflows" aria-label="workflows"><g><rect class="stub" x="40" y="140" width="260" height="56" rx="4"/><text class="name" x="170" y="166" text-anchor="middle">workflows</text><text class="node-sub" x="170" y="182" text-anchor="middle">registrations (spoke)</text></g></a>
+<a href="package-map-web.html#package-web" id="mini-web" aria-label="web"><g><rect class="stub" x="620" y="140" width="260" height="56" rx="4"/><text class="name" x="750" y="166" text-anchor="middle">web</text><text class="node-sub" x="750" y="182" text-anchor="middle">router (spoke)</text></g></a>
+<a href="#package-core" id="mini-core" aria-label="core"><g><rect class="node" x="330" y="140" width="260" height="80" rx="4"/><text class="name" x="460" y="170" text-anchor="middle">core</text><text class="node-sub" x="460" y="188" text-anchor="middle">the Port (the contract)</text><rect class="badge" x="556" y="148" width="24" height="14" rx="2"/><text class="badge-t" x="568" y="158">4</text></g></a>
+<a href="#package-boot" id="mini-boot" aria-label="core/boot"><g><rect class="node" x="40" y="300" width="260" height="80" rx="4"/><text class="name" x="170" y="330" text-anchor="middle">core/boot</text><text class="node-sub" x="170" y="348" text-anchor="middle">launch · ctx · queue</text><rect class="badge" x="266" y="308" width="24" height="14" rx="2"/><text class="badge-t" x="278" y="318">7</text></g></a>
+<a href="#package-actions" id="mini-actions" aria-label="core/actions"><g><rect class="node" x="330" y="300" width="260" height="80" rx="4"/><text class="name" x="460" y="330" text-anchor="middle">core/actions</text><text class="node-sub" x="460" y="348" text-anchor="middle">enqueue · resume · cancel</text><rect class="badge" x="556" y="308" width="24" height="14" rx="2"/><text class="badge-t" x="568" y="318">2</text></g></a>
+<a href="#package-registry" id="mini-registry" aria-label="core/registry"><g><rect class="node" x="620" y="300" width="260" height="80" rx="4"/><text class="name" x="750" y="330" text-anchor="middle">core/registry</text><text class="node-sub" x="750" y="348" text-anchor="middle">list · spec · parse</text><rect class="badge" x="846" y="308" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="318">5</text></g></a>
+<a href="#package-reads" id="mini-reads" aria-label="core/reads"><g><rect class="node" x="40" y="460" width="260" height="80" rx="4"/><text class="name" x="170" y="490" text-anchor="middle">core/reads</text><text class="node-sub" x="170" y="508" text-anchor="middle">list · badge · detail · steps</text><rect class="badge" x="266" y="468" width="24" height="14" rx="2"/><text class="badge-t" x="278" y="478">5</text></g></a>
+<a href="#package-graph" id="mini-graph" aria-label="core/graph"><g><rect class="node leaf" x="330" y="460" width="260" height="80" rx="4"/><text class="name" x="460" y="490" text-anchor="middle">core/graph</text><text class="node-sub" x="460" y="508" text-anchor="middle">block model · possible paths</text><rect class="badge" x="556" y="468" width="24" height="14" rx="2"/><text class="badge-t" x="568" y="478">6</text></g></a>
+<a href="#package-status" id="mini-status" aria-label="core/status"><g><rect class="node leaf" x="620" y="460" width="260" height="80" rx="4"/><text class="name" x="750" y="490" text-anchor="middle">core/status</text><text class="node-sub" x="750" y="508" text-anchor="middle">state enum · terminal map</text><rect class="badge" x="846" y="468" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="478">4</text></g></a>
+<a href="package-map-entry.html#package-dbos" id="mini-dbos" aria-label="dbos"><g><rect class="node ext" x="60" y="580" width="260" height="80" rx="4"/><text class="name" x="190" y="610" text-anchor="middle">dbos</text><text class="node-sub" x="190" y="628" text-anchor="middle">DBOS (third-party)</text><rect class="badge" x="286" y="588" width="24" height="14" rx="2"/><text class="badge-t" x="298" y="598">5</text></g></a>
+<a href="#package-testcore" id="mini-testcore" aria-label="core/internal/testcore"><g><rect class="node test" x="620" y="580" width="260" height="56" rx="4"/><text class="name" x="750" y="606" text-anchor="middle">core/internal/testcore</text><text class="node-sub" x="750" y="622" text-anchor="middle">test env</text></g></a>
+</svg>
+  </section>
+  <section id="packages">
+    <h2>packages <span class="badge">8</span></h2>
+
+    <div class="pkg" id="package-core">
+      <h2>core <span class="badge">FAN-IN 4</span></h2>
+      <p class="role">The <code>Port</code> — the single contract between web and core (10 function fields: <code>List · Graph · Spec · Executions · Enqueue · Status · Steps · Detail · Resume · Cancel</code>). <code>NewPort</code> wires the live core instance; web never touches DBOS.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>port.go</code></td><td><code>Port · NewPort (the 10 members)</code></td></tr><tr><td><code>core_test.go</code></td><td><code>TestMain</code></td></tr><tr><td><code>e2e_test.go</code></td><td><code>TestE2EEnqueueRunsToSuccess · TestE2EDetailOfFailedRun · TestE2EResumeOfFailedRun · TestE2EStepsOfBranchedRun</code></td></tr><tr><td><code>paths_test.go</code></td><td><code>TestPathsGraphFromWorkflowsTree</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-boot">
+      <h2>core/boot <span class="badge">FAN-IN 7</span></h2>
+      <p class="role">Launches the DBOS context, embeds the workflow source tree, owns the single queue and readiness; clean shutdown via <code>defer boot.Shutdown</code>.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>lifecycle.go</code></td><td><code>SetWorkflowsSource · Launch · Ready · Shutdown · Ctx · CtxOrErr · QueueName · Paths · ErrNotLaunched</code></td></tr><tr><td><code>sqlite_driver.go</code></td><td><code>sqlite driver (blank import)</code></td></tr><tr><td><code>lifecycle_test.go</code></td><td><code>TestLaunch · TestShutdown</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/boot</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-registry">
+      <h2>core/registry <span class="badge">FAN-IN 6</span></h2>
+      <p class="role">Which workflows are registered (<code>List</code>), their parameter specs (<code>Spec</code>/<code>SpecOf</code>) parsed from the registration, and the unknown-workflow error.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>registry.go</code></td><td><code>List · Workflow · ErrUnknownWorkflow</code></td></tr><tr><td><code>spec.go</code></td><td><code>Spec · SpecOf</code></td></tr><tr><td><code>registry_test.go · spec_test.go</code></td><td><code>TestList · TestSpec · TestSpecOf</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/registry</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-reads">
+      <h2>core/reads <span class="badge">FAN-IN 5</span></h2>
+      <p class="role">The read models: the executions list, the badge row (status + created), the execution detail (with stored input values), and the executed path (state + steps).</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>executions.go</code></td><td><code>Executions · Execution</code></td></tr><tr><td><code>status.go</code></td><td><code>ListByID · MapState · Status · ErrUnknownExecution</code></td></tr><tr><td><code>steps.go</code></td><td><code>Steps · RunPath · childIDsOf · childRows · childInfo</code></td></tr><tr><td><code>detail.go</code></td><td><code>Detail · DetailPath · inputValues · inputOf</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/reads</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-actions">
+      <h2>core/actions <span class="badge">FAN-IN 2</span></h2>
+      <p class="role">The write side: dispatch (<code>Enqueue</code>), <code>Resume</code>, <code>Cancel</code> — each reads the row back after the mutation; owns the error map (<code>ErrNotResumable</code> · <code>ErrNotCancellable</code>).</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>dispatch.go</code></td><td><code>Enqueue · dispatch</code></td></tr><tr><td><code>resume.go</code></td><td><code>Resume · ErrNotResumable</code></td></tr><tr><td><code>cancel.go</code></td><td><code>Cancel · ErrNotCancellable · cancelAck</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/actions</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-status">
+      <h2>core/status <span class="badge">FAN-IN 4 · LEAF</span></h2>
+      <p class="role">The state enum (<code>Queued · Running · Success · Error · Cancelled</code>) and the terminal map that stops the badge poll.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>state.go</code></td><td><code>State · Queued · Running · Success · Error · Cancelled · (State).Terminal</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/status</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-graph">
+      <h2>core/graph <span class="badge">FAN-IN 6 · LEAF</span></h2>
+      <p class="role">The block model (<code>Block · Child · Node · NodeKind · BlockType</code>) and the possible-paths graph (<code>PathGraph · Of · New</code>) built from the embedded workflow source; the form-value sanitization.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>graph.go</code></td><td><code>PathGraph · Of · New</code></td></tr><tr><td><code>build.go · parse.go</code></td><td><code>Build · parse</code></td></tr><tr><td><code>spec.go</code></td><td><code>Spec · WorkflowGraph</code></td></tr><tr><td><code>sanitize.go</code></td><td><code>(Spec).Sanitize · ErrInvalidInput</code></td></tr><tr><td><code>paths.go</code></td><td><code>pathsOf</code></td></tr><tr><td><code>block.go · names.go</code></td><td><code>Block · Child · NodeKind · BlockType · names</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/graph</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-testcore">
+      <h2>core/internal/testcore <span class="badge">TEST</span></h2>
+      <p class="role">The test environment: boots the core against the test env, polls states, asserts the executed path; registers the test-only workflows (<code>failing-test</code> · <code>resume-test</code>, <code>WithMaxRecoveryAttempts(3)</code>).</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>testcore.go</code></td><td><code>Setup · NeedCore · PollState · MustStepNames</code></td></tr><tr><td><code>testworkflows.go</code></td><td><code>RegisterTestWorkflows · failing-test · resume-test</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/internal/testcore</code>).</p>
+    </div>
+
+  </section>
+  <footer class="foot">
+    <span>flowdeck · diagrams/package-map-core.html</span>
+    <span>contacts live in the hub · verified 2026-11-02</span>
+  </footer>
+
+</div>
+</body>
+</html>

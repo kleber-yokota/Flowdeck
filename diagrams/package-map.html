@@ -1,1885 +1,230 @@
 <!DOCTYPE html>
-<!--
-  AGENT: This file is the single source of truth for the package map.
-  When a package, folder, dependency, or function changes — update the SVG graph (nodes + edges + fan-in badges), the contact tables, and the facts.
-  One section per package (main · workflows · core · core/boot · core/registry · core/reads · core/actions · web · web/executions · web/catalog · web/render · web/graph · core/graph · core/status · cmd · test · dbos).
-  The graph is the runtime import DAG. The coupling numbers are in .goimportmaps.yaml (goimportmaps ./... --metrics).
-  Zero JavaScript — navigation is anchors + CSS :target. Keyboard accessible (tab + enter).
--->
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FlowDeck — Package Map</title>
-  <link rel="stylesheet" href="css/package-map.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowDeck · Package Map</title>
+<style>
+:root{
+  --bg:#0b0c0e; --panel:#101216; --panel2:#14171c;
+  --line:#b8bcc4; --line2:#8f96a3; --ink:#e8e6e1; --dim:#9aa0ab;
+  --acc:#ff9142; --success:#46d19a; --ext:#8f96a3; --test:#9aa0ab;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,sans-serif}
+.frame{max-width:1120px;margin:0 auto;padding:28px 20px 40px}
+h1{font-size:1.35rem;letter-spacing:.14em;text-transform:uppercase;margin:0}
+h1 span{color:var(--acc);font-weight:400}
+.desc{color:var(--dim);font-size:.8rem;margin:8px 0 0;line-height:1.5}
+.desc code{font-family:ui-monospace,monospace;font-size:.74rem;color:var(--ink)}
+nav{margin-top:12px;font-size:.75rem;color:var(--dim);line-height:1.8}
+nav a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+nav a:hover,nav a:focus{color:var(--acc);border-color:var(--acc)}
+nav span{color:var(--acc);letter-spacing:.08em;font-size:.65rem}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:.7rem;margin:14px 0 0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:2px solid var(--line2);display:inline-block;flex:none}
+.sw.cmd{border-color:var(--acc)}
+.sw.leaf{border-color:var(--success)}
+.sw.test{border:2px dashed var(--test);background:none}
+.sw.ext{border:2px dashed var(--ext);background:none}
+svg{width:100%;height:auto;display:block;margin-top:10px}
+.arrow{fill:var(--line2)}
+.edge{fill:none;stroke:var(--line2);stroke-width:1.4}
+.edge.test{stroke:var(--test);stroke-dasharray:4 3;opacity:.65}
+.edge.build{stroke:var(--test);stroke-dasharray:2 3;opacity:.65}
+.edge-label rect{fill:var(--bg)}
+.edge-label text{fill:var(--dim);font:600 9px ui-monospace,monospace;letter-spacing:.06em}
+a{cursor:pointer}
+.node{fill:var(--panel);stroke:var(--line2);stroke-width:1.5}
+.node.cmd{stroke:var(--acc)}
+.node.leaf{stroke:var(--success);stroke-width:1.2}
+.node.ext{stroke:var(--ext);stroke-dasharray:5 3;fill:transparent}
+.node.test{stroke:var(--test);stroke-dasharray:4 3}
+.stub{fill:transparent;stroke:var(--line2);stroke-dasharray:5 3}
+text.name,text.node-sub,text.node-fn,text.badge-t{text-anchor:middle;pointer-events:none}
+text.name{fill:var(--ink);font:600 15px ui-monospace,monospace}
+text.node-sub{fill:var(--dim);font:400 10px ui-monospace,monospace}
+text.node-fn{fill:var(--dim);font:400 9px ui-monospace,monospace}
+.badge{fill:rgba(255,145,66,.14);stroke:var(--acc)}
+.badge-t{fill:var(--acc);font:700 9px ui-monospace,monospace;letter-spacing:.08em}
+a:hover .node,a:focus .node,a:hover .stub,a:focus .stub{stroke:var(--acc);stroke-width:2.5}
+section{margin-top:34px}
+h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--line2);padding-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h2 .badge{font:700 9px ui-monospace,monospace;color:var(--acc);letter-spacing:.08em;border:1px solid var(--acc);padding:2px 6px;text-transform:none;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:10px}
+th{color:var(--dim);text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;padding:8px 16px;border-bottom:1px solid #262a31}
+td{padding:8px 16px;border-bottom:1px solid #1c1f24;vertical-align:top}
+td code{font-family:ui-monospace,monospace;font-size:.76rem;color:var(--ink)}
+tr:last-child td{border-bottom:none}
+td a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
+.role{padding:10px 16px 0;color:var(--dim);font-size:.82rem;line-height:1.5}
+.role a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+.role a:hover,.role a:focus{color:var(--acc);border-color:var(--acc)}
+.pkg{margin-top:34px;border:1px solid var(--line2);background:var(--panel)}
+.pkg h2{margin:0;border:none;border-bottom:1px solid var(--line2);padding:12px 16px;background:var(--panel2)}
+.foot{margin-top:26px;color:var(--dim);font-size:.72rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media print{
+  .frame{max-width:none}
+  nav{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
 </head>
 <body>
-  <div class="map">
+<div class="frame">
+<header>
+    <h1>FlowDeck <span>package map</span></h1>
+    <p class="desc">Ranked dependency graph · 19 packages (17 production · 2 test) · 59 edges (49 runtime · 9 test · 1 build) · zero cycles.
+    Every node links to its spoke section; the contacts table below is the machine-readable edge list (the agent's "Contacts" input).</p>
+    <nav><span>SECTIONS</span> <a href="#graph">graph</a> · <a href="#packages">packages</a> · <a href="#edges">edges</a> · <a href="#facts">facts</a> · <a href="#gates">gates</a><br>
+    <span>SPOKES</span> <a href="package-map-core.html">core</a> · <a href="package-map-web.html">web</a> · <a href="package-map-entry.html">entry</a></nav>
+    <ul class="legend">
+      <li><span class="sw"></span> PACKAGE</li>
+      <li><span class="sw cmd"></span> CMD / CODEGEN</li>
+      <li><span class="sw leaf"></span> LEAF (FAN-OUT 0)</li>
+      <li><span class="sw test"></span> TEST</li>
+      <li><span class="sw ext"></span> THIRD-PARTY</li>
+      <li>— RUNTIME</li>
+      <li>┄ TEST</li>
+      <li>┅ BUILD</li>
+    </ul>
+  </header>
+  <section id="graph">
+    <svg viewBox="0 0 1240 1090" role="img" aria-labelledby="diagram-title diagram-desc" aria-describedby="diagram-desc" id="diagram">
+<title id="diagram-title">FlowDeck package map</title>
+<desc id="diagram-desc">The 19 packages of the flowdeck module (17 production · 2 test) as nodes, the 59 import edges (49 runtime · 9 test · 1 build) as arrows pointing at the imported package, fan-in badges (runtime importers). Every node links to its section.</desc>
+<defs><marker id="flowdeck-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,4.5 L0,9 Z" class="arrow"/></marker></defs>
+<path class="edge" d="M 650 120 L 650 132 L 8 132 L 8 920 L 60 920" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 700 120 L 700 148 L 470 148 L 470 160" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 760 120 L 760 160" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 820 120 L 820 136 L 610 136 L 610 430 L 620 430" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge build" d="M 320 200 L 340 200" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 380 240 L 380 250 L 30 250 L 30 904 L 60 904" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 560 240 L 560 270 L 1170 270 L 1170 876 L 860 876 L 860 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 880 190 L 890 190 L 890 290 L 900 290" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 660 240 L 660 280" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 720 240 L 720 378 L 604 378 L 604 444 L 620 444" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 940 360 L 940 390 L 700 390 L 700 400" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 900 304 L 880 304" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 1030 360 L 1030 640" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 900 318 L 56 318 L 56 564 L 320 564" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 900 332 L 40 332 L 40 574 L 340 574" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 900 352 L 36 352 L 36 938 L 340 938" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 800 360 L 800 400" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 840 360 L 840 396 L 1184 396 L 1184 628 L 970 628 L 970 640" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 780 360 L 780 400 L 1198 400 L 1198 818 L 900 818" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 680 360 L 680 496 L 336 496 L 336 786 L 340 786" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 740 360 L 740 500 L 470 500 L 470 520" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 620 340 L 28 340 L 28 550 L 320 550" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 600 548 L 750 548 L 750 640" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 600 560 L 894 560 L 894 616 L 930 616 L 930 640" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 470 600 L 470 760" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 370 600 L 370 620 L 94 620 L 94 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 100 600 L 100 850 L 370 850 L 370 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 140 600 L 140 746 L 360 746 L 360 760" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 706 480 L 706 640" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 730 480 L 730 490 L 606 490 L 606 746 L 400 746 L 400 760" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 760 480 L 760 620 L 1010 620 L 1010 640" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 620 458 L 10 458 L 10 860 L 80 860 L 80 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 880 430 L 890 430 L 890 776 L 900 776" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 620 470 L 338 470 L 338 862 L 350 862 L 350 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 660 720 L 660 736 L 44 736 L 44 918 L 60 918" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 640 720 L 640 750 L 380 750 L 380 760" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 880 660 L 900 660" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 880 700 L 880 736 L 1178 736 L 1178 804 L 900 804" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 740 720 L 740 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 340 830 L 24 830 L 24 932 L 60 932" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 560 760 L 560 740 L 1100 740 L 1100 720" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 600 790 L 900 790" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 480 840 L 480 850 L 660 850 L 660 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 930 720 L 930 744 L 6 744 L 6 946 L 60 946" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 900 710 L 894 710 L 894 870 L 570 870 L 570 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 1160 690 L 1206 690 L 1206 980 L 810 980 L 810 960" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 320 902 L 340 902" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 250 960 L 250 980 L 750 980 L 750 960" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 940 240 L 940 260 L 326 260 L 326 874 L 410 874 L 410 880" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge" d="M 1000 240 L 1000 266 L 20 266 L 20 536 L 60 536" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 190 1000 L 190 960" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 90 1000 L 90 986 L 330 986 L 330 814 L 340 814" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 130 1000 L 130 982 L 1188 982 L 1188 850 L 930 850 L 930 840" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 170 1000 L 170 990 L 690 990 L 690 960" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 380 1000 L 380 972 L 614 972 L 614 452 L 620 452" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 420 1000 L 420 974 L 322 974 L 322 914 L 340 914" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 460 1000 L 460 964 L 334 964 L 334 800 L 340 800" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 560 1000 L 560 976 L 1194 976 L 1194 730 L 1110 730 L 1110 720" marker-end="url(#flowdeck-arrow)"/>
+<path class="edge test" d="M 520 1000 L 520 970 L 886 970 L 886 830 L 900 830" marker-end="url(#flowdeck-arrow)"/>
+<g class="edge-label"><rect x="224" y="125" width="152" height="14"/><text x="300" y="135.5" text-anchor="middle">LAUNCH · SHUTDOWN · READY</text></g>
+<g class="edge-label"><rect x="546.4" y="141" width="79.19999999999999" height="14"/><text x="586" y="151.5" text-anchor="middle">INIT · EMBED</text></g>
+<g class="edge-label"><rect x="745.6" y="133" width="28.799999999999997" height="14"/><text x="760" y="143.5" text-anchor="middle">NEW</text></g>
+<g class="edge-label"><rect x="689.4" y="129" width="51.199999999999996" height="14"/><text x="715" y="139.5" text-anchor="middle">NEWPORT</text></g>
+<g class="edge-label"><rect x="183.6" y="243" width="28.799999999999997" height="14"/><text x="198" y="253.5" text-anchor="middle">CTX</text></g>
+<g class="edge-label"><rect x="814.2" y="263" width="101.6" height="14"/><text x="865" y="273.5" text-anchor="middle">REGISTERWORKFLOW</text></g>
+<g class="edge-label"><rect x="861.6" y="243" width="56.8" height="14"/><text x="890" y="253.5" text-anchor="middle">REGISTER</text></g>
+<g class="edge-label"><rect x="631.6" y="251" width="56.8" height="14"/><text x="660" y="261.5" text-anchor="middle">REGISTER</text></g>
+<g class="edge-label"><rect x="644.8" y="371" width="34.4" height="14"/><text x="662" y="381.5" text-anchor="middle">PORT</text></g>
+<g class="edge-label"><rect x="1001.6" y="493" width="56.8" height="14"/><text x="1030" y="503.5" text-anchor="middle">WORKFLOW</text></g>
+<g class="edge-label"><rect x="444" y="311" width="68" height="14"/><text x="478" y="321.5" text-anchor="middle">BLOCKTOSVG</text></g>
+<g class="edge-label"><rect x="502.8" y="345" width="34.4" height="14"/><text x="520" y="355.5" text-anchor="middle">SPEC</text></g>
+<g class="edge-label"><rect x="632.6" y="541" width="84.8" height="14"/><text x="675" y="551.5" text-anchor="middle">ACTION ERRORS</text></g>
+<g class="edge-label"><rect x="187.8" y="613" width="90.39999999999999" height="14"/><text x="233" y="623.5" text-anchor="middle">ERRNOTLAUNCHED</text></g>
+<a href="package-map-entry.html#package-main" id="node-main" aria-label="main (section)"><g><rect class="node " x="490" y="40" width="260" height="80" rx="4"/><text class="name" x="620" y="70" text-anchor="middle">main</text><text class="node-sub" x="620" y="88" text-anchor="middle">flags · launch · wiring</text><text class="node-fn" x="620" y="106" text-anchor="middle">main · loadConfig · run · healthcheckExit</text></g></a>
+<a href="package-map-entry.html#package-workflowgen" id="node-workflowgen" aria-label="cmd/workflowgen (section)"><g><rect class="node cmd" x="60" y="160" width="260" height="80" rx="4"/><text class="name" x="190" y="190" text-anchor="middle">cmd/workflowgen</text><text class="node-sub" x="190" y="208" text-anchor="middle">codegen (build-time)</text><text class="node-fn" x="190" y="226" text-anchor="middle">main · run · subpackages · render</text></g></a>
+<a href="package-map-entry.html#package-workflows" id="node-workflows" aria-label="workflows (section)"><g><rect class="node " x="340" y="160" width="260" height="80" rx="4"/><text class="name" x="470" y="190" text-anchor="middle">workflows</text><text class="node-sub" x="470" y="208" text-anchor="middle">12 subpackages (11 registered + steps)</text><text class="node-fn" x="470" y="226" text-anchor="middle">init() · RegisterWorkflow (each subpackage)</text><rect class="badge" x="566" y="170" width="24" height="14" rx="2"/><text class="badge-t" x="578" y="180">1</text></g></a>
+<a href="package-map-web.html#package-web" id="node-web" aria-label="web (section)"><g><rect class="node " x="620" y="160" width="260" height="80" rx="4"/><text class="name" x="750" y="190" text-anchor="middle">web</text><text class="node-sub" x="750" y="208" text-anchor="middle">router · static · middlewares</text><text class="node-fn" x="750" y="226" text-anchor="middle">New · handleHealthz · withRecovery · withRequestLog</text><rect class="badge" x="846" y="170" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="180">1</text></g></a>
+<a href="package-map-entry.html#package-svgdump" id="node-svgdump" aria-label="cmd/svgdump (section)"><g><rect class="node cmd" x="900" y="160" width="260" height="80" rx="4"/><text class="name" x="1030" y="190" text-anchor="middle">cmd/svgdump</text><text class="node-sub" x="1030" y="208" text-anchor="middle">static dump of the possible paths</text><text class="node-fn" x="1030" y="226" text-anchor="middle">main · printBlock</text></g></a>
+<a href="package-map-web.html#package-executions" id="node-executions" aria-label="web/executions (section)"><g><rect class="node " x="620" y="280" width="260" height="80" rx="4"/><text class="name" x="750" y="310" text-anchor="middle">web/executions</text><text class="node-sub" x="750" y="328" text-anchor="middle">handlers · badge · row models</text><text class="node-fn" x="750" y="346" text-anchor="middle">Register · 6 handlers · Badge · Row</text><rect class="badge" x="846" y="290" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="300">2</text></g></a>
+<a href="package-map-web.html#package-catalog" id="node-catalog" aria-label="web/catalog (section)"><g><rect class="node " x="900" y="280" width="260" height="80" rx="4"/><text class="name" x="1030" y="310" text-anchor="middle">web/catalog</text><text class="node-sub" x="1030" y="328" text-anchor="middle">dashboard · workflow page</text><text class="node-fn" x="1030" y="346" text-anchor="middle">Register · handleDashboard · handleWorkflowsList · handleWorkflowPage</text><rect class="badge" x="1126" y="290" width="24" height="14" rx="2"/><text class="badge-t" x="1138" y="300">1</text></g></a>
+<a href="package-map-core.html#package-core" id="node-core" aria-label="core (section)"><g><rect class="node " x="620" y="400" width="260" height="80" rx="4"/><text class="name" x="750" y="430" text-anchor="middle">core</text><text class="node-sub" x="750" y="448" text-anchor="middle">the Port (the contract)</text><text class="node-fn" x="750" y="466" text-anchor="middle">Port · NewPort · implementation of the 10 members</text><rect class="badge" x="846" y="410" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="420">4</text></g></a>
+<a href="package-map-web.html#package-webgraph" id="node-webgraph" aria-label="web/graph (section)"><g><rect class="node " x="60" y="520" width="260" height="80" rx="4"/><text class="name" x="190" y="550" text-anchor="middle">web/graph</text><text class="node-sub" x="190" y="568" text-anchor="middle">block-model SVG · executed-path SVG</text><text class="node-fn" x="190" y="586" text-anchor="middle">BlockToSVG · ExecutedPathToSVG · graphScale · arrowDefs</text><rect class="badge" x="286" y="530" width="24" height="14" rx="2"/><text class="badge-t" x="298" y="540">3</text></g></a>
+<a href="package-map-web.html#package-render" id="node-render" aria-label="web/render (section)"><g><rect class="node " x="340" y="520" width="260" height="80" rx="4"/><text class="name" x="470" y="550" text-anchor="middle">web/render</text><text class="node-sub" x="470" y="568" text-anchor="middle">HTMX renderer (templates · htm)</text><text class="node-fn" x="470" y="586" text-anchor="middle">Page · Partial · Fail · ok</text><rect class="badge" x="566" y="530" width="24" height="14" rx="2"/><text class="badge-t" x="578" y="540">2</text></g></a>
+<a href="package-map-core.html#package-actions" id="node-actions" aria-label="core/actions (section)"><g><rect class="node " x="620" y="640" width="260" height="80" rx="4"/><text class="name" x="750" y="670" text-anchor="middle">core/actions</text><text class="node-sub" x="750" y="688" text-anchor="middle">enqueue · resume · cancel · the error map</text><text class="node-fn" x="750" y="706" text-anchor="middle">Enqueue · dispatch · Resume · Cancel · ErrNotResumable · ErrNotCancellable</text><rect class="badge" x="846" y="650" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="660">2</text></g></a>
+<a href="package-map-core.html#package-registry" id="node-registry" aria-label="core/registry (section)"><g><rect class="node " x="900" y="640" width="260" height="80" rx="4"/><text class="name" x="1030" y="670" text-anchor="middle">core/registry</text><text class="node-sub" x="1030" y="688" text-anchor="middle">the registry (list · spec · parse)</text><text class="node-fn" x="1030" y="706" text-anchor="middle">List · Spec · SpecOf · Workflow · ErrUnknownWorkflow</text><rect class="badge" x="1126" y="650" width="24" height="14" rx="2"/><text class="badge-t" x="1138" y="660">6</text></g></a>
+<a href="package-map-core.html#package-reads" id="node-reads" aria-label="core/reads (section)"><g><rect class="node " x="340" y="760" width="260" height="80" rx="4"/><text class="name" x="470" y="790" text-anchor="middle">core/reads</text><text class="node-sub" x="470" y="808" text-anchor="middle">the reads (list · badge · detail · steps)</text><text class="node-fn" x="470" y="826" text-anchor="middle">ListByID · Executions · Status · MapState · Detail · Steps</text><rect class="badge" x="566" y="770" width="24" height="14" rx="2"/><text class="badge-t" x="578" y="780">5</text></g></a>
+<a href="package-map-core.html#package-status" id="node-status" aria-label="core/status (section)"><g><rect class="node leaf" x="900" y="760" width="260" height="80" rx="4"/><text class="name" x="1030" y="790" text-anchor="middle">core/status</text><text class="node-sub" x="1030" y="808" text-anchor="middle">the state enum · the terminal map</text><text class="node-fn" x="1030" y="826" text-anchor="middle">State · Queued · Running · Success · Error · Cancelled · Terminal</text><rect class="badge" x="1126" y="770" width="24" height="14" rx="2"/><text class="badge-t" x="1138" y="780">4</text></g></a>
+<a href="package-map-core.html#package-boot" id="node-boot" aria-label="core/boot (section)"><g><rect class="node " x="60" y="880" width="260" height="80" rx="4"/><text class="name" x="190" y="910" text-anchor="middle">core/boot</text><text class="node-sub" x="190" y="928" text-anchor="middle">launch · ctx · queue · ready · shutdown</text><text class="node-fn" x="190" y="946" text-anchor="middle">Launch · Ctx · CtxOrErr · QueueName · Ready · Shutdown</text><rect class="badge" x="286" y="890" width="24" height="14" rx="2"/><text class="badge-t" x="298" y="900">7</text></g></a>
+<a href="package-map-core.html#package-graph" id="node-graph" aria-label="core/graph (section)"><g><rect class="node leaf" x="340" y="880" width="260" height="80" rx="4"/><text class="name" x="470" y="910" text-anchor="middle">core/graph</text><text class="node-sub" x="470" y="928" text-anchor="middle">the block model · the possible paths</text><text class="node-fn" x="470" y="946" text-anchor="middle">PathGraph · Of · Spec · WorkflowGraph · Child · Block · NodeKind</text><rect class="badge" x="566" y="890" width="24" height="14" rx="2"/><text class="badge-t" x="578" y="900">6</text></g></a>
+<a href="package-map-entry.html#package-dbos" id="node-dbos" aria-label="dbos (section)"><g><rect class="node ext" x="620" y="880" width="260" height="80" rx="4"/><text class="name" x="750" y="910" text-anchor="middle">dbos</text><text class="node-sub" x="750" y="928" text-anchor="middle">DBOS (third-party · v1.7.0)</text><text class="node-fn" x="750" y="946" text-anchor="middle">dbos.RegisterWorkflow · Step · Go · Context · RegisterQueue</text><rect class="badge" x="846" y="890" width="24" height="14" rx="2"/><text class="badge-t" x="858" y="900">5</text></g></a>
+<a href="package-map-core.html#package-testcore" id="node-testcore" aria-label="core/internal/testcore (section)"><g><rect class="node test" x="60" y="1000" width="260" height="70" rx="4"/><text class="name" x="190" y="1030" text-anchor="middle">core/internal/testcore</text><text class="node-sub" x="190" y="1048" text-anchor="middle">test env (boot · poll · steps)</text><text class="node-fn" x="190" y="1066" text-anchor="middle">Setup · NeedCore · PollState · MustStepNames</text></g></a>
+<a href="package-map-web.html#package-webtest" id="node-webtest" aria-label="web/internal/webtest (section)"><g><rect class="node test" x="340" y="1000" width="260" height="70" rx="4"/><text class="name" x="470" y="1030" text-anchor="middle">web/internal/webtest</text><text class="node-sub" x="470" y="1048" text-anchor="middle">fake Port (the web tests)</text><text class="node-fn" x="470" y="1066" text-anchor="middle">TestPort · AckEnqueuer · ok* fakes</text></g></a>
+</svg>
+  </section>
+  <section id="packages">
+    <h2>packages <span class="badge">19 · 17 PROD · 2 TEST</span></h2>
+    <table>
+      <thead><tr><th>package</th><th>group</th><th>role</th><th>fan-in</th><th>spoke</th></tr></thead>
+      <tbody><tr><td><code>main</code></td><td>entry</td><td>flags · launch · wiring</td><td>0</td><td><a href="package-map-entry.html#package-main">spoke</a></td></tr><tr><td><code>core</code></td><td>core</td><td>the Port (the contract)</td><td>4</td><td><a href="package-map-core.html#package-core">spoke</a></td></tr><tr><td><code>core/boot</code></td><td>core</td><td>launch · ctx · queue · ready · shutdown</td><td>7</td><td><a href="package-map-core.html#package-boot">spoke</a></td></tr><tr><td><code>core/registry</code></td><td>core</td><td>list · spec · parse</td><td>6</td><td><a href="package-map-core.html#package-registry">spoke</a></td></tr><tr><td><code>core/reads</code></td><td>core</td><td>list · badge · detail · steps</td><td>5</td><td><a href="package-map-core.html#package-reads">spoke</a></td></tr><tr><td><code>core/actions</code></td><td>core</td><td>enqueue · resume · cancel · error map</td><td>2</td><td><a href="package-map-core.html#package-actions">spoke</a></td></tr><tr><td><code>core/status</code></td><td>core</td><td>state enum · terminal map</td><td>4</td><td><a href="package-map-core.html#package-status">spoke</a></td></tr><tr><td><code>core/graph</code></td><td>core</td><td>block model · possible paths</td><td>6</td><td><a href="package-map-core.html#package-graph">spoke</a></td></tr><tr><td><code>core/internal/testcore</code></td><td>core</td><td>test env (boot · poll · steps) · test</td><td>0</td><td><a href="package-map-core.html#package-testcore">spoke</a></td></tr><tr><td><code>web</code></td><td>web</td><td>router · middlewares · healthz · static</td><td>1</td><td><a href="package-map-web.html#package-web">spoke</a></td></tr><tr><td><code>web/executions</code></td><td>web</td><td>handlers · badge · row models</td><td>2</td><td><a href="package-map-web.html#package-executions">spoke</a></td></tr><tr><td><code>web/catalog</code></td><td>web</td><td>dashboard · workflow list · workflow page</td><td>1</td><td><a href="package-map-web.html#package-catalog">spoke</a></td></tr><tr><td><code>web/render</code></td><td>web</td><td>HTMX renderer · error map</td><td>2</td><td><a href="package-map-web.html#package-render">spoke</a></td></tr><tr><td><code>web/graph</code></td><td>web</td><td>block SVG · executed-path SVG</td><td>3</td><td><a href="package-map-web.html#package-webgraph">spoke</a></td></tr><tr><td><code>web/internal/webtest</code></td><td>web</td><td>fake Port (the web tests) · test</td><td>0</td><td><a href="package-map-web.html#package-webtest">spoke</a></td></tr><tr><td><code>workflows</code></td><td>entry</td><td>12 subpackages (11 registered + steps)</td><td>1</td><td><a href="package-map-entry.html#package-workflows">spoke</a></td></tr><tr><td><code>cmd/workflowgen</code></td><td>entry</td><td>codegen (build-time)</td><td>0</td><td><a href="package-map-entry.html#package-workflowgen">spoke</a></td></tr><tr><td><code>cmd/svgdump</code></td><td>entry</td><td>static dump of the possible paths</td><td>0</td><td><a href="package-map-entry.html#package-svgdump">spoke</a></td></tr><tr><td><code>dbos</code></td><td>third-party</td><td>DBOS Go SDK v1.7.0 (external)</td><td>5</td><td><a href="package-map-entry.html#package-dbos">spoke</a></td></tr></tbody>
+    </table>
+  </section>
+  <section id="edges">
+    <h2>contacts <span class="badge">59 EDGES · 0 CYCLES</span></h2>
+    <table>
+      <thead><tr><th>edge</th><th>where</th><th>what</th><th>kind</th></tr></thead>
+      <tbody><tr><td><code>main</code> → <code>core/boot</code></td><td>main.go · run · boot.SetWorkflowsSource · boot.Launch · boot.Ready · boot.Shutdown</td><td>launch the core · poll the health endpoint · clean shutdown</td><td class="kind">rt</td></tr><tr><td><code>main</code> → <code>core</code></td><td>main.go · run · core.NewPort()</td><td>wire the Port into the web router</td><td class="kind">rt</td></tr><tr><td><code>main</code> → <code>web</code></td><td>main.go · run · web.New(core.NewPort(), boot.Ready)</td><td>router + ready guard</td><td class="kind">rt</td></tr><tr><td><code>main</code> → <code>workflows</code></td><td>main.go · run · //go:embed workflows · zz_generated.go (blank imports)</td><td>register the workflows at init · embed the source tree for the paths parser</td><td class="kind">rt</td></tr><tr><td><code>cmd/workflowgen</code> → <code>workflows</code></td><td>cmd/workflowgen/main.go · run · subpackages · render</td><td>reads the workflow sources and writes zz_generated.go (build-time, not imported)</td><td class="kind">build</td></tr><tr><td><code>workflows</code> → <code>core/boot</code></td><td>workflows/<name>/<name>.go · init · boot.Ctx</td><td>each subpackage grabs the launch ctx for its dbos context</td><td class="kind">rt</td></tr><tr><td><code>workflows</code> → <code>dbos</code></td><td>workflows/<name>/<name>.go · init · dbos.RegisterWorkflow · WithWorkflowName · WithMaxRecoveryAttempts(3)</td><td>register each workflow (11 registered + steps helpers)</td><td class="kind">rt</td></tr><tr><td><code>web</code> → <code>core</code></td><td>web/web.go · New · core.Port</td><td>the router takes the Port (never the core internals)</td><td class="kind">rt</td></tr><tr><td><code>web</code> → <code>web/catalog</code></td><td>web/web.go · New · catalog.Register</td><td>mount the catalog routes</td><td class="kind">rt</td></tr><tr><td><code>web</code> → <code>web/executions</code></td><td>web/web.go · New · executions.Register</td><td>mount the executions routes</td><td class="kind">rt</td></tr><tr><td><code>web/catalog</code> → <code>core</code></td><td>web/catalog/register.go · Register · core.Port</td><td>route registration takes the Port</td><td class="kind">rt</td></tr><tr><td><code>web/catalog</code> → <code>web/executions</code></td><td>web/catalog/workflow.go · workflowPage · executions.Badge · executions.Row</td><td>workflow page reuses the badge/row models</td><td class="kind">rt</td></tr><tr><td><code>web/catalog</code> → <code>core/registry</code></td><td>web/catalog/dashboard.go · handleDashboard · handleWorkflowsList · registry.Workflow</td><td>workflow list (names + params)</td><td class="kind">rt</td></tr><tr><td><code>web/catalog</code> → <code>core/graph</code></td><td>web/catalog/workflow.go · workflowPage · graph.Spec · (Spec).Sanitize · WorkflowGraph · Block · Child</td><td>possible-paths graph of the form</td><td class="kind">rt</td></tr><tr><td><code>web/catalog</code> → <code>web/graph</code></td><td>web/catalog/workflow.go · workflowPage · graph.BlockToSVG</td><td>render the possible-paths block to SVG</td><td class="kind">rt</td></tr><tr><td><code>web/catalog</code> → <code>web/render</code></td><td>web/catalog/dashboard.go · workflow.go · render.Page · render.Partial · render.Fail</td><td>HTMX page/fragment/error rendering</td><td class="kind">rt</td></tr><tr><td><code>web/executions</code> → <code>core</code></td><td>web/executions/register.go · Register · core.Port</td><td>route registration takes the Port</td><td class="kind">rt</td></tr><tr><td><code>web/executions</code> → <code>core/reads</code></td><td>web/executions/badge.go · detail.go · steps.go · reads.Execution · RunPath · ErrUnknownExecution</td><td>badge row · detail · steps read models</td><td class="kind">rt</td></tr><tr><td><code>web/executions</code> → <code>core/registry</code></td><td>web/executions/dispatch.go · resume.go · registry.ErrUnknownWorkflow</td><td>workflow lookup for dispatch/resume</td><td class="kind">rt</td></tr><tr><td><code>web/executions</code> → <code>core/status</code></td><td>web/executions/badge.go · detail.go · steps.go · status.State · (State).Terminal</td><td>badge state · stop the 2s poll on terminal</td><td class="kind">rt</td></tr><tr><td><code>web/executions</code> → <code>web/render</code></td><td>web/executions/*.go · render.Partial · render.Page · render.Fail</td><td>HTMX fragments for dispatch/badge/detail/steps</td><td class="kind">rt</td></tr><tr><td><code>web/executions</code> → <code>web/graph</code></td><td>web/executions/steps.go · newStepsView · graph.ExecutedPathToSVG</td><td>render the executed path to SVG</td><td class="kind">rt</td></tr><tr><td><code>web/render</code> → <code>core/actions</code></td><td>web/render/render.go · Fail · actions.ErrNotResumable · actions.ErrNotCancellable</td><td>map the action errors to statuses</td><td class="kind">rt</td></tr><tr><td><code>web/render</code> → <code>core/boot</code></td><td>web/render/render.go · Fail · boot.ErrNotLaunched</td><td>503 until the core is launched</td><td class="kind">rt</td></tr><tr><td><code>web/render</code> → <code>core/reads</code></td><td>web/render/render.go · Fail · reads.ErrUnknownExecution</td><td>404 for unknown executions</td><td class="kind">rt</td></tr><tr><td><code>web/render</code> → <code>core/registry</code></td><td>web/render/render.go · Fail · registry.ErrUnknownWorkflow</td><td>404 for unknown workflows</td><td class="kind">rt</td></tr><tr><td><code>web/graph</code> → <code>core/graph</code></td><td>web/graph/graph.go · block_svg.go · block.go · *WorkflowGraph · Block · Child · Node · NodeKind · BlockType</td><td>the block model to SVG (possible paths)</td><td class="kind">rt</td></tr><tr><td><code>web/graph</code> → <code>core/reads</code></td><td>web/graph/graph.go · ExecutedPathToSVG · reads.Step</td><td>the executed path (state + steps) to SVG</td><td class="kind">rt</td></tr><tr><td><code>cmd/svgdump</code> → <code>web/graph</code></td><td>cmd/svgdump/main.go · webgraph.BlockToSVG</td><td>static dump of every workflow block</td><td class="kind">rt</td></tr><tr><td><code>core</code> → <code>core/actions</code></td><td>core/port.go · NewPort · actions.Enqueue · actions.Resume · actions.Cancel</td><td>Port members: the write side</td><td class="kind">rt</td></tr><tr><td><code>core</code> → <code>core/reads</code></td><td>core/port.go · NewPort · reads.Executions · reads.Status · reads.Steps · reads.Detail</td><td>Port members: the read side · Execution · RunPath · DetailPath</td><td class="kind">rt</td></tr><tr><td><code>core</code> → <code>core/registry</code></td><td>core/port.go · NewPort · registry.List · registry.Spec</td><td>Port members: List · Spec</td><td class="kind">rt</td></tr><tr><td><code>core</code> → <code>core/boot</code></td><td>core/port.go · NewPort · boot.Paths</td><td>Port members: the possible-paths graph (captured at boot)</td><td class="kind">rt</td></tr><tr><td><code>core</code> → <code>core/status</code></td><td>core/port.go · NewPort · status.State</td><td>Port member: Status</td><td class="kind">rt</td></tr><tr><td><code>core</code> → <code>core/graph</code></td><td>core/port.go · NewPort · *graph.PathGraph · graph.PathGraph{}</td><td>Port members: Graph</td><td class="kind">rt</td></tr><tr><td><code>core/actions</code> → <code>core/boot</code></td><td>core/actions/dispatch.go · resume.go · cancel.go · boot.Ctx · boot.CtxOrErr · boot.QueueName</td><td>enqueue on the single queue</td><td class="kind">rt</td></tr><tr><td><code>core/actions</code> → <code>core/reads</code></td><td>core/actions/dispatch.go · cancel.go · resume.go · reads.ListByID</td><td>read the row back after each mutation</td><td class="kind">rt</td></tr><tr><td><code>core/actions</code> → <code>core/registry</code></td><td>core/actions/resume.go · registry.List</td><td>validate the workflow name on resume</td><td class="kind">rt</td></tr><tr><td><code>core/actions</code> → <code>core/status</code></td><td>core/actions/cancel.go · resume.go · dispatch.go · status.Queued · Running · (State).Terminal</td><td>guard the mutations (only live runs)</td><td class="kind">rt</td></tr><tr><td><code>core/actions</code> → <code>dbos</code></td><td>core/actions/dispatch.go · resume.go · cancel.go · ctx.Enqueue · dbos.ResumeWorkflow · dbos.CancelWorkflow</td><td>the DBOS mutations</td><td class="kind">rt</td></tr><tr><td><code>core/reads</code> → <code>core/boot</code></td><td>core/reads/executions.go · status.go · steps.go · detail.go · boot.Ctx</td><td>open the DBOS ctx for each read</td><td class="kind">rt</td></tr><tr><td><code>core/reads</code> → <code>core/registry</code></td><td>core/reads/detail.go · inputValues · inputOf · registry.SpecOf</td><td>detail page: stored step args + the spec</td><td class="kind">rt</td></tr><tr><td><code>core/reads</code> → <code>core/status</code></td><td>core/reads/status.go · MapState · status.State · (State).Terminal</td><td>map DBOS statuses to the State enum</td><td class="kind">rt</td></tr><tr><td><code>core/reads</code> → <code>dbos</code></td><td>core/reads/executions.go · status.go · steps.go · detail.go · dbos.ListWorkflows · GetWorkflowStatuses · GetWorkflowSteps</td><td>the DBOS queries</td><td class="kind">rt</td></tr><tr><td><code>core/registry</code> → <code>core/boot</code></td><td>core/registry/registry.go · spec.go · boot.Ctx · boot.Paths</td><td>registered names + the embedded source tree</td><td class="kind">rt</td></tr><tr><td><code>core/registry</code> → <code>core/graph</code></td><td>core/registry/spec.go · SpecOf · graph.Spec</td><td>the parameter spec from the registration</td><td class="kind">rt</td></tr><tr><td><code>core/registry</code> → <code>dbos</code></td><td>core/registry/registry.go · List · dbos.ListWorkflows · dbos.ListRegisteredWorkflows · dbos.Workflow</td><td>the registry lists</td><td class="kind">rt</td></tr><tr><td><code>core/boot</code> → <code>core/graph</code></td><td>core/boot/lifecycle.go · SetWorkflowsSource · Paths · graph.New</td><td>parse the embedded source into the PathGraph</td><td class="kind">rt</td></tr><tr><td><code>core/boot</code> → <code>dbos</code></td><td>core/boot/lifecycle.go · sqlite_driver.go · dbos.NewContext · Launch · Shutdown</td><td>launch · shutdown · sqlite driver (blank import)</td><td class="kind">rt</td></tr><tr><td><code>cmd/svgdump</code> → <code>core/graph</code></td><td>cmd/svgdump/main.go · graph.New · g.ByName</td><td>parse the workflow tree from disk</td><td class="kind">rt</td></tr><tr><td><code>core/internal/testcore</code> → <code>core/boot</code></td><td>core/internal/testcore/testcore.go · Setup · boot.Launch · Ctx · Shutdown</td><td>boot the core against the test env</td><td class="kind">test</td></tr><tr><td><code>core/internal/testcore</code> → <code>core/reads</code></td><td>core/internal/testcore/testcore.go · MustStepNames · PollState · reads.Steps</td><td>assert the executed path</td><td class="kind">test</td></tr><tr><td><code>core/internal/testcore</code> → <code>core/status</code></td><td>core/internal/testcore/testcore.go · PollState · status.State</td><td>poll until the wanted state</td><td class="kind">test</td></tr><tr><td><code>core/internal/testcore</code> → <code>dbos</code></td><td>core/internal/testcore/testworkflows.go · RegisterTestWorkflows · dbos.RegisterWorkflow</td><td>register failing-test · resume-test (test-only)</td><td class="kind">test</td></tr><tr><td><code>web/internal/webtest</code> → <code>core</code></td><td>web/internal/webtest/webtest.go · TestPort · core.Port</td><td>the fake Port for handler tests</td><td class="kind">test</td></tr><tr><td><code>web/internal/webtest</code> → <code>core/graph</code></td><td>web/internal/webtest/webtest.go · graph.Spec</td><td>fake specs</td><td class="kind">test</td></tr><tr><td><code>web/internal/webtest</code> → <code>core/reads</code></td><td>web/internal/webtest/webtest.go · reads.Execution · RunPath</td><td>fake rows</td><td class="kind">test</td></tr><tr><td><code>web/internal/webtest</code> → <code>core/registry</code></td><td>web/internal/webtest/webtest.go · registry.Workflow</td><td>fake workflows</td><td class="kind">test</td></tr><tr><td><code>web/internal/webtest</code> → <code>core/status</code></td><td>web/internal/webtest/webtest.go · status.State</td><td>fake states</td><td class="kind">test</td></tr></tbody>
+    </table>
+  </section>
+  <section id="facts">
+    <h2>facts <span class="badge">VALIDATED 2026-11-02</span></h2>
+    <table>
+      <thead><tr><th>fact</th><th>evidence</th></tr></thead>
+      <tbody><tr><td>Every workflow subpackage registers with <code>WithMaxRecoveryAttempts(3)</code> (not 0) — the resume behavior of a failed run is pinned by the tests.</td><td>workflows/*/*.go · init · WithMaxRecoveryAttempts(3) · core/actions/resume_test.go · TestE2EResumeOfFailedRun</td></tr><tr><td><code>core.Port</code> is the single contract: 10 function fields (<code>List · Graph · Spec · Executions · Enqueue · Status · Steps · Detail · Resume · Cancel</code>) — web never touches DBOS.</td><td>core/port.go · Port · NewPort</td></tr><tr><td><code>Ready</code> is a function, not a Port field: <code>boot.Ready</code> is wired into <code>web.New</code>; <code>boot.ErrNotLaunched</code> maps to 503 until launch.</td><td>core/boot/lifecycle.go · Ready · main.go · run · web/web.go · New</td></tr><tr><td>The single queue: <code>boot.QueueName = "flowdeck"</code> — <code>Launch</code> registers it; <code>Enqueue</code>/<code>Resume</code>/<code>Cancel</code> all dispatch on it.</td><td>core/boot/lifecycle.go · QueueName · core/actions/dispatch.go · Enqueue · resume.go · cancel.go</td></tr><tr><td><code>MapState</code>/<code>ListByID</code> live in <code>core/reads/status.go</code> — dispatch ACKs and status polls read the same row back.</td><td>core/reads/status.go · ListByID · MapState · Status · core/actions/dispatch.go · dispatch</td></tr><tr><td>The badge/row models (<code>Badge</code> · <code>badgeLabels</code> · <code>BadgeFor</code> · <code>Row</code>) live in <code>web/executions/badge.go</code>, not in <code>core/reads</code>.</td><td>web/executions/badge.go · Badge · badgeLabels · BadgeFor · Row · handleBadge</td></tr><tr><td><code>web/catalog</code> does not import <code>core/status</code> in production (only <code>workflow_test.go</code>) — the workflow page's badge comes from <code>executions.Badge</code>.</td><td>go list -deps · web/catalog/workflow.go · web/catalog/workflow_test.go</td></tr><tr><td><code>SetWorkflowsSource</code> embeds the workflow tree (<code>//go:embed workflows</code> in main.go) — main calls it once before <code>Launch</code>; the graph is captured into the Port at <code>NewPort</code> (empty before boot).</td><td>main.go · //go:embed workflows · core/boot/lifecycle.go · SetWorkflowsSource · core/port.go · NewPort</td></tr><tr><td>The executed path (<code>RunPath</code>: state + steps) is a read model with the poll control — <code>(State).Terminal</code> stops the 2s badge poll.</td><td>core/reads/steps.go · RunPath · Steps · core/status/state.go · (State).Terminal</td></tr><tr><td>Resume uses the SDK's <code>ResumeWorkflow</code> (resumes from the last completed step) — the <code>pause</code> workflow (10s sleep · <code>pauseDuration</code>) pins the behavior.</td><td>core/actions/resume.go · Resume · workflows/pause/pause.go · pauseStep · pauseDuration</td></tr><tr><td>Cancel is only for live runs (queued/running) — the guard (<code>ErrNotCancellable</code>) is in <code>core/actions</code>; the DBOS cancel flips the row and the ACK reads it back.</td><td>core/actions/cancel.go · Cancel · ErrNotCancellable · cancelAck</td></tr></tbody>
+    </table>
+  </section>
+  <section id="gates">
+    <h2>gates <span class="badge">SCRIPTS/STRUCTURE-GATE.SH</span></h2>
+    <table>
+      <thead><tr><th>gate</th><th>check</th><th>status</th></tr></thead>
+      <tbody><tr><td>Coupling</td><td>goimportmaps ./... --metrics — Ca ≤18 · Ce ≤16 · I ≤1.0 (baseline 2026-11-02: <code>core/boot</code> Ca=18 is the boot hub · <code>main</code> Ce=16 is the entry wiring)</td><td>✅</td></tr><tr><td>Cycles</td><td>zero import cycles (the graph is a DAG · 59 edges · 2026-11-02)</td><td>✅</td></tr><tr><td>Cyclomatic · Cognitive · Nesting</td><td>scripts/structure-gate.sh (the per-function gates)</td><td>✅</td></tr><tr><td>Contract</td><td>forbidden imports enforced by goimportmaps (e.g. <code>web</code> must not import <code>dbos</code> · <code>cmd</code> must not import <code>web</code>)</td><td>✅</td></tr><tr><td>Map ↔ code</td><td>this map is in sync with the code (the change that moved the code updated the map, as its last step)</td><td>✅</td></tr></tbody>
+    </table>
+  </section>
+  <footer class="foot">
+    <span>flowdeck · diagrams/package-map.html</span>
+    <span>generated from code · verified 2026-11-02</span>
+  </footer>
 
-    <!-- ============ GRAPH ============ -->
-    <section id="graph">
-      <h1>FlowDeck <span class="sub">package map</span></h1>
-      <p class="desc">
-        Ranked dependency graph by folder · zero cycles · <code>core</code> is the focal node (fan-in 4) ·
-        <code>core/boot</code> is the root of the core tree (fan-in 7) · <code>core/graph</code> + <code>core/status</code> are pure leaves ·
-        <code>cmd</code> and <code>workflows</code> are not imported at runtime.
-      </p>
-      <nav>
-        <a href="#contacts">contacts</a> · <a href="#facts">facts</a> · <a href="#gates">gates</a> ·
-        <a href="#package-main">main</a> · <a href="#package-core">core</a> ·
-        <a href="#package-boot">boot</a> · <a href="#package-registry">registry</a> ·
-        <a href="#package-reads">reads</a> · <a href="#package-actions">actions</a> ·
-        <a href="#package-workflows">workflows</a> · <a href="#package-gen">cmd</a> ·
-        <a href="#package-status">status</a> · <a href="#package-graph">graph</a> ·
-        <a href="#package-web">web</a> · <a href="#package-webexecutions">executions</a> ·
-        <a href="#package-webcatalog">catalog</a> · <a href="#package-webrender">render</a> ·
-        <a href="#package-webgraph">web/graph</a> ·
-        <a href="#package-testcore">testcore</a> · <a href="#package-webtest">webtest</a> ·
-        <a href="#package-dbos">dbos</a>
-      </nav>
-      <ul class="legend">
-        <li><span class="sw focal"></span> FOCAL (fan-in 4)</li>
-        <li><span class="sw"></span> IMPORTS</li>
-        <li><span class="sw core"></span> INTRA-CORE</li>
-        <li><span class="sw leaf"></span> LEAF (fan-out 0)</li>
-        <li><span class="sw ext"></span> THIRD-PARTY</li>
-      </ul>
-      <div class="chart" role="img" aria-label="FlowDeck dependency DAG: main boots boot and builds the port; the core tree (registry, reads, actions) hangs off boot; web renders the catalog and executions routes; cmd tools and workflows are not imported at runtime.">
-        <svg viewBox="0 0 960 800" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-              <path d="M0 0L10 5L0 10z" fill="context-stroke"/>
-            </marker>
-          </defs>
-
-          <!-- ===== edges: main ===== -->
-          <path class="edge" d="M 390 60 L 175 60 L 175 160" marker-end="url(#arr)"/>
-          <path class="edge" d="M 570 55 L 760 55 L 760 160" marker-end="url(#arr)"/>
-          <path class="edge" d="M 480 90 L 480 150 L 600 150 L 600 430" marker-end="url(#arr)"/>
-          <path class="edge" d="M 390 75 L 24 75 L 24 730 L 310 730" marker-end="url(#arr)"/>
-          <!-- ===== edges: workflows ===== -->
-          <path class="edge" d="M 175 290 L 175 240" marker-end="url(#arr)"/>
-          <path class="edge" d="M 60 200 L 40 200 L 40 715 L 310 715" marker-end="url(#arr)"/>
-          <path class="edge ext" d="M 100 160 L 100 140 L 936 140 L 936 705 L 950 705" marker-end="url(#arr)"/>
-          <!-- ===== edges: web ===== -->
-          <path class="edge" d="M 765 250 L 765 290" marker-end="url(#arr)"/>
-          <path class="edge" d="M 655 250 L 655 270 L 430 270 L 430 290" marker-end="url(#arr)"/>
-          <path class="edge" d="M 620 210 L 320 210 L 320 470 L 400 470" marker-end="url(#arr)"/>
-          <!-- ===== edges: catalog ===== -->
-          <path class="edge" d="M 660 380 L 660 410 L 615 410 L 615 430" marker-end="url(#arr)"/>
-          <path class="edge" d="M 650 335 L 530 335" marker-end="url(#arr)"/>
-          <path class="edge" d="M 800 380 L 800 430" marker-end="url(#arr)"/>
-          <path class="edge" d="M 640 380 L 640 396 L 200 396 L 200 430" marker-end="url(#arr)"/>
-          <path class="edge" d="M 910 380 L 910 560" marker-end="url(#arr)"/>
-          <path class="edge" d="M 650 370 L 34 370 L 34 710 L 60 710" marker-end="url(#arr)"/>
-          <!-- ===== edges: executions ===== -->
-          <path class="edge" d="M 460 380 L 460 430" marker-end="url(#arr)"/>
-          <path class="edge" d="M 520 380 L 520 415 L 660 415 L 660 560" marker-end="url(#arr)"/>
-          <path class="edge" d="M 440 380 L 440 425 L 690 425 L 690 690" marker-end="url(#arr)"/>
-          <path class="edge" d="M 525 380 L 525 392 L 745 392 L 745 430" marker-end="url(#arr)"/>
-          <path class="edge" d="M 340 380 L 340 418 L 270 418 L 270 430" marker-end="url(#arr)"/>
-          <!-- ===== edges: render ===== -->
-          <path class="edge" d="M 240 520 L 240 560" marker-end="url(#arr)"/>
-          <path class="edge" d="M 60 510 L 36 510 L 36 778 L 405 778 L 405 770" marker-end="url(#arr)"/>
-          <path class="edge" d="M 300 520 L 300 544 L 530 544 L 530 560" marker-end="url(#arr)"/>
-          <path class="edge" d="M 310 510 L 310 552 L 800 552 L 800 560" marker-end="url(#arr)"/>
-          <!-- ===== edges: intra-core (gray family) ===== -->
-          <path class="edge core" d="M 430 530 L 430 560" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 560 530 L 560 560" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 610 530 L 610 546 L 770 546 L 770 560" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 490 530 L 490 690" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 700 530 L 700 690" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 400 525 L 30 525 L 30 730 L 60 730" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 350 640 L 350 690" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 480 600 L 500 600" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 350 640 L 350 652 L 830 652 L 830 640" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 450 640 L 450 672 L 620 672 L 620 690" marker-end="url(#arr)"/>
-          <path class="edge core ext" d="M 370 640 L 370 660 L 936 660 L 936 745 L 950 745" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 520 640 L 520 666 L 405 666 L 405 690" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 680 610 L 740 610" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 590 640 L 590 690" marker-end="url(#arr)"/>
-          <path class="edge core ext" d="M 660 640 L 660 668 L 936 668 L 936 700 L 950 700" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 730 640 L 730 656 L 30 656 L 30 686 L 330 686 L 330 690" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 735 640 L 735 674 L 30 674 L 30 679 L 155 679 L 155 690" marker-end="url(#arr)"/>
-          <path class="edge core ext" d="M 830 640 L 830 690" marker-end="url(#arr)"/>
-          <path class="edge core" d="M 310 730 L 250 730" marker-end="url(#arr)"/>
-          <path class="edge core ext" d="M 440 770 L 440 778 L 935 778 L 935 770 L 950 770" marker-end="url(#arr)"/>
-          <!-- ===== edges: web/graph · cmd ===== -->
-          <path class="edge" d="M 750 520 L 750 535 L 44 535 L 44 700 L 60 700" marker-end="url(#arr)"/>
-          <path class="edge" d="M 760 520 L 760 540 L 620 540 L 620 560" marker-end="url(#arr)"/>
-          <path class="edge" d="M 140 630 L 140 690" marker-end="url(#arr)"/>
-          <path class="edge" d="M 220 585 L 260 585 L 260 548 L 750 548 L 750 520" marker-end="url(#arr)"/>
-
-          <!-- ===== edge labels ===== -->
-          <text class="edge-label" x="280" y="52">INIT · EMBED</text>
-          <text class="edge-label" x="665" y="47">NEW</text>
-          <text class="edge-label" x="608" y="142">NEWPORT</text>
-          <text class="edge-label" transform="rotate(-90 16 430)" x="16" y="430">SETWORKFLOWSOURCE · LAUNCH · READY · SHUTDOWN</text>
-          <text class="edge-label" x="183" y="270">GO:GENERATE</text>
-          <text class="edge-label" transform="rotate(-90 32 470)" x="32" y="470">CTX</text>
-          <text class="edge-label" transform="rotate(-90 944 400)" x="944" y="400">REGISTERWORKFLOW</text>
-          <text class="edge-label" x="542" y="263">REGISTER</text>
-          <text class="edge-label" x="773" y="273">REGISTER</text>
-          <text class="edge-label" x="350" y="204">PORT</text>
-          <text class="edge-label" x="623" y="404">PORT</text>
-          <text class="edge-label" x="590" y="327">BADGE · ROW</text>
-          <text class="edge-label" x="808" y="405">BLOCKTOSVG</text>
-          <text class="edge-label" x="420" y="390">PAGE · PARTIAL · FAIL</text>
-          <text class="edge-label" transform="rotate(-90 918 460)" x="918" y="460">WORKFLOW</text>
-          <text class="edge-label" transform="rotate(-90 26 540)" x="26" y="540">SPEC</text>
-          <text class="edge-label" x="468" y="405">PORT</text>
-          <text class="edge-label" x="590" y="409">EXECUTION · RUNPATH · DETAILPATH</text>
-          <text class="edge-label" x="565" y="419">STATE</text>
-          <text class="edge-label" x="635" y="386">EXECUTEDPATHTOSVG</text>
-          <text class="edge-label" x="300" y="412">RENDER</text>
-          <text class="edge-label" x="248" y="540">ACTION ERRORS</text>
-          <text class="edge-label" x="415" y="538">ERRUNKNOWNEXECUTION</text>
-          <text class="edge-label" x="555" y="546">ERRUNKNOWNWORKFLOW</text>
-          <text class="edge-label" transform="rotate(-90 46 600)" x="46" y="600">BLOCK MODEL</text>
-          <text class="edge-label" x="690" y="534">STEP</text>
-          <text class="edge-label" x="148" y="660">NEW</text>
-          <text class="edge-label" x="500" y="542">BLOCKTOSVG</text>
-          <text class="edge-label" x="410" y="794">ERRNOTLAUNCHED</text>
-
-          <!-- ===== nodes ===== -->
-          <a href="#package-main">
-            <g>
-              <rect x="390" y="30" width="180" height="60" class="node"/>
-              <text x="480" y="54">main</text>
-              <text x="480" y="72" class="node-sub">main.go · main_test.go</text>
-              <text x="480" y="88" class="node-fn">env → boot → core.NewPort → web.New</text>
-            </g>
-          </a>
-          <a href="#package-workflows">
-            <g>
-              <rect x="60" y="160" width="230" height="80" class="node"/>
-              <text x="175" y="184">workflows</text>
-              <text x="175" y="200" class="node-sub">the sample workflows</text>
-              <text x="175" y="216" class="node-fn">10 subpackages · init() registers</text>
-              <text x="175" y="229" class="node-fn">zz_generated.go (generated)</text>
-            </g>
-            <rect x="214" y="166" width="70" height="14" class="badge"/>
-            <text x="249" y="176" class="badge-t">FAN-IN 2</text>
-          </a>
-          <a href="#package-web">
-            <g>
-              <rect x="620" y="160" width="280" height="90" class="node"/>
-              <text x="760" y="184">web</text>
-              <text x="760" y="200" class="node-sub">the HTTP wiring (router · healthz · static · middlewares)</text>
-              <text x="760" y="216" class="node-fn">New(p Port, ready) · catalog.Register · executions.Register</text>
-              <text x="760" y="232" class="node-fn">web.go · health.go · middleware.go</text>
-            </g>
-            <rect x="824" y="166" width="70" height="14" class="badge"/>
-            <text x="859" y="176" class="badge-t">FAN-IN 1</text>
-          </a>
-          <a href="#package-gen">
-            <g>
-              <rect x="60" y="290" width="230" height="70" class="node"/>
-              <text x="175" y="314">cmd/workflowgen</text>
-              <text x="175" y="330" class="node-sub">build tool · go:generate</text>
-              <text x="175" y="346" class="node-fn">writes workflows/zz_generated.go</text>
-            </g>
-          </a>
-          <a href="#package-webexecutions">
-            <g>
-              <rect x="330" y="290" width="200" height="90" class="node"/>
-              <text x="430" y="314">web/executions</text>
-              <text x="430" y="330" class="node-sub">the execution routes</text>
-              <text x="430" y="346" class="node-fn">badge · detail · steps · dispatch</text>
-              <text x="430" y="362" class="node-fn">resume · cancel · register.go</text>
-            </g>
-            <rect x="454" y="296" width="70" height="14" class="badge"/>
-            <text x="489" y="306" class="badge-t">FAN-IN 2</text>
-          </a>
-          <a href="#package-webcatalog">
-            <g>
-              <rect x="650" y="290" width="260" height="90" class="node"/>
-              <text x="780" y="314">web/catalog</text>
-              <text x="780" y="330" class="node-sub">the catalog routes</text>
-              <text x="780" y="346" class="node-fn">dashboard · workflows · workflow page</text>
-              <text x="780" y="362" class="node-fn">register.go</text>
-            </g>
-            <rect x="834" y="296" width="70" height="14" class="badge"/>
-            <text x="869" y="306" class="badge-t">FAN-IN 1</text>
-          </a>
-          <a href="#package-webrender">
-            <g>
-              <rect x="60" y="430" width="250" height="90" class="node"/>
-              <text x="135" y="454">web/render</text>
-              <text x="135" y="470" class="node-sub">templates · error mapping</text>
-              <text x="135" y="486" class="node-fn">Page · Partial · Fail</text>
-              <text x="135" y="502" class="node-fn">templates/ (8 files)</text>
-            </g>
-            <rect x="234" y="436" width="70" height="14" class="badge"/>
-            <text x="269" y="446" class="badge-t">FAN-IN 2</text>
-          </a>
-          <a href="#package-core">
-            <g>
-              <rect x="400" y="430" width="230" height="100" class="node focal"/>
-              <text x="515" y="454">core</text>
-              <text x="515" y="470" class="node-sub">port.go — the composition contract</text>
-              <text x="515" y="486" class="node-fn">Port · NewPort</text>
-            </g>
-            <rect x="554" y="436" width="70" height="14" class="badge"/>
-            <text x="589" y="446" class="badge-t">FAN-IN 4</text>
-          </a>
-          <a href="#package-webgraph">
-            <g>
-              <rect x="710" y="430" width="190" height="90" class="node"/>
-              <text x="805" y="454">web/graph</text>
-              <text x="805" y="470" class="node-sub">SVG layout (12 blocks)</text>
-              <text x="805" y="486" class="node-fn">BlockToSVG · ExecutedPathToSVG</text>
-              <text x="805" y="502" class="node-fn">1.25× scale</text>
-            </g>
-            <rect x="824" y="436" width="70" height="14" class="badge"/>
-            <text x="859" y="446" class="badge-t">FAN-IN 3</text>
-          </a>
-          <a href="#package-gen">
-            <g>
-              <rect x="60" y="560" width="160" height="70" class="node"/>
-              <text x="140" y="584">cmd/svgdump</text>
-              <text x="140" y="600" class="node-sub">diagnostic · go run</text>
-              <text x="140" y="616" class="node-fn">block tree · svg diff</text>
-            </g>
-          </a>
-          <a href="#package-actions">
-            <g>
-              <rect x="280" y="560" width="200" height="80" class="node"/>
-              <text x="380" y="584">core/actions</text>
-              <text x="380" y="600" class="node-sub">dispatch · resume · cancel</text>
-              <text x="380" y="616" class="node-fn">Enqueue · Resume · Cancel</text>
-              <text x="380" y="632" class="node-fn">ErrNotResumable · ErrNotCancellable</text>
-            </g>
-            <rect x="404" y="566" width="70" height="14" class="badge"/>
-            <text x="439" y="576" class="badge-t">FAN-IN 2</text>
-          </a>
-          <a href="#package-reads">
-            <g>
-              <rect x="500" y="560" width="180" height="80" class="node"/>
-              <text x="590" y="584">core/reads</text>
-              <text x="590" y="600" class="node-sub">the execution reads</text>
-              <text x="590" y="616" class="node-fn">Executions · Status · Detail · Steps</text>
-              <text x="590" y="632" class="node-fn">ErrUnknownExecution</text>
-            </g>
-            <rect x="604" y="566" width="70" height="14" class="badge"/>
-            <text x="639" y="576" class="badge-t">FAN-IN 5</text>
-          </a>
-          <a href="#package-registry">
-            <g>
-              <rect x="740" y="560" width="180" height="80" class="node"/>
-              <text x="830" y="584">core/registry</text>
-              <text x="830" y="600" class="node-sub">the registration read</text>
-              <text x="830" y="616" class="node-fn">List · Spec · SpecOf</text>
-              <text x="830" y="632" class="node-fn">ErrUnknownWorkflow</text>
-            </g>
-            <rect x="844" y="566" width="70" height="14" class="badge"/>
-            <text x="879" y="576" class="badge-t">FAN-IN 6</text>
-          </a>
-          <a href="#package-graph">
-            <g>
-              <rect x="60" y="690" width="190" height="80" class="node"/>
-              <text x="155" y="714">core/graph</text>
-              <text x="155" y="730" class="node-sub">parse · build · paths · spec</text>
-              <text x="155" y="746" class="node-fn">PathGraph · WorkflowGraph · Spec</text>
-              <text x="155" y="762" class="node-fn">pure · leaf</text>
-            </g>
-            <rect x="174" y="696" width="70" height="14" class="badge"/>
-            <text x="209" y="706" class="badge-t">FAN-IN 6</text>
-          </a>
-          <a href="#package-boot">
-            <g>
-              <rect x="310" y="690" width="190" height="80" class="node"/>
-              <text x="405" y="714">core/boot</text>
-              <text x="405" y="730" class="node-sub">the DBOS singleton</text>
-              <text x="405" y="746" class="node-fn">Ctx · Paths · Launch · Ready</text>
-              <text x="405" y="762" class="node-fn">SetWorkflowsSource · Shutdown</text>
-            </g>
-            <rect x="424" y="696" width="70" height="14" class="badge"/>
-            <text x="459" y="706" class="badge-t">FAN-IN 7</text>
-          </a>
-          <a href="#package-status">
-            <g>
-              <rect x="540" y="690" width="190" height="80" class="node"/>
-              <text x="635" y="714">core/status</text>
-              <text x="635" y="730" class="node-sub">the state vocabulary</text>
-              <text x="635" y="746" class="node-fn">State · 5 states · Terminal()</text>
-              <text x="635" y="762" class="node-fn">pure · leaf</text>
-            </g>
-            <rect x="654" y="696" width="70" height="14" class="badge"/>
-            <text x="689" y="706" class="badge-t">FAN-IN 5</text>
-          </a>
-          <a href="#package-dbos">
-            <g>
-              <rect x="760" y="690" width="190" height="80" class="node ext"/>
-              <text x="855" y="714">dbos</text>
-              <text x="855" y="730" class="node-sub">third-party · v1.7.0</text>
-              <text x="855" y="746" class="node-fn">NewContext · Enqueue · Cancel</text>
-              <text x="855" y="762" class="node-fn">RegisterWorkflow · ListWorkflows</text>
-            </g>
-            <rect x="874" y="696" width="70" height="14" class="badge"/>
-            <text x="909" y="706" class="badge-t">FAN-IN 5</text>
-          </a>
-        </svg>
-      </div>
-    </section>
-    <!-- ============ contacts (machine-readable) ============ -->
-    <section id="contacts">
-      <h2>Contacts <span class="badge">49 EDGES · 0 CYCLES</span></h2>
-      <table>
-        <thead>
-          <tr><th>Edge (importer → imported)</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><a href="#package-main">main</a> → <a href="#package-boot">core/boot</a></td><td>main.go · <code>run</code> (flags · env)</td><td><code>boot.SetWorkflowsSource</code> (embedded <code>workflows/</code> tree) · <code>boot.Launch</code> · <code>boot.Ready</code> · <code>boot.Shutdown</code></td></tr>
-          <tr><td><a href="#package-main">main</a> → <a href="#package-core">core</a></td><td>main.go · <code>run</code></td><td><code>core.NewPort</code> (the Port wiring)</td></tr>
-          <tr><td><a href="#package-main">main</a> → <a href="#package-web">web</a></td><td>main.go · <code>run</code></td><td><code>web.New</code> (receives <code>core.NewPort()</code> + the <code>boot.Ready</code> guard)</td></tr>
-          <tr><td><a href="#package-main">main</a> → <a href="#package-workflows">workflows</a></td><td>main.go · <code>run</code> (single blank import)</td><td><code>init()</code> registrations · the embedded source (graph parser input)</td></tr>
-          <tr><td><a href="#package-core">core</a> → <a href="#package-actions">core/actions</a></td><td>port.go · <code>NewPort</code></td><td><code>actions.Enqueue</code> · <code>actions.Resume</code> · <code>actions.Cancel</code> (Port function fields)</td></tr>
-          <tr><td><a href="#package-core">core</a> → <a href="#package-reads">core/reads</a></td><td>port.go · <code>NewPort</code></td><td><code>reads.Executions</code> · <code>reads.Status</code> · <code>reads.Detail</code> · <code>reads.Steps</code> (Port function fields) + the read-model types (<code>reads.Execution</code> · <code>reads.RunPath</code> · <code>reads.DetailPath</code>)</td></tr>
-          <tr><td><a href="#package-core">core</a> → <a href="#package-registry">core/registry</a></td><td>port.go · <code>NewPort</code></td><td><code>registry.List</code> · <code>registry.Spec</code> (Port function fields)</td></tr>
-          <tr><td><a href="#package-core">core</a> → <a href="#package-boot">core/boot</a></td><td>port.go · <code>NewPort</code></td><td><code>boot.Paths</code> (the <code>Graph</code> field) · <code>boot.ErrNotLaunched</code> (the <code>Ready</code> field)</td></tr>
-          <tr><td><a href="#package-core">core</a> → <a href="#package-status">core/status</a></td><td>port.go · <code>NewPort</code></td><td><code>status.State</code> (the <code>Status</code> field's return)</td></tr>
-          <tr><td><a href="#package-core">core</a> → <a href="#package-graph">core/graph</a></td><td>port.go · <code>NewPort</code></td><td><code>*graph.PathGraph</code> (the <code>Graph</code> field) · <code>graph.Spec</code> (the <code>Spec</code> field's return)</td></tr>
-          <tr><td><a href="#package-actions">core/actions</a> → <a href="#package-boot">core/boot</a></td><td>dispatch.go · resume.go · cancel.go</td><td><code>boot.Ctx</code> (the live DBOS context) · <code>boot.CtxOrErr</code> · <code>boot.QueueName</code> (dispatch + resume)</td></tr>
-          <tr><td><a href="#package-actions">core/actions</a> → <a href="#package-reads">core/reads</a></td><td>dispatch.go · cancel.go · resume.go</td><td><code>reads.listByID</code> (the ACK read-back: the same id, now queued/cancelled)</td></tr>
-          <tr><td><a href="#package-actions">core/actions</a> → <a href="#package-registry">core/registry</a></td><td>resume.go · <code>resumeAck</code></td><td><code>registry.List</code> (the re-enqueue guard: known + failed)</td></tr>
-          <tr><td><a href="#package-actions">core/actions</a> → <a href="#package-status">core/status</a></td><td>cancel.go · <code>cancelAck</code> · resume.go · dispatch.go</td><td><code>status.Queued</code> · <code>status.Running</code> · <code>status.Success</code> · <code>status.Error</code> · <code>status.Cancelled</code> · <code>(State).Terminal</code></td></tr>
-          <tr><td><a href="#package-actions">core/actions</a> → <a href="#package-dbos">dbos</a></td><td>dispatch.go · <code>Enqueue</code>/<code>dispatch</code> · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code></td><td><code>ctx.Enqueue</code> · <code>ctx.Queue</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code></td></tr>
-          <tr><td><a href="#package-reads">core/reads</a> → <a href="#package-boot">core/boot</a></td><td>executions.go · status.go · steps.go · detail.go · <code>mapState</code> · <code>listByID</code></td><td><code>boot.Ctx</code> (the live DBOS context)</td></tr>
-          <tr><td><a href="#package-reads">core/reads</a> → <a href="#package-registry">core/registry</a></td><td>detail.go · <code>inputValues</code> · <code>inputOf</code></td><td><code>registry.SpecOf</code> (the input fields for the stored values)</td></tr>
-          <tr><td><a href="#package-reads">core/reads</a> → <a href="#package-status">core/status</a></td><td>status.go · <code>mapState</code>/<code>Status</code> · executions.go · <code>Executions</code> · steps.go · <code>Steps</code> · detail.go · <code>Detail</code></td><td><code>status.State</code> · the 5 states · <code>Terminal()</code> (the poll control)</td></tr>
-          <tr><td><a href="#package-reads">core/reads</a> → <a href="#package-dbos">dbos</a></td><td>executions.go · <code>Executions</code> · status.go · <code>listByID</code> · steps.go · <code>Steps</code> · detail.go · <code>Detail</code></td><td><code>dbos.ListWorkflows</code> · <code>dbos.GetWorkflowStatuses</code> · <code>dbos.GetWorkflowSteps</code></td></tr>
-          <tr><td><a href="#package-registry">core/registry</a> → <a href="#package-boot">core/boot</a></td><td>registry.go · <code>List</code>/<code>Spec</code>/<code>SpecOf</code> · spec.go</td><td><code>boot.Ctx</code> (the live DBOS context) · <code>boot.Paths</code> (the graph source for <code>SpecOf</code>)</td></tr>
-          <tr><td><a href="#package-registry">core/registry</a> → <a href="#package-graph">core/graph</a></td><td>spec.go · <code>SpecOf</code></td><td><code>graph.Spec</code> (the read model)</td></tr>
-          <tr><td><a href="#package-registry">core/registry</a> → <a href="#package-dbos">dbos</a></td><td>registry.go · <code>List</code></td><td><code>dbos.ListWorkflows</code> · <code>dbos.ListRegisteredWorkflows</code> · the status types (the <code>Workflow</code> struct)</td></tr>
-          <tr><td><a href="#package-boot">core/boot</a> → <a href="#package-graph">core/graph</a></td><td>lifecycle.go · <code>SetWorkflowsSource</code>/<code>Paths</code></td><td><code>graph.New</code> · <code>*graph.PathGraph</code> (built once at boot)</td></tr>
-          <tr><td><a href="#package-boot">core/boot</a> → <a href="#package-dbos">dbos</a></td><td>lifecycle.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>ctxOrErr</code> · sqlite_driver.go</td><td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · the status types · SQLite driver (blank import)</td></tr>
-          <tr><td><a href="#package-web">web</a> → <a href="#package-core">core</a></td><td>web.go · <code>New</code> (the router)</td><td><code>core.Port</code> (the contract) · <code>core.Ready</code> (the 503 guard, wired by main)</td></tr>
-          <tr><td><a href="#package-web">web</a> → <a href="#package-webcatalog">web/catalog</a></td><td>web.go · <code>New</code></td><td><code>catalog.Register</code> (GET / · GET /workflows · GET /workflows/{name})</td></tr>
-          <tr><td><a href="#package-web">web</a> → <a href="#package-webexecutions">web/executions</a></td><td>web.go · <code>New</code></td><td><code>executions.Register</code> (POST /run/{name} · GET /status/{id} · GET /executions/{id} · /steps · POST /resume/{id} · /cancel/{id})</td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-core">core</a></td><td>register.go · dashboard.go · workflow.go · <code>Register</code> (the <code>Port</code> parameter type)</td><td><code>core.Port</code> (type only — the calls go through the handlers)</td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-webexecutions">web/executions</a></td><td>workflow.go · <code>handleWorkflowPage</code> · <code>workflowPage</code></td><td><code>executions.Badge</code> · <code>executions.Row</code> (the executions list model)</td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-registry">core/registry</a></td><td>dashboard.go · <code>handleDashboard</code> · <code>handleWorkflowsList</code></td><td><code>registry.Workflow</code> (the dashboard list model)</td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-graph">core/graph</a></td><td>workflow.go · <code>handleWorkflowPage</code> · <code>workflowPage</code></td><td><code>graph.Spec</code> (the form model) · <code>(Spec).Sanitize</code> · <code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Node</code></td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-status">core/status</a></td><td>workflow.go · <code>handleWorkflowPage</code></td><td><code>status.Queued</code> · <code>status.Success</code> (the empty-state check)</td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-webgraph">web/graph</a></td><td>workflow.go · <code>handleWorkflowPage</code></td><td><code>graph.BlockToSVG</code> (the possible-paths diagram)</td></tr>
-          <tr><td><a href="#package-webcatalog">web/catalog</a> → <a href="#package-webrender">web/render</a></td><td>dashboard.go · workflow.go · <code>handleDashboard</code> · <code>handleWorkflowsList</code> · <code>handleWorkflowPage</code></td><td><code>render.Page</code> · <code>render.Partial</code> · <code>render.Fail</code></td></tr>
-          <tr><td><a href="#package-webexecutions">web/executions</a> → <a href="#package-core">core</a></td><td>register.go · badge.go · cancel.go · detail.go · dispatch.go · resume.go · steps.go</td><td><code>core.Port</code> (the <code>Register</code> parameter + every handler)</td></tr>
-          <tr><td><a href="#package-webexecutions">web/executions</a> → <a href="#package-reads">core/reads</a></td><td>badge.go · <code>Badge</code>/<code>BadgeFor</code>/<code>Row</code> · detail.go · steps.go · <code>RunPath</code></td><td><code>reads.Execution</code> · <code>reads.DetailPath</code> · <code>reads.RunPath</code> · <code>reads.Step</code> · <code>reads.ErrUnknownExecution</code></td></tr>
-          <tr><td><a href="#package-webexecutions">web/executions</a> → <a href="#package-registry">core/registry</a></td><td>resume.go · dispatch.go · <code>fail</code></td><td><code>registry.ErrUnknownWorkflow</code> (404 mapping)</td></tr>
-          <tr><td><a href="#package-webexecutions">web/executions</a> → <a href="#package-status">core/status</a></td><td>badge.go · detail.go · <code>retriesFor</code> · steps.go</td><td><code>status.State</code> · the 5 states · <code>(State).Terminal</code></td></tr>
-          <tr><td><a href="#package-webexecutions">web/executions</a> → <a href="#package-webrender">web/render</a></td><td>badge.go · detail.go · dispatch.go · resume.go · cancel.go · steps.go · <code>fail</code></td><td><code>render.Partial</code> · <code>render.Page</code> · <code>render.Fail</code></td></tr>
-          <tr><td><a href="#package-webexecutions">web/executions</a> → <a href="#package-webgraph">web/graph</a></td><td>steps.go · <code>newStepsView</code> · detail.go</td><td><code>graph.ExecutedPathToSVG</code> (the executed-path SVG)</td></tr>
-          <tr><td><a href="#package-webrender">web/render</a> → <a href="#package-actions">core/actions</a></td><td>render.go · <code>Fail</code></td><td><code>actions.ErrNotResumable</code> · <code>actions.ErrNotCancellable</code> (400 mapping)</td></tr>
-          <tr><td><a href="#package-webrender">web/render</a> → <a href="#package-boot">core/boot</a></td><td>render.go · <code>Fail</code></td><td><code>boot.ErrNotLaunched</code> (503 mapping)</td></tr>
-          <tr><td><a href="#package-webrender">web/render</a> → <a href="#package-reads">core/reads</a></td><td>render.go · <code>Fail</code></td><td><code>reads.ErrUnknownExecution</code> (404 mapping)</td></tr>
-          <tr><td><a href="#package-webrender">web/render</a> → <a href="#package-registry">core/registry</a></td><td>render.go · <code>Fail</code></td><td><code>registry.ErrUnknownWorkflow</code> (404 mapping)</td></tr>
-          <tr><td><a href="#package-webgraph">web/graph</a> → <a href="#package-graph">core/graph</a></td><td>block_svg.go · <code>BlockToSVG</code> · metrics.go · <code>nodeBoxW</code></td><td><code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code> · <code>graph.Node</code> · <code>graph.NodeKind</code> · <code>graph.BlockType</code> (the stored block model)</td></tr>
-          <tr><td><a href="#package-webgraph">web/graph</a> → <a href="#package-reads">core/reads</a></td><td>graph.go · <code>ExecutedPathToSVG</code></td><td><code>reads.Step</code> (the fields: <code>Name</code> · <code>State</code> · <code>Kind</code> · <code>ChildID</code> · <code>ChildName</code> · <code>ChildState</code>)</td></tr>
-          <tr><td><a href="#package-workflows">workflows</a> → <a href="#package-boot">core/boot</a></td><td>workflows/*.go · <code>init</code> · workflows_test.go</td><td><code>boot.Ctx</code> (the registration context) · <code>boot.CtxOrErr</code></td></tr>
-          <tr><td><a href="#package-workflows">workflows</a> → <a href="#package-dbos">dbos</a></td><td>workflows/*.go · <code>init</code></td><td><code>dbos.RegisterWorkflow</code> · <code>dbos.WithWorkflowName</code> · <code>dbos.WithMaxRecoveryAttempts</code></td></tr>
-          <tr><td><a href="#package-gen">cmd/workflowgen</a> → <a href="#package-workflows">workflows</a></td><td>cmd/workflowgen/main.go · <code>run</code></td><td>writes <code>workflows/zz_generated.go</code> (the generated blank imports) — not a runtime import</td></tr>
-          <tr><td><a href="#package-gen">cmd/svgdump</a> → <a href="#package-graph">core/graph</a></td><td>cmd/svgdump/main.go · <code>main</code> · <code>printBlock</code></td><td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code></td></tr>
-          <tr><td><a href="#package-gen">cmd/svgdump</a> → <a href="#package-webgraph">web/graph</a></td><td>cmd/svgdump/main.go · <code>main</code></td><td><code>graph.BlockToSVG</code> (the SVG diff)</td></tr>
-        </tbody>
-      </table>
-    </section>
-    <!-- ============ facts ============ -->
-    <section id="facts">
-      <h2>Facts</h2>
-      <table>
-        <tbody>
-          <tr>
-            <td>The single queue contract: <code>boot.Launch</code> registers one queue (<code>boot.QueueName</code>) and dispatch (<code>actions.Enqueue</code>) and resume (<code>actions.Resume</code>) enqueue on it.</td>
-            <td>core/boot/lifecycle.go · boot · dispatch.go · Enqueue · resume.go · Resume</td>
-          </tr>
-          <tr>
-            <td>Dispatch sanitization (form values → clean input, <code>(Spec).Sanitize</code>) lives in the web layer (catalog/executions) — the core's <code>Enqueue</code> receives only a clean payload.</td>
-            <td>web/catalog/workflow.go · handleWorkflowPage · web/executions/dispatch.go · handleRunDispatch · core/graph/sanitize.go · (Spec).Sanitize</td>
-          </tr>
-          <tr>
-            <td>The executed path (the <code>RunPath</code>: state + steps) is a read model with the poll control — the state rides on the path so the poll knows when to stop (the <code>Terminal</code> rule).</td>
-            <td>core/reads/steps.go · RunPath · Steps · core/status/state.go · (State).Terminal</td>
-          </tr>
-          <tr>
-            <td>Resume uses the SDK's <code>ResumeWorkflow</code> (the SDK resumes from the last completed step) — the pinned behavior is tested in the <code>pause</code> workflow (10s sleep).</td>
-            <td>core/actions/resume.go · Resume · workflows/pause/pause.go · Pause · core/actions/resume_test.go</td>
-          </tr>
-          <tr>
-            <td>The detail page's input values come from the stored step arguments (the SDK stores the input per step) — the read model (<code>ExecutionDetail</code>) carries the values, not the raw payload.</td>
-            <td>core/reads/detail.go · Detail · inputValues · inputOf</td>
-          </tr>
-          <tr>
-            <td>The retries-exhausted run is not resumable (the pinned SDK behavior — the <code>pause</code> test with <code>WithMaxRecoveryAttempts(0)</code>; the failure is documented in <code>bug.md</code>).</td>
-            <td>core/actions/resume_test.go · TestResumeOfFailedRun · workflows/pause/pause.go · pauseStep</td>
-          </tr>
-          <tr>
-            <td>The cancel is only for live runs (queued/running) — the guard (<code>ErrNotCancellable</code>) is in core; the DBOS cancel flips the row to CANCELLED and the ACK reads the row back.</td>
-            <td>core/actions/cancel.go · Cancel · cancelAck · ErrNotCancellable</td>
-          </tr>
-          <tr>
-            <td>The dispatch ACK returns the queued row (id + state + created_at) — the badge's first execution date comes from the same read (<code>reads.listByID</code>).</td>
-            <td>core/actions/dispatch.go · Enqueue · dispatch · core/reads/status.go · listByID</td>
-          </tr>
-          <tr>
-            <td>The child row on the executed path (the <code>child</code> kind) shows the child's name + the child's live badge (the <code>ChildID</code> lookup) — the row mapping (the batched child query) is shared with the detail read.</td>
-            <td>core/reads/steps.go · RunPath · childIDsOf · childRows · childInfo · core/reads/detail.go · Detail</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ gates ============ -->
-    <section id="gates">
-      <h2>Gates</h2>
-      <table>
-        <thead>
-          <tr><th>Gate</th><th>Check</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Coupling</td><td>goimportmaps ./... --metrics — Ca ≤18 · Ce ≤16 · I ≤1.0 (baseline 2026-11-02: <code>core/boot</code> Ca=18 is the boot hub · <code>main</code> Ce=16 is the entry wiring)</td><td>✅</td></tr>
-          <tr><td>Cycles</td><td>zero import cycles (the graph is a DAG)</td><td>✅</td></tr>
-          <tr><td>File mutual pairs</td><td>zero bidirectional file references inside a package (<code>scripts/structure-gate.sh</code> · the AST check)</td><td>✅</td></tr>
-          <tr><td>Map ↔ code</td><td>this map is in sync with the code (the change that moved the code updated the map, as its last step)</td><td>✅</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ main ============ -->
-    <section id="package-main" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>main <span class="badge">ENTRY</span></h2>
-      <p class="role">The entry point: parses the flags, boots the core once, builds the Port, and starts the web server. No domain logic — only wiring.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>main.go</code></td>
-            <td>Parses the flags (<code>-addr</code> · <code>-static</code> · <code>-shutdown</code>), boots the core (the env-driven context), builds the <code>core.NewPort()</code>, wires the <code>web.New</code> server, and runs it until shutdown</td>
-            <td><code>main</code> · <code>run</code> · <code>mainTest</code> (the flag-parse test)</td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td><code>run</code> (flags · env)</td>
-            <td><code>boot.SetWorkflowsSource</code> · <code>boot.Launch</code> · <code>boot.Ready</code> · <code>boot.Shutdown</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-core">core</a> →</td>
-            <td><code>run</code></td>
-            <td><code>core.NewPort</code> (the Port wiring)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-web">web</a> →</td>
-            <td><code>run</code></td>
-            <td><code>web.New</code> (receives <code>core.NewPort()</code> + the <code>boot.Ready</code> guard)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-workflows">workflows</a> → (blank import)</td>
-            <td><code>run</code> (single blank import + <code>//go:embed workflows</code>)</td>
-            <td><code>init()</code> registrations · the embedded source (graph parser input)</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ core ============ -->
-    <section id="package-core" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core <span class="badge">FAN-IN 4</span></h2>
-      <p class="role">The composition contract: <code>port.go</code> is the whole package — the <code>Port</code> struct (the 10 function fields: List · Graph · Spec · Executions · Enqueue · Status · Steps · Detail · Resume · Cancel) + <code>NewPort</code> (the wiring: <code>boot.Paths</code> → <code>Graph</code> · <code>boot.ErrNotLaunched</code> → <code>Ready</code> · the subpackage functions → the rest). The subpackages (<code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code>) hang off this contract; nothing in <code>core</code> imports them back (the gate).</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>port.go</code></td>
-            <td>The Port struct (the 10 function fields) + <code>NewPort</code> (the wiring: <code>boot.Paths</code> → <code>Graph</code> · <code>boot.ErrNotLaunched</code> → <code>Ready</code> · <code>registry.List</code>/<code>registry.Spec</code> · <code>reads.Executions</code>/<code>reads.Status</code>/<code>reads.Detail</code>/<code>reads.Steps</code> · <code>actions.Enqueue</code>/<code>actions.Resume</code>/<code>actions.Cancel</code>)</td>
-            <td><code>Port</code> · <code>NewPort</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> →</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>actions.Enqueue</code> · <code>actions.Resume</code> · <code>actions.Cancel</code> (Port function fields)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> →</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>reads.Executions</code> · <code>reads.Status</code> · <code>reads.Detail</code> · <code>reads.Steps</code> (Port function fields) + the read-model types</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> →</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>registry.List</code> · <code>registry.Spec</code> (Port function fields)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>boot.Paths</code> (the <code>Graph</code> field) · <code>boot.ErrNotLaunched</code> (the <code>Ready</code> field)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-status">core/status</a> →</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>status.State</code> (the <code>Status</code> field's return)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-graph">core/graph</a> →</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>*graph.PathGraph</code> (the <code>Graph</code> field) · <code>graph.Spec</code> (the <code>Spec</code> field's return)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-main">main</a> ←</td>
-            <td>main.go · <code>run</code></td>
-            <td><code>core.NewPort</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-web">web</a> ←</td>
-            <td>web.go · <code>New</code></td>
-            <td><code>core.Port</code> (the contract) · <code>core.Ready</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ core/boot ============ -->
-    <section id="package-boot" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/boot <span class="badge">FAN-IN 7 · HUB</span></h2>
-      <p class="role">The DBOS singleton: the env-driven context (<code>init</code>), the launch (register + <code>dbos.Launch</code>), the queue contract (<code>QueueName</code>: the single DBOS queue Launch registers — dispatch and resume go through it), the graph source (<code>SetWorkflowsSource</code> + <code>Paths</code>), the registry verification (<code>warnUnregistered</code>: a name the source declares but the registry lacks warns — <code>zz_generated.go</code> staleness), <code>Ctx</code> (the context the workflow registrations run on) + its read guard (booted + launched → the live context, else <code>ErrNotLaunched</code>), <code>Ready</code> (health) and <code>Shutdown</code>. The root of the core tree: <code>registry</code> · <code>reads</code> · <code>actions</code> hang off it.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>lifecycle.go</code></td>
-            <td>The singleton lifecycle (everything above) — env <code>init</code> (context from <code>DBOS_APP_NAME</code>/<code>DBOS_SYSTEM_DATABASE_URL</code>), the <code>boot</code> (register + launch), <code>Ctx</code>/<code>CtxOrErr</code>, <code>Ready</code>, <code>Shutdown</code></td>
-            <td><code>QueueName</code> · <code>init</code> · <code>boot</code> · <code>SetWorkflowsSource</code> · <code>Launch</code> · <code>warnUnregistered</code> · <code>Ctx</code> · <code>CtxOrErr</code> · <code>Ready</code> · <code>Shutdown</code> · <code>coreState</code></td>
-          </tr>
-          <tr>
-            <td><code>sqlite_driver.go</code></td>
-            <td>Links the DBOS SQLite driver (blank import) so env-driven <code>init</code> works with <code>sqlite:</code> URLs (tests, local dev)</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><code>lifecycle_test.go</code></td>
-            <td>The lifecycle contract: the source declares every registered workflow (<code>zz_generated.go</code> staleness guard) · the env boot (<code>TestMain</code>)</td>
-            <td><code>TestRegistrationMatchesSource</code> · <code>TestMain</code> · <code>needCore</code> · <code>pollState</code> · <code>mustStepNames</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-graph">core/graph</a> →</td>
-            <td>lifecycle.go · <code>SetWorkflowsSource</code>/<code>Paths</code></td>
-            <td><code>graph.New</code> · <code>*graph.PathGraph</code> (built once at boot)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-dbos">dbos</a> →</td>
-            <td>lifecycle.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>ctxOrErr</code> · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · the status types · SQLite driver</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> ←</td>
-            <td>registry.go · spec.go · <code>List</code>/<code>Spec</code>/<code>SpecOf</code></td>
-            <td><code>boot.Ctx</code> · <code>boot.Paths</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> ←</td>
-            <td>executions.go · status.go · steps.go · detail.go · <code>mapState</code> · <code>listByID</code></td>
-            <td><code>boot.Ctx</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> ←</td>
-            <td>dispatch.go · resume.go · cancel.go</td>
-            <td><code>boot.Ctx</code> · <code>boot.CtxOrErr</code> · <code>boot.QueueName</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webrender">web/render</a> ←</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>boot.ErrNotLaunched</code> (503)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-main">main</a> ←</td>
-            <td>main.go · <code>run</code></td>
-            <td><code>boot.SetWorkflowsSource</code> · <code>boot.Launch</code> · <code>boot.Ready</code> · <code>boot.Shutdown</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-    <!-- ============ core/registry ============ -->
-    <section id="package-registry" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/registry <span class="badge">FAN-IN 5</span></h2>
-      <p class="role">The registration read: the registered workflows (from DBOS) + the parameter spec read (<code>SpecOf</code> — the workflow inputs, one per parameter, with the default values + step defaults from the graph). No hardcoding: the dashboard and the workflow pages list what is registered.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>registry.go</code></td>
-            <td>The registry read: <code>List</code> (the registered workflows — the read the dashboard and the workflow pages use) + the <code>Workflow</code> model</td>
-            <td><code>Workflow</code> · <code>List</code> · <code>ErrUnknownWorkflow</code></td>
-          </tr>
-          <tr>
-            <td><code>spec.go</code></td>
-            <td>Parameter spec (phase 5, BOOT): the workflow inputs (one per parameter, with the default values) + step defaults from the graph — <code>SpecOf</code> is the exported read the detail page's input values share</td>
-            <td><code>Spec</code> · <code>SpecOf</code></td>
-          </tr>
-          <tr>
-            <td><code>registry_test.go</code></td>
-            <td>The registry read contract: <code>List</code> shows the shipped workflows (no hardcoding)</td>
-            <td><code>TestListShowsRegisteredWorkflows</code></td>
-          </tr>
-          <tr>
-            <td><code>spec_test.go</code></td>
-            <td>The spec contract: a registered workflow (input + the steps' defaults) · an unknown name 404</td>
-            <td><code>TestSpecOf*</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td>registry.go · spec.go · <code>List</code>/<code>Spec</code>/<code>SpecOf</code></td>
-            <td><code>boot.Ctx</code> (the live DBOS context) · <code>boot.Paths</code> (the graph source for <code>SpecOf</code>)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-graph">core/graph</a> →</td>
-            <td>spec.go · <code>SpecOf</code></td>
-            <td><code>graph.Spec</code> (the read model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-dbos">dbos</a> →</td>
-            <td>registry.go · <code>List</code></td>
-            <td><code>dbos.ListWorkflows</code> · <code>dbos.ListRegisteredWorkflows</code> · the status types</td>
-          </tr>
-          <tr>
-            <td><a href="#package-core">core</a> ←</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>registry.List</code> · <code>registry.Spec</code> (Port function fields)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> ←</td>
-            <td>detail.go · <code>inputValues</code> · <code>inputOf</code></td>
-            <td><code>registry.SpecOf</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> ←</td>
-            <td>resume.go · <code>resumeAck</code></td>
-            <td><code>registry.List</code> (the re-enqueue guard)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webrender">web/render</a> ←</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>registry.ErrUnknownWorkflow</code> (404)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> ←</td>
-            <td>dashboard.go · workflow.go</td>
-            <td><code>registry.Workflow</code> (the model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> ←</td>
-            <td>resume.go · dispatch.go · <code>fail</code></td>
-            <td><code>registry.ErrUnknownWorkflow</code> (404)</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ core/reads ============ -->
-    <section id="package-reads" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/reads <span class="badge">FAN-IN 5</span></h2>
-      <p class="role">The execution reads: the run list (phase 3, LIST: the runs of a workflow, newest first), the status read (phase 3: <code>Status</code> from DBOS + <code>mapState</code>), the executed path (phase 4, STEP 3: the <code>RunPath</code> — the state + the steps that ran, the poll control rides on it), and the execution detail (phase 3 DETAIL + phase 5: one read — the status row + the step rows + the child rows, only when the run dispatched a child) with the stored input values (error + the failed step).</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>executions.go</code></td>
-            <td>The run list (phase 3, LIST): the runs of a workflow, newest first (id · badge · first execution date)</td>
-            <td><code>Executions</code> · <code>Execution</code></td>
-          </tr>
-          <tr>
-            <td><code>status.go</code></td>
-            <td>Status reading from DBOS + <code>mapState</code> (the <code>listByID</code> the ACK read-backs share)</td>
-            <td><code>Status</code> · <code>ErrUnknownExecution</code> · <code>mapState</code> · <code>listByID</code></td>
-          </tr>
-          <tr>
-            <td><code>steps.go</code></td>
-            <td>The executed path (phase 4, STEP 3): the run's state + the steps that ran, in execution order — one read model (<code>RunPath</code>: the poll carries its own poll-control state); the row mapping (<code>stepRows</code>, with the batched child query) is the one the detail page's read shares</td>
-            <td><code>Steps</code> · <code>RunPath</code> · <code>Step</code> · <code>stepRows</code> · <code>stepRow</code> · <code>childIDsOf</code> · <code>childRows</code> · <code>childInfo</code> · <code>kindOf</code> · <code>KindStep</code> · <code>KindChild</code> · <code>KindWait</code></td>
-          </tr>
-          <tr>
-            <td><code>detail.go</code></td>
-            <td>The execution detail page's read model (phase 3 DETAIL + phase 5): the execution's row (badge state, first execution date, attempts, the stored input values, error + the failed step) and the executed path — one read (the status row + the step rows + the child rows, only when the run dispatched a child); the state rides on the path (the poll control)</td>
-            <td><code>Detail</code> · <code>DetailPath</code> · <code>ExecutionDetail</code> · <code>InputValue</code> · <code>failedStepOf</code> · <code>inputValues</code> · <code>inputOf</code> · <code>structValues</code></td>
-          </tr>
-          <tr>
-            <td><code>executions_test.go</code></td>
-            <td>The run list contract: the runs of a workflow, newest first · a name with no runs is empty</td>
-            <td><code>TestExecutionsListsRunsOfWorkflow</code> · <code>TestExecutionsUnknownWorkflowIsEmpty</code></td>
-          </tr>
-          <tr>
-            <td><code>mapstate_test.go</code></td>
-            <td>mapState unit tests — asserts <code>mapState</code></td>
-            <td><code>TestMapState</code></td>
-          </tr>
-          <tr>
-            <td><code>status_test.go</code></td>
-            <td>The status read contract: an unknown execution 404 (<code>ErrUnknownExecution</code>)</td>
-            <td><code>TestStatusOfUnknownExecution</code></td>
-          </tr>
-          <tr>
-            <td><code>steps_test.go</code></td>
-            <td>The executed path rows of the <code>kitchen</code> run: the row kinds (step · wait · child, the row names) · the child row (child id + the child name/state · never completed) · unknown execution 404</td>
-            <td><code>TestStepsOfKitchenRun</code> · <code>TestStepsOfUnknownExecution</code></td>
-          </tr>
-          <tr>
-            <td><code>detail_test.go</code></td>
-            <td>The detail contract: the stored input values (simple · struct) · a failing run (error + the failed step · attempts) · unknown execution 404</td>
-            <td><code>TestDetailShows*</code> · <code>TestFailingRunDetailHasErrorAndFailedStep</code> · <code>TestDetailOfUnknownExecution</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td>executions.go · status.go · steps.go · detail.go · <code>mapState</code> · <code>listByID</code></td>
-            <td><code>boot.Ctx</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> →</td>
-            <td>detail.go · <code>inputValues</code> · <code>inputOf</code></td>
-            <td><code>registry.SpecOf</code> (the input fields for the stored values)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-status">core/status</a> →</td>
-            <td>status.go · executions.go · steps.go · detail.go</td>
-            <td><code>status.State</code> · the 5 states · <code>Terminal()</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-dbos">dbos</a> →</td>
-            <td>executions.go · <code>Executions</code> · status.go · <code>listByID</code> · steps.go · <code>Steps</code> · detail.go · <code>Detail</code></td>
-            <td><code>dbos.ListWorkflows</code> · <code>dbos.GetWorkflowStatuses</code> · <code>dbos.GetWorkflowSteps</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> ←</td>
-            <td>dispatch.go · cancel.go · resume.go</td>
-            <td><code>reads.listByID</code> (the ACK read-back)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> ←</td>
-            <td>badge.go · detail.go · steps.go</td>
-            <td><code>reads.Execution</code> · <code>reads.DetailPath</code> · <code>reads.RunPath</code> · <code>reads.Step</code> · <code>reads.ErrUnknownExecution</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webgraph">web/graph</a> ←</td>
-            <td>graph.go · <code>ExecutedPathToSVG</code></td>
-            <td><code>reads.Step</code> (the fields)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webrender">web/render</a> ←</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>reads.ErrUnknownExecution</code> (404)</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ core/actions ============ -->
-    <section id="package-actions" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/actions <span class="badge">FAN-IN 2</span></h2>
-      <p class="role">The write actions: dispatch (phase 5, EXECUTE: the clean input → the single queue, the dispatch ACK — the queued row: id + state + created_at), resume (phase 5, RESUME: the re-enqueue of a failed run by id, same stored input, restart from the last completed step), cancel (the cancel of a live run by id — the DBOS cancel flips the row to CANCELLED, the ACK reads the row back). The guards (<code>ErrNotResumable</code> · <code>ErrNotCancellable</code>) are owned here.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>dispatch.go</code></td>
-            <td>The dispatch (phase 5, EXECUTE): the clean input → the single queue, the dispatch ACK (the queued row: id + state + created_at)</td>
-            <td><code>Enqueue</code> · <code>dispatch</code></td>
-          </tr>
-          <tr>
-            <td><code>resume.go</code></td>
-            <td>Resume of a failed run by id (phase 5, RESUME): re-enqueue, same stored input, restart from the last completed step</td>
-            <td><code>Resume</code> · <code>resumeAck</code> · <code>ErrNotResumable</code></td>
-          </tr>
-          <tr>
-            <td><code>cancel.go</code></td>
-            <td>Cancel of a live run by id (queued/running — the guard): the DBOS cancel flips the row to CANCELLED, the ACK reads the row back (the same id, now cancelled)</td>
-            <td><code>Cancel</code> · <code>cancelAck</code> · <code>ErrNotCancellable</code></td>
-          </tr>
-          <tr>
-            <td><code>enqueue_test.go</code></td>
-            <td>The dispatch contract: the ACK (id · state · created_at) · an unknown name 400 · the values reach the workflow (the branch taken)</td>
-            <td><code>TestEnqueue*</code></td>
-          </tr>
-          <tr>
-            <td><code>resume_test.go</code></td>
-            <td>Phase 5 resume tests: unknown id 404 · not-failed/queued/running rejected · the retries-exhausted run is not resumable (the pinned SDK behavior, <code>bug.md</code>) · the cancelled run is not resumable</td>
-            <td><code>TestResume*</code></td>
-          </tr>
-          <tr>
-            <td><code>cancel_test.go</code></td>
-            <td>The cancel of a live run by id: unknown 404 · not-live 400 · queued (the frozen queue) · running (the ACK: same id, now cancelled)</td>
-            <td><code>TestCancel*</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td>dispatch.go · resume.go · cancel.go</td>
-            <td><code>boot.Ctx</code> · <code>boot.CtxOrErr</code> · <code>boot.QueueName</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> →</td>
-            <td>dispatch.go · cancel.go · resume.go</td>
-            <td><code>reads.listByID</code> (the ACK read-back)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> →</td>
-            <td>resume.go · <code>resumeAck</code></td>
-            <td><code>registry.List</code> (the re-enqueue guard)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-status">core/status</a> →</td>
-            <td>cancel.go · <code>cancelAck</code> · resume.go · dispatch.go</td>
-            <td><code>status.Queued</code> · <code>status.Running</code> · <code>status.Success</code> · <code>status.Error</code> · <code>status.Cancelled</code> · <code>(State).Terminal</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-dbos">dbos</a> →</td>
-            <td>dispatch.go · <code>Enqueue</code>/<code>dispatch</code> · resume.go · <code>Resume</code> · cancel.go · <code>Cancel</code></td>
-            <td><code>ctx.Enqueue</code> · <code>ctx.Queue</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-core">core</a> ←</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>actions.Enqueue</code> · <code>actions.Resume</code> · <code>actions.Cancel</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webrender">web/render</a> ←</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>actions.ErrNotResumable</code> · <code>actions.ErrNotCancellable</code> (400)</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-    <!-- ============ workflows ============ -->
-    <section id="package-workflows" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>workflows <span class="badge">REGISTRATIONS</span></h2>
-      <p class="role">The workflows: one subpackage per workflow (<code>workflows/&lt;name&gt;/</code> — the workflow, its steps, and the <code>init()</code> that registers it on the core's DBOS context (<code>boot.Ctx()</code>) with <code>dbos.RegisterWorkflow</code>) plus the shared step functions (<code>workflows/steps/</code>, the leaf of the tree: imported by the workflow subpackages, no workflow in it). Adding one = adding a subpackage; the only wiring is <code>go generate ./workflows</code> (the generated <code>zz_generated.go</code> carries the blank imports — <code>main.go</code> never changes). The embedded source (paths graph) picks everything up automatically.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>workflows.go</code></td>
-            <td>The package doc (the subpackage recipe) + the <code>//go:generate</code> directive — no code</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><code>hello/hello.go</code></td>
-            <td>Workflow <code>hello-world</code> (1 step: greet) + registration</td>
-            <td><code>HelloWorld</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>pipeline/pipeline.go</code></td>
-            <td>Workflow <code>pipeline</code> (4 steps, no branch): fetch → parse → transform → store</td>
-            <td><code>Pipeline</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>decide/decide.go</code></td>
-            <td>Workflow <code>decide</code> (step + <code>if</code>: left/right)</td>
-            <td><code>Decide</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>schedule/schedule.go</code></td>
-            <td>Workflow <code>schedule</code> (1 step, struct input <code>ScheduleArgs</code>: one form item per field — the phase 5 defaults <code>const defaultName</code> · <code>defaultStartDate</code>)</td>
-            <td><code>Schedule</code> · <code>ScheduleArgs</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>loop/loop.go</code></td>
-            <td><code>loop</code> (loop validation: <code>for</code> + <code>RunAsStep</code> spin — loop block outline + symbol)</td>
-            <td><code>Loop</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>branch/branch.go</code></td>
-            <td><code>branch</code> (if validation: if/else-if/else fork of steps)</td>
-            <td><code>Branch</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>fanout/fanout.go</code></td>
-            <td><code>fanout</code> (async validation: <code>alpha ∥ beta</code> → <code>select</code> wait — async group + join)</td>
-            <td><code>Fanout</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>compose/compose.go</code></td>
-            <td><code>compose</code> (child validation: <code>RunWorkflow</code> + step)</td>
-            <td><code>Compose</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>kitchen/kitchen.go</code></td>
-            <td><code>kitchen</code> (combined: step · sleep · child · async · wait · loop — the block tree of the real world)</td>
-            <td><code>Kitchen</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>steps/steps.go</code></td>
-            <td>Reusable steps (what the workflows execute) — the leaf of the tree: imported by the workflow subpackages</td>
-            <td><code>GreetStep</code> · <code>EchoStep</code></td>
-          </tr>
-          <tr>
-            <td><code>buy/buy.go</code></td>
-            <td>Workflow <code>buy</code> (1 step: charge)</td>
-            <td><code>Buy</code> · <code>ChargeStep</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>pause/pause.go</code></td>
-            <td>Workflow <code>pause</code> (1 step: pause, the 10s sleep; no input — the blank parameter of the Go SDK) — the resume target of the phase 5 tests</td>
-            <td><code>Pause</code> · <code>pauseStep</code> · <code>init</code></td>
-          </tr>
-          <tr>
-            <td><code>zz_generated.go</code></td>
-            <td>Generated (do not edit): a blank import per subpackage (the workflows + <code>steps</code>) — written by <code>cmd/workflowgen</code> via <code>go generate ./workflows</code></td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><code>steps/steps_test.go</code></td>
-            <td>Step unit tests (fake <code>ctx</code>) — asserts <code>GreetStep</code></td>
-            <td><code>TestGreetStepGreets</code></td>
-          </tr>
-          <tr>
-            <td><code>workflows_test.go</code></td>
-            <td>The workflow runs: the env-driven <code>TestMain</code> boots the core once (the same lifecycle as production), and each test enqueues a workflow and asserts the executed steps</td>
-            <td><code>TestHelloWorldRun</code> · <code>TestPipelineRun</code> · <code>TestDecideRunBranches</code> · <code>TestBuyRun</code></td>
-          </tr>
-          <tr>
-            <td><code>buy/buy_test.go</code></td>
-            <td>The buy step unit test (fake <code>ctx</code>)</td>
-            <td><code>TestChargeStepCharges</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td>*.go · <code>init</code> · workflows_test.go</td>
-            <td><code>boot.Ctx</code> · <code>boot.CtxOrErr</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-dbos">dbos</a> →</td>
-            <td>*.go · <code>init</code></td>
-            <td><code>dbos.RegisterWorkflow</code> · <code>dbos.WithWorkflowName</code> · <code>dbos.WithMaxRecoveryAttempts</code></td>
-          </tr>
-          <tr>
-            <td><code>compose · kitchen</code> → <code>pipeline</code></td>
-            <td>compose/compose.go · kitchen/kitchen.go · <code>Compose</code> · <code>Kitchen</code></td>
-            <td><code>dbos.RunWorkflow(ctx, pipeline.Pipeline, msg)</code> (the child dispatch)</td>
-          </tr>
-          <tr>
-            <td><code>hello · pipeline · decide · schedule · loop · compose · kitchen</code> → <code>steps</code></td>
-            <td>the step calls of each subpackage</td>
-            <td><code>steps.GreetStep</code> (hello) · <code>steps.EchoStep</code> (pipeline · decide · schedule · loop · compose · kitchen)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-main">main</a> ←</td>
-            <td>main.go · <code>run</code> (single blank import + <code>//go:embed workflows</code>)</td>
-            <td><code>init()</code> registrations · the embedded source (graph parser input)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-gen">cmd/workflowgen</a> ←</td>
-            <td>the <code>//go:generate</code> directive in <code>workflows.go</code></td>
-            <td>writes <code>zz_generated.go</code> (the subpackage blank imports)</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ cmd ============ -->
-    <section id="package-gen" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>cmd — build &amp; diagnostic tools <span class="badge">PACKAGES cmd/workflowgen · cmd/svgdump</span></h2>
-      <p class="role">Not imported at runtime. <code>cmd/workflowgen</code> regenerates <code>workflows/zz_generated.go</code> (one blank import per subpackage — the workflows + the shared steps), so a new <code>workflows/&lt;name&gt;/</code> is wired without editing <code>main.go</code>; invoked by <code>go generate ./workflows</code> (the Dockerfile and CI run it too — CI fails on a stale file). <code>cmd/svgdump</code> is a diagnostic main package: <code>go run ./cmd/svgdump</code> reads <code>workflows/</code> with <code>core/graph</code> and prints, per workflow, the stored block tree, the read-back paths and the block-DAG SVG (rendered by <code>web/graph</code>).</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>cmd/workflowgen/main.go</code></td>
-            <td>Walks <code>workflows/</code> and writes <code>zz_generated.go</code> — a blank import per subpackage (module name from the nearest <code>go.mod</code>)</td>
-            <td><code>run</code> · <code>moduleName</code> · <code>moduleLine</code> · <code>subpackages</code></td>
-          </tr>
-          <tr>
-            <td><code>cmd/workflowgen/main_test.go</code></td>
-            <td>Generator tests: render with/without subpackages · module name/line resolution · writes <code>zz_generated.go</code></td>
-            <td><code>TestRender*</code> · <code>TestSubpackages</code> · <code>TestModule*</code> · <code>TestRunWritesGeneratedFile</code></td>
-          </tr>
-          <tr>
-            <td><code>cmd/svgdump/main.go</code></td>
-            <td>diagnostic: reads <code>workflows/</code> with <code>core/graph</code>, prints each workflow's block tree + read-back paths + block-DAG SVG (<code>go run ./cmd/svgdump</code>)</td>
-            <td><code>main</code> · <code>printBlock</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-workflows">workflows</a> →</td>
-            <td><code>run</code> (output: <code>workflows/zz_generated.go</code>)</td>
-            <td>the generated blank imports — no runtime import</td>
-          </tr>
-          <tr>
-            <td><a href="#package-graph">core/graph</a> →</td>
-            <td><code>main</code> · <code>printBlock</code></td>
-            <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webgraph">web/graph</a> →</td>
-            <td><code>main</code></td>
-            <td><code>graph.BlockToSVG</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ core/status ============ -->
-    <section id="package-status" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/status <span class="badge">PURE · LEAF</span></h2>
-      <p class="role">State machine — the 5 badge states + the <code>Terminal</code> rule (the poll control). No imports.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>state.go</code></td>
-            <td>State machine: <code>queued</code> → <code>running</code> → <code>success</code> | <code>failed</code> | <code>cancelled</code> (the 5 badge colors)</td>
-            <td><code>State</code> · <code>Queued</code> · <code>Running</code> · <code>Success</code> · <code>Error</code> · <code>Cancelled</code> · <code>(State).Terminal</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-core">core</a> ←</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>status.State</code> (the <code>Status</code> field's return)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> ←</td>
-            <td>status.go · <code>mapState</code>/<code>Status</code> · executions.go · steps.go · detail.go</td>
-            <td><code>status.State</code> · the 5 states · <code>Terminal()</code> (the poll control)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> ←</td>
-            <td>cancel.go · <code>cancelAck</code> · resume.go · dispatch.go</td>
-            <td><code>status.Queued</code> · <code>status.Running</code> · <code>status.Success</code> · <code>status.Error</code> · <code>status.Cancelled</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> ←</td>
-            <td>workflow.go · <code>handleWorkflowPage</code></td>
-            <td><code>status.Queued</code> · <code>status.Success</code> (the empty-state check)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> ←</td>
-            <td>badge.go · detail.go · steps.go</td>
-            <td><code>status.State</code> · the 5 states · <code>(State).Terminal</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ core/graph ============ -->
-    <section id="package-graph" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/graph <span class="badge">PURE · LEAF</span></h2>
-      <p class="role">Possible-paths graph (the stored block model) + parameter spec (phase 5, BOOT): the AST parser builds the block tree at boot (step · child · async · wait; sequence · loop · if · join) and reads the paths back, plus the read models. Pure: no imports. Source: the embedded <code>workflows/</code> tree, injected by <code>boot.SetWorkflowsSource</code>.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>block.go</code></td>
-            <td>The block model: <code>WorkflowGraph</code> (root · paths · steps) + <code>Block</code> (id · level · type · children · else) + <code>Child</code> (a node or a block) + <code>Node</code> (name · kind)</td>
-            <td><code>WorkflowGraph</code> · <code>Block</code> · <code>Child</code> · <code>Node</code> · <code>NodeKind</code> · <code>BlockType</code></td>
-          </tr>
-          <tr>
-            <td><code>graph.go</code></td>
-            <td>Component: map name → the stored workflow graph (built once at boot, served by map lookup)</td>
-            <td><code>New</code> · <code>PathGraph</code> · <code>(PathGraph).Of</code></td>
-          </tr>
-          <tr>
-            <td><code>parse.go</code></td>
-            <td>The parse pipeline: sources → the collected declarations (funcs · the <code>RegisterWorkflow</code> registrations · the <code>const default&lt;NamePascal&gt;</code> defaults · the struct types) → the graph + spec maps</td>
-            <td><code>pathsFromSources</code> · <code>pathsFromRegistrations</code> · <code>collectFuncs</code> · <code>collectConstants</code> · <code>collectTypes</code> · <code>collectRegistrations</code></td>
-          </tr>
-          <tr>
-            <td><code>build.go</code></td>
-            <td>The block-tree build: the statements → the stored model (sequence · loop · if · join = asyncs + the wait right after them; step · child · async · wait nodes)</td>
-            <td><code>buildGraph</code> · <code>buildChildren</code> · <code>groupJoins</code> · <code>buildIf</code> · <code>buildLoop</code> · <code>blockChild</code> · <code>hasNode</code> · <code>nodeName</code> · <code>namedNode</code> · <code>childNode</code></td>
-          </tr>
-          <tr>
-            <td><code>paths.go</code></td>
-            <td>The read-back: every possible path of a workflow (the if branches · the block sequences · the dedupe)</td>
-            <td><code>possiblePaths</code> · <code>readPaths</code> · <code>readBlock</code> · <code>readChild</code> · <code>blockSequences</code> · <code>stepsOf</code> · <code>forkPaths</code> · <code>joinSteps</code> · <code>dedupePaths</code></td>
-          </tr>
-          <tr>
-            <td><code>names.go</code></td>
-            <td>Name extraction from the calls (the callee · the option literal · the <code>RunAsStep</code> function · the qualified selector)</td>
-            <td><code>calleeName</code> · <code>optionName</code> · <code>runAsStepName</code> · <code>exprName</code></td>
-          </tr>
-          <tr>
-            <td><code>spec.go</code></td>
-            <td>Parameter spec (phase 5): the workflow inputs — one per parameter/field of the struct input (<code>Param</code>, with the default value) + step defaults (<code>StepSpec</code>) — parsed from the same registrations</td>
-            <td><code>Spec</code> · <code>Param</code> · <code>StepSpec</code> · <code>specsFromRegistrations</code> · <code>inputsOf</code></td>
-          </tr>
-          <tr>
-            <td><code>sanitize.go</code></td>
-            <td>The dispatch sanitization (form values → clean input, the map for a struct input)</td>
-            <td><code>(Spec).Sanitize</code> · <code>checkFields</code> · <code>convert</code> · <code>ErrInvalidInput</code></td>
-          </tr>
-          <tr>
-            <td><code>parse_test.go</code></td>
-            <td>The source discovery: the registration is found (and the graph built) · any import alias (asserts <code>pathsFromSources</code>) + the shared fixtures (<code>parseSnippet</code> · <code>equalPaths</code>)</td>
-            <td><code>TestPathsFromSources*</code> · <code>parseSnippet</code> · <code>equalPaths</code></td>
-          </tr>
-          <tr>
-            <td><code>build_test.go</code></td>
-            <td>The block-tree build: levels · read-back · node kinds · if keeps level · error guard (no block) · join (asyncs + wait) · no-join (asserts <code>buildGraph</code>)</td>
-            <td><code>TestBuildGraph*</code></td>
-          </tr>
-          <tr>
-            <td><code>paths_test.go</code></td>
-            <td>The possible paths: linear steps · branch on if · branch without else (asserts <code>possiblePaths</code>)</td>
-            <td><code>TestPossiblePaths*</code></td>
-          </tr>
-          <tr>
-            <td><code>default_test.go</code></td>
-            <td>The input defaults: package constant · snake-case param · absent · per-package (asserts <code>inputsOf</code> via <code>parseSpecs</code>)</td>
-            <td><code>parseSpecs</code> · <code>TestInputDefault*</code></td>
-          </tr>
-          <tr>
-            <td><code>spec_test.go</code></td>
-            <td>The parameter spec: struct input (fields) · blank param is not an input · no input · the spec map from sources (input + step defaults · int input) (asserts <code>specsFromRegistrations</code>)</td>
-            <td><code>TestSpecStructInput</code> · <code>TestSpecBlankParamIsNotAnInput</code> · <code>TestSpecNoInput</code> · <code>TestSpecsFromSources*</code></td>
-          </tr>
-          <tr>
-            <td><code>sanitize_test.go</code></td>
-            <td>Dispatch sanitization: nil/string/int payloads · trims · unknown field · struct · no input · unsupported (asserts <code>(Spec).Sanitize</code>)</td>
-            <td><code>TestSanitize*</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> ←</td>
-            <td>lifecycle.go · <code>SetWorkflowsSource</code>/<code>Paths</code></td>
-            <td><code>graph.New</code> · <code>*graph.PathGraph</code> (built once at boot)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> ←</td>
-            <td>spec.go · <code>SpecOf</code></td>
-            <td><code>graph.Spec</code> (the read model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-core">core</a> ←</td>
-            <td>port.go · <code>NewPort</code></td>
-            <td><code>*graph.PathGraph</code> (the <code>Graph</code> field) · <code>graph.Spec</code> (the <code>Spec</code> field's return)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> ←</td>
-            <td>workflow.go · <code>handleWorkflowPage</code> · <code>workflowPage</code></td>
-            <td><code>graph.Spec</code> (the model) · <code>(Spec).Sanitize</code> · <code>*graph.WorkflowGraph</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webgraph">web/graph</a> ←</td>
-            <td>block_svg.go · <code>BlockToSVG</code> · metrics.go · <code>nodeBoxW</code></td>
-            <td><code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code> · <code>graph.Node</code> · <code>graph.NodeKind</code> · <code>graph.BlockType</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-gen">cmd/svgdump</a> ←</td>
-            <td>cmd/svgdump/main.go · <code>main</code> · <code>printBlock</code></td>
-            <td><code>graph.New</code> · <code>*graph.PathGraph</code> · <code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-    <!-- ============ web ============ -->
-    <section id="package-web" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>web <span class="badge">FAN-IN 1 · WIRING</span></h2>
-      <p class="role">The HTTP wiring: <code>New(p core.Port, ready func() error) http.Handler</code> — the router (the routes registered by <code>catalog.Register</code> + <code>executions.Register</code>, the healthz, the static), the middlewares (recovery + request log), and the embeds (the vendored HTMX + the static CSS). Zero workflow hardcoding; the domain handlers live in <code>web/catalog</code> and <code>web/executions</code>.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>web.go</code></td>
-            <td>The router: <code>New</code> builds the <code>http.ServeMux</code>, calls <code>catalog.Register</code> + <code>executions.Register</code>, wires the healthz (the <code>ready</code> guard) and the static (the embeds); the middlewares wrap the mux</td>
-            <td><code>New</code> · <code>static</code></td>
-          </tr>
-          <tr>
-            <td><code>health.go</code></td>
-            <td>The healthz (mirrors the core: 200 ready / 503 not ready — the container healthcheck)</td>
-            <td><code>handleHealthz</code></td>
-          </tr>
-          <tr>
-            <td><code>middleware.go</code></td>
-            <td>Recovery + request log</td>
-            <td><code>withRecovery</code> · <code>withRequestLog</code></td>
-          </tr>
-          <tr>
-            <td><code>static/</code></td>
-            <td>Vendored HTMX + the theme CSS (dark metallic + status colors)</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><code>web_test.go</code></td>
-            <td>Test harness: the booted-core harness (<code>TestMain</code> env → <code>Launch</code> · <code>bootedTestServer</code>) + the shared stub-Port factory (delegates to <code>web/internal/webtest</code>)</td>
-            <td><code>TestMain</code> · <code>needCore</code> · <code>bootedTestServer</code></td>
-          </tr>
-          <tr>
-            <td><code>e2e_test.go</code></td>
-            <td>E2E (build tag <code>e2e</code>, Postgres 18): dispatch → success · form dispatch (branch) · resume 404 · executed path polling · trims values · HTML-safe input · schedule dispatch</td>
-            <td><code>TestE2E*</code></td>
-          </tr>
-          <tr>
-            <td><code>router_test.go</code></td>
-            <td>The router wiring: the vendored HTMX static · 404 unknown path · 405 wrong method (asserts <code>New</code>)</td>
-            <td><code>TestStatic*</code> · <code>TestUnknownPathReturns404</code> · <code>TestPostRootReturns405</code></td>
-          </tr>
-          <tr>
-            <td><code>health_test.go</code></td>
-            <td>The health endpoint (ready / 503)</td>
-            <td><code>TestHealthz</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-core">core</a> → (domain)</td>
-            <td>web.go · <code>New</code></td>
-            <td><code>core.Port</code> (the contract) · <code>core.Ready</code> (the 503 guard, injected — main wires <code>boot.Ready</code>)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> →</td>
-            <td>web.go · <code>New</code></td>
-            <td><code>catalog.Register</code> (GET / · GET /workflows · GET /workflows/{name})</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> →</td>
-            <td>web.go · <code>New</code></td>
-            <td><code>executions.Register</code> (POST /run/{name} · GET /status/{id} · GET /executions/{id} · /steps · POST /resume/{id} · /cancel/{id})</td>
-          </tr>
-          <tr>
-            <td><a href="#package-main">main</a> ←</td>
-            <td>main.go · <code>run</code></td>
-            <td><code>web.New</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table>
-        <thead>
-          <tr><th>Port members in use (handler → member)</th><th>Members</th><th>Feeds</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>handleWorkflowsList</code> · GET /workflows (catalog)</td>
-            <td><code>List</code></td>
-            <td>the workflows partial (the dashboard list)</td>
-          </tr>
-          <tr>
-            <td><code>handleBadge</code> · GET /status/{id} (executions)</td>
-            <td><code>Status</code></td>
-            <td>the 2s badge polling</td>
-          </tr>
-          <tr>
-            <td><code>handleWorkflowPage</code> · GET /workflows/{name} (catalog)</td>
-            <td><code>List</code> · <code>Executions</code> · <code>Spec</code> · <code>Graph</code> (<code>(PathGraph).Of</code> → <code>*WorkflowGraph</code>)</td>
-            <td>the page: form + executions + block-DAG SVG</td>
-          </tr>
-          <tr>
-            <td><code>handleRunDispatch</code> · POST /run/{name} (executions)</td>
-            <td><code>Spec</code> · <code>Enqueue</code></td>
-            <td>form values → <code>Sanitize</code> → clean input → dispatch</td>
-          </tr>
-          <tr>
-            <td><code>handleResume</code> · POST /resume/{id} (executions)</td>
-            <td><code>Resume</code></td>
-            <td>the re-enqueue of a failed run</td>
-          </tr>
-          <tr>
-            <td><code>handleCancel</code> · POST /cancel/{id} (executions)</td>
-            <td><code>Cancel</code></td>
-            <td>the cancel of a live run (the badge ACK)</td>
-          </tr>
-          <tr>
-            <td><code>handleExecutionDetail</code> · GET /executions/{id} (executions)</td>
-            <td><code>Detail</code> (one read: detail + path)</td>
-            <td>the detail page + the executed path</td>
-          </tr>
-          <tr>
-            <td><code>handleExecutionSteps</code> · GET /executions/{id}/steps (executions)</td>
-            <td><code>Steps</code> (the <code>RunPath</code>: the state + the steps — the poll control rides on the same read)</td>
-            <td>the 2s steps partial</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ web/executions ============ -->
-    <section id="package-webexecutions" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>web/executions <span class="badge">FAN-IN 2</span></h2>
-      <p class="role">The execution routes (the run lifecycle on the web): dispatch (POST /run/{name} — the form → <code>Sanitize</code> → the clean input → the dispatch ACK row), the badge (GET /status/{id} — the 2s poll fragment, the 5 states), the execution detail page (GET /executions/{id} — badge · first date · the stored input values · the attempts rows · the error + failed step · the executed path · the Resume/Cancel buttons), the executed path partial (GET /executions/{id}/steps — the 2s poll until terminal), resume (POST /resume/{id}) and cancel (POST /cancel/{id}). The shared execution models (<code>Badge</code> · <code>Row</code>) live here too — the catalog's workflow page lists them.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>register.go</code></td>
-            <td>The wiring contract: <code>Register(mux, p core.Port)</code> — the 6 execution routes</td>
-            <td><code>Register</code></td>
-          </tr>
-          <tr>
-            <td><code>dispatch.go</code></td>
-            <td>The dispatch (phase 5, EXECUTE): reads the form · sanitizes against the spec · enqueues · the ACK row (queued badge + id + first date); 400 bad form · 404 unknown · 500/503</td>
-            <td><code>handleRunDispatch</code> · <code>formValues</code></td>
-          </tr>
-          <tr>
-            <td><code>badge.go</code></td>
-            <td>The badge (the 2s poll fragment): the 5 states (label · class · terminal) · the execution rows (badge + first execution date + id) — the shared models <code>Badge</code> + <code>Row</code> the catalog's list uses</td>
-            <td><code>handleBadge</code> · <code>Badge</code> · <code>BadgeFor</code> · <code>Row</code></td>
-          </tr>
-          <tr>
-            <td><code>detail.go</code></td>
-            <td>The execution detail page: badge · first date · the stored input values · the attempts rows · the error + failed step · the executed path · the Resume/Cancel buttons</td>
-            <td><code>handleExecutionDetail</code> · <code>executionDetail</code> · <code>retriesFor</code></td>
-          </tr>
-          <tr>
-            <td><code>steps.go</code></td>
-            <td>The executed path partial (phase 4, STEP 3): the steps that ran, in execution order — the 2s poll until terminal</td>
-            <td><code>handleExecutionSteps</code> · <code>newStepsView</code></td>
-          </tr>
-          <tr>
-            <td><code>resume.go</code></td>
-            <td>The resume (phase 5, RESUME): the re-enqueue of a failed run by id — the ACK badge replaces the badge</td>
-            <td><code>handleResume</code></td>
-          </tr>
-          <tr>
-            <td><code>cancel.go</code></td>
-            <td>The cancel: the live run by id — the ACK badge (cancelled, terminal) stops the 2s poll</td>
-            <td><code>handleCancel</code></td>
-          </tr>
-          <tr>
-            <td><code>server_test.go</code></td>
-            <td>The test harness for this package: <code>testServer</code> (the <code>Port</code> on a <code>httptest.Server</code>) + the <code>fakeGraph</code> (a <code>*graph.PathGraph</code> for the page tests) + the stub-Port factory (delegates to <code>web/internal/webtest</code>)</td>
-            <td><code>testServer</code> · <code>fakeGraph</code> · <code>okCanceller</code></td>
-          </tr>
-          <tr>
-            <td><code>booted_core_test.go</code></td>
-            <td>Booted core (live <code>core.NewPort()</code> on <code>httptest</code>): pause dispatch · detail input values</td>
-            <td><code>bootedTestServer</code> · <code>TestPausePageHasNoFormAndDispatches</code> · <code>TestExecutionDetailShowsInputValues</code></td>
-          </tr>
-          <tr>
-            <td><code>dispatch_test.go</code></td>
-            <td>Dispatch POST: queued badge · unknown field 400 · bad int 400 · clean values forwarded · unknown 404 · enqueue failure 500 · the form values take the branch (booted)</td>
-            <td><code>TestRun*</code> · <code>TestRunPostWithFormValuesTakesBranch</code></td>
-          </tr>
-          <tr>
-            <td><code>badge_test.go</code></td>
-            <td>The badge fragment (the 2s poll): the 5 states · single complete element · no store · unknown 404 · core down 503</td>
-            <td><code>TestStatusBadge*</code></td>
-          </tr>
-          <tr>
-            <td><code>detail_test.go</code></td>
-            <td>Execution detail: failure rendering · running badge polls · success (zero retries) · unknown 404 · core down 503</td>
-            <td><code>TestExecutionDetail*</code></td>
-          </tr>
-          <tr>
-            <td><code>steps_test.go</code></td>
-            <td>Steps partial: polling · terminal stops · failed step color · order · 404/503 · the executed path on the detail page</td>
-            <td><code>TestStepsPartial*</code> · <code>TestExecutionDetailPage*</code></td>
-          </tr>
-          <tr>
-            <td><code>resume_test.go</code></td>
-            <td>Phase 5 resume: the button on a failed run · no button on success · 404/400 of <code>POST /resume</code></td>
-            <td><code>TestExecutionDetail*Resume*</code> · <code>TestResume*</code></td>
-          </tr>
-          <tr>
-            <td><code>cancel_test.go</code></td>
-            <td>The cancel of a live run from the execution page: the Cancel button (live run) · no button on the terminal runs · 404/400/503 of <code>POST /cancel</code> · the booted twin (the cancelled badge, the poll stops)</td>
-            <td><code>TestExecutionDetail*Cancel*</code> · <code>TestCancel*</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-core">core</a> → (domain)</td>
-            <td>register.go · the per-behavior handlers</td>
-            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> →</td>
-            <td>badge.go · <code>Badge</code>/<code>BadgeFor</code>/<code>Row</code> · detail.go · steps.go</td>
-            <td><code>reads.Execution</code> · <code>reads.DetailPath</code> · <code>reads.RunPath</code> · <code>reads.Step</code> · <code>reads.ErrUnknownExecution</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> →</td>
-            <td>resume.go · dispatch.go · <code>fail</code></td>
-            <td><code>registry.ErrUnknownWorkflow</code> (404 mapping)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-status">core/status</a> →</td>
-            <td>badge.go · detail.go · steps.go</td>
-            <td><code>status.State</code> · the 5 states · <code>(State).Terminal</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webrender">web/render</a> →</td>
-            <td>badge.go · detail.go · dispatch.go · resume.go · cancel.go · steps.go</td>
-            <td><code>render.Partial</code> · <code>render.Page</code> · <code>render.Fail</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webgraph">web/graph</a> →</td>
-            <td>steps.go · <code>newStepsView</code> · detail.go</td>
-            <td><code>graph.ExecutedPathToSVG</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> ←</td>
-            <td>workflow.go · <code>handleWorkflowPage</code></td>
-            <td><code>executions.Badge</code> · <code>executions.Row</code> (the executions list model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-web">web</a> ←</td>
-            <td>web.go · <code>New</code></td>
-            <td><code>executions.Register</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-    <!-- ============ web/catalog ============ -->
-    <section id="package-webcatalog" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>web/catalog <span class="badge">FAN-IN 1</span></h2>
-      <p class="role">The catalog routes: the dashboard (GET / — the index full page, the HTMX shell), the workflows partial (GET /workflows — the dashboard list from the registry, the empty state) and the workflow page (GET /workflows/{name} — the spec form with the defaults prefilled · the executions list · the possible paths (the block diagram) · 404 unknown).</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>register.go</code></td>
-            <td>The wiring contract: <code>Register(mux, p core.Port)</code> — the 3 catalog routes</td>
-            <td><code>Register</code></td>
-          </tr>
-          <tr>
-            <td><code>dashboard.go</code></td>
-            <td>The dashboard: the index full page (the HTMX shell) + the workflows partial (the dashboard list — from the registry, the empty state)</td>
-            <td><code>indexPage</code> · <code>handleDashboard</code> · <code>handleWorkflowsList</code></td>
-          </tr>
-          <tr>
-            <td><code>workflow.go</code></td>
-            <td>The workflow page: the spec form (one item per input, the defaults prefilled) · the executions list (the <code>executions.Row</code> model) · the possible paths (the block diagram) · 404 unknown</td>
-            <td><code>handleWorkflowPage</code> · <code>workflowPage</code> · <code>registered</code></td>
-          </tr>
-          <tr>
-            <td><code>server_test.go</code></td>
-            <td>The test harness for this package: <code>testServer</code> (the <code>Port</code> on a <code>httptest.Server</code>) + the <code>fakeGraph</code></td>
-            <td><code>testServer</code> · <code>fakeGraph</code></td>
-          </tr>
-          <tr>
-            <td><code>dashboard_test.go</code></td>
-            <td>Dashboard + workflows partial: registry · empty · no store · links (asserts <code>List</code>)</td>
-            <td><code>TestRoot*</code> · <code>TestWorkflowsPartial*</code></td>
-          </tr>
-          <tr>
-            <td><code>workflow_test.go</code></td>
-            <td>Workflow page: dispatch button + list · columns · block-DAG SVG (outlines · symbols · 1.25×) · executions list · 503/404 (asserts <code>List</code> · <code>Executions</code> · <code>Port.Graph.Of</code>)</td>
-            <td><code>TestWorkflowPage*</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-core">core</a> →</td>
-            <td>register.go · dashboard.go · workflow.go</td>
-            <td><code>core.Port</code> (type only — the calls go through the handlers)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> →</td>
-            <td>workflow.go · <code>handleWorkflowPage</code></td>
-            <td><code>executions.Badge</code> · <code>executions.Row</code> (the executions list model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> →</td>
-            <td>dashboard.go · workflow.go</td>
-            <td><code>registry.Workflow</code> (the model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-graph">core/graph</a> →</td>
-            <td>workflow.go · <code>handleWorkflowPage</code> · <code>workflowPage</code></td>
-            <td><code>graph.Spec</code> (the model) · <code>(Spec).Sanitize</code> · <code>*graph.WorkflowGraph</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-status">core/status</a> →</td>
-            <td>workflow.go · <code>handleWorkflowPage</code></td>
-            <td><code>status.Queued</code> · <code>status.Success</code> (the empty-state check)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webgraph">web/graph</a> →</td>
-            <td>workflow.go · <code>handleWorkflowPage</code></td>
-            <td><code>graph.BlockToSVG</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webrender">web/render</a> →</td>
-            <td>dashboard.go · workflow.go</td>
-            <td><code>render.Page</code> · <code>render.Partial</code> · <code>render.Fail</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-web">web</a> ←</td>
-            <td>web.go · <code>New</code></td>
-            <td><code>catalog.Register</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ web/render ============ -->
-    <section id="package-webrender" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>web/render <span class="badge">FAN-IN 2</span></h2>
-      <p class="role">The rendering: the HTML fragments (full pages + HTMX partials from the embedded <code>templates/</code>) + the core-error → HTTP mapping (404 · 400 — <code>ErrNotResumable</code>/<code>ErrNotCancellable</code> · 503 — <code>ErrNotLaunched</code> · 500).</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>render.go</code></td>
-            <td>The templates (the embedded FS) + <code>Page</code> (a full page) · <code>Partial</code> (an HTMX fragment) · <code>Fail</code> (the core-error → HTTP mapping: 404 · 400 · 503 · 500)</td>
-            <td><code>Page</code> · <code>Partial</code> · <code>Fail</code></td>
-          </tr>
-          <tr>
-            <td><code>templates/</code></td>
-            <td>HTMX templates (fragments): index · workflows · workflow · badge · steps · detail · resume · cancel</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td><code>render_test.go</code></td>
-            <td>Render failure → a clean 500</td>
-            <td><code>TestRenderErrorIsClean500</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> →</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>actions.ErrNotResumable</code> · <code>actions.ErrNotCancellable</code> (400 mapping)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> →</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>boot.ErrNotLaunched</code> (503 mapping)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> →</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>reads.ErrUnknownExecution</code> (404 mapping)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> →</td>
-            <td>render.go · <code>Fail</code></td>
-            <td><code>registry.ErrUnknownWorkflow</code> (404 mapping)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> ←</td>
-            <td>dashboard.go · workflow.go</td>
-            <td><code>render.Page</code> · <code>render.Partial</code> · <code>render.Fail</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> ←</td>
-            <td>badge.go · detail.go · dispatch.go · resume.go · cancel.go · steps.go</td>
-            <td><code>render.Partial</code> · <code>render.Page</code> · <code>render.Fail</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ web/graph ============ -->
-    <section id="package-webgraph" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>web/graph <span class="badge">FAN-IN 3</span></h2>
-      <p class="role">SVG layout of the block model (the block DAG — possible paths) + the executed path — both emitted at 1.25× (content-unit layout, <code>&lt;g transform="scale(1.25)"&gt;</code> in the output).</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>block.go</code></td>
-            <td>The block-DAG model + node placement: the measured boxes · async runs side-by-side (the ∥ marks) · the outline geometry (the root outline clears the inner blocks) · canvas</td>
-            <td><code>blockLayout</code> · <code>placeNode</code> · <code>placeAsyncRun</code> · <code>connectTo</code> · <code>outlineOf</code> · <code>outlinePadded</code> · <code>canvas</code></td>
-          </tr>
-          <tr>
-            <td><code>block_layout.go</code></td>
-            <td>The recursive block-DAG layout: the main-flow cursor (the vertical stack · the child dispatch) · if-fork (equal-width branches · the skip branch forks as arrows · the width metrics · the fork wiring)</td>
-            <td><code>layoutColumn</code> · <code>placeChild</code> · <code>layoutIf</code> · <code>forkMaxWidth</code> · <code>ifBranches</code> · <code>measureContentWidth</code> · <code>forkIn</code></td>
-          </tr>
-          <tr>
-            <td><code>block_svg.go</code></td>
-            <td>Block-DAG entry + SVG emission: the root outline (clears the inner blocks) · the level-ramp outlines · the type symbols (∥ async · ◉ child · … wait · the loop arc) · the edges</td>
-            <td><code>BlockToSVG</code> · <code>svg</code> · <code>levelClass</code></td>
-          </tr>
-          <tr>
-            <td><code>graph.go</code></td>
-            <td>Executed-path layout + SVG (status colors; the child row renders the child's name + the child's live badge)</td>
-            <td><code>ExecutedPathToSVG</code> · <code>graphLayout</code> · <code>newGraphLayout</code> · <code>measure</code> · <code>place</code> · <code>svg</code></td>
-          </tr>
-          <tr>
-            <td><code>metrics.go</code></td>
-            <td>The shared geometry of the two graphs: the char width · the paddings and gaps · the canvas pad · the box widths (base + the child/wait symbol zone)</td>
-            <td><code>baseBoxW</code> · <code>nodeBoxW</code></td>
-          </tr>
-          <tr>
-            <td><code>svg.go</code></td>
-            <td>The shared SVG emission of both emitters: the 1.25× scale · the coordinate format · the arrow marker</td>
-            <td><code>graphScale</code> · <code>num</code> · <code>arrowDefs</code></td>
-          </tr>
-          <tr>
-            <td><code>block_test.go</code></td>
-            <td>Block structure: nil · sequence · loop · forks · the 1.25× scale · async (side-by-side · group edge) · the join · well-formed XML</td>
-            <td><code>TestBlockToSVG*</code></td>
-          </tr>
-          <tr>
-            <td><code>block_outlines_test.go</code></td>
-            <td>The outlines: the root outline clears the inner blocks · no sibling overlap</td>
-            <td><code>TestBlockToSVGRootOutlineClearsInnerBlocks</code> · <code>TestBlockToSVGOutlinesDontOverlap</code></td>
-          </tr>
-          <tr>
-            <td><code>block_symbols_test.go</code></td>
-            <td>The kind symbols: the loop symbol shape (arc, not a circle) · the top-right anchor · the child ring + dot · the wait dots · the ∥ mark · the symbol space</td>
-            <td><code>TestBlockToSVGLoopSymbol*</code> · <code>TestBlockToSVGNodeSymbol*</code> · <code>TestBlockToSVGAsyncParallelMark</code></td>
-          </tr>
-          <tr>
-            <td><code>graph_test.go</code></td>
-            <td>Layout + SVG: the graph layout (linear/fork/nested/empty) · executed path (linear · failed · empty) · the child node (the child's name + live badge · the fallback to the row name) · the 1.25× scale · well-formed XML</td>
-            <td><code>TestNewGraphLayout*</code> · <code>TestExecutedPathToSVG*</code> · <code>TestExecutedPathToSVG*Child*</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-graph">core/graph</a> →</td>
-            <td>block_svg.go · <code>BlockToSVG</code> · metrics.go · <code>nodeBoxW</code></td>
-            <td><code>*graph.WorkflowGraph</code> · <code>graph.Block</code> · <code>graph.Child</code> · <code>graph.Node</code> · <code>graph.NodeKind</code> · <code>graph.BlockType</code> (the stored block model)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> →</td>
-            <td>graph.go · <code>ExecutedPathToSVG</code></td>
-            <td><code>reads.Step</code> (the fields: <code>Name</code> · <code>State</code> · <code>Kind</code> · <code>ChildID</code> · <code>ChildName</code> · <code>ChildState</code>)</td>
-          </tr>
-          <tr>
-            <td><a href="#package-webcatalog">web/catalog</a> ←</td>
-            <td>workflow.go · <code>handleWorkflowPage</code></td>
-            <td><code>graph.BlockToSVG</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-webexecutions">web/executions</a> ←</td>
-            <td>steps.go · <code>newStepsView</code> · detail.go</td>
-            <td><code>graph.ExecutedPathToSVG</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-gen">cmd/svgdump</a> ←</td>
-            <td>cmd/svgdump/main.go · <code>main</code></td>
-            <td><code>graph.BlockToSVG</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ test-only packages ============ -->
-    <section id="package-testcore" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>core/internal/testcore <span class="badge">TEST-ONLY</span></h2>
-      <p class="role">The shared test fixtures of the <code>core</code> packages: the env-driven <code>TestMain</code> (the same lifecycle as production) + the test-only workflows (<code>failing-test</code> — the flaky <code>flakyFail</code>, retries exhausted, the deterministic failed run · <code>resume-test</code>) registered on the booted context. Internal: only the <code>core/...</code> tests import it.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>testcore.go</code></td>
-            <td>The env boot (<code>TestMain</code> → <code>needCore</code>: <code>boot.SetWorkflowsSource</code> + <code>boot.Launch</code>) + the test helpers (<code>pollState</code> · <code>mustStepNames</code>)</td>
-            <td><code>TestMain</code> · <code>needCore</code> · <code>pollState</code> · <code>mustStepNames</code></td>
-          </tr>
-          <tr>
-            <td><code>testworkflows.go</code></td>
-            <td>The test-only workflows: <code>failing-test</code> (the flaky step — retries exhausted, the deterministic failed run) + <code>resume-test</code></td>
-            <td><code>FailingTest</code> · <code>flakyFail</code> · <code>ResumeTest</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section id="package-webtest" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>web/internal/webtest <span class="badge">TEST-ONLY</span></h2>
-      <p class="role">The shared test harness of the <code>web</code> packages: the stub-Port factory (the <code>ok*</code> fields + the <code>okCanceller</code>) and the <code>httptest</code> helpers (<code>Get</code> · <code>Post</code> · <code>PostForm</code> · <code>ReadAll</code> · <code>ContainsAll</code> · <code>ContainsAny</code>). Internal: only the <code>web/...</code> tests import it.</p>
-      <table>
-        <thead>
-          <tr><th>File</th><th>Responsibility</th><th>Functions</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>webtest.go</code></td>
-            <td>The stub Port (the <code>ok</code> fields) + the HTTP helpers</td>
-            <td><code>TestPort</code> · <code>AckEnqueuer</code> · <code>Get</code> · <code>Post</code> · <code>PostForm</code> · <code>ReadAll</code> · <code>ExecutionID</code> · <code>ContainsAll</code> · <code>ContainsAny</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ============ dbos ============ -->
-    <section id="package-dbos" class="pkg">
-      <a class="close" href="#graph">× CLOSE</a>
-      <h2>dbos <span class="badge">THIRD-PARTY</span></h2>
-      <p class="role">External dependency: durable queue + executor. Contacts: <code>core/boot</code> (the runtime), <code>core/registry</code> (the registration read), <code>core/reads</code> (the status/steps reads), <code>core/actions</code> (enqueue/resume/cancel) and <code>workflows</code> (registration in <code>init()</code>).</p>
-      <table>
-        <thead>
-          <tr><th>Package</th><th>Responsibility</th><th>Contact</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>github.com/dbos-inc/dbos-transact-golang/dbos</code></td>
-            <td>DBOS runtime SDK (Go) — <code>v1.7.0</code></td>
-            <td><code>NewContext</code> · <code>RegisterWorkflow</code> · <code>Enqueue</code> · <code>ListWorkflows</code> · <code>ListRegisteredWorkflows</code> · <code>GetWorkflowStatuses</code> · <code>GetWorkflowSteps</code> · <code>ResumeWorkflow</code> · <code>CancelWorkflow</code></td>
-          </tr>
-          <tr>
-            <td><code>.../dbos/driver/sqlite</code></td>
-            <td>SQLite driver (blank import, links the env-driven <code>sqlite:</code> URLs)</td>
-            <td><code>core/boot/sqlite_driver.go</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <table class="contacts">
-        <thead>
-          <tr><th>Module</th><th>Where (file · function)</th><th>What (identifiers)</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><a href="#package-boot">core/boot</a> ←</td>
-            <td>lifecycle.go · <code>init</code>/<code>boot</code>/<code>Launch</code>/<code>Shutdown</code>/<code>ctxOrErr</code> · sqlite_driver.go</td>
-            <td><code>dbos.NewContext</code> · <code>dbos.Launch</code> · <code>dbos.Shutdown</code> · the status types · SQLite driver</td>
-          </tr>
-          <tr>
-            <td><a href="#package-registry">core/registry</a> ←</td>
-            <td>registry.go · <code>List</code></td>
-            <td><code>dbos.ListWorkflows</code> · <code>dbos.ListRegisteredWorkflows</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-reads">core/reads</a> ←</td>
-            <td>executions.go · status.go · steps.go · detail.go</td>
-            <td><code>dbos.ListWorkflows</code> · <code>dbos.GetWorkflowStatuses</code> · <code>dbos.GetWorkflowSteps</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-actions">core/actions</a> ←</td>
-            <td>dispatch.go · resume.go · cancel.go</td>
-            <td><code>ctx.Enqueue</code> · <code>ctx.Queue</code> · <code>dbos.ResumeWorkflow</code> · <code>dbos.CancelWorkflow</code></td>
-          </tr>
-          <tr>
-            <td><a href="#package-workflows">workflows</a> ←</td>
-            <td>workflows/*.go · <code>init</code></td>
-            <td><code>dbos.RegisterWorkflow</code> · <code>dbos.WithWorkflowName</code> · <code>dbos.WithMaxRecoveryAttempts</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <div class="foot">
-      <span>FlowDeck — package map · 19 packages · 49 runtime edges · 0 cycles</span>
-      <span>click a node · zero JavaScript (anchors + <code>:target</code>) · keyboard accessible (tab + enter)</span>
-    </div>
-  </div>
+</div>
 </body>
 </html>
