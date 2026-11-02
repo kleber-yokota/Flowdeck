@@ -1,4 +1,4 @@
-# layout.md — the code is a change index
+# code.md — the code is a change index
 
 The code is planned against the *changes*, not the *domain*. A project is not
 a snapshot of what it is — it is the set of changes it will receive. The right

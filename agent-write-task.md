@@ -258,5 +258,5 @@ The README holds, once for the whole set:
 - It does not re-read a file for a name the map names or a value the
   digest holds: names come from `package-map.html`, values from
   `tasks/symbols.md`.
-- It does not read `layout.md`: the layout is already decided — the map
+- It does not read `code.md`: the layout is already decided — the map
   and the code carry it; the author navigates the map and the code.
