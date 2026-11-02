@@ -11,7 +11,8 @@
     AGENT: this file is the package map. The machine-readable map is the sections
     below: #contacts (where the modules touch —
     per edge: file/function + identifiers), #facts (the verified runtime
-    facts the design depends on) and one per package (package-main,
+    facts the design depends on), #gates (the structure load lines the CI
+    and the agent run) and one per package (package-main,
     package-core, package-workflows, package-gen, package-status, package-graph, package-web,
     package-webgraph, package-dbos) — each has a file table (file | responsibility | functions;
     test files name the symbols they assert) plus a contacts table (module | where (file ·
@@ -28,7 +29,7 @@
       <span><i class="sw leaf"></i>LEAF (NO IMPORTS)</span>
       <span><i class="sw ext"></i>THIRD-PARTY</span>
     </div>
-    <nav class="index" aria-label="Index">NAVIGATE — <a href="#contacts">contacts</a> · <a href="#facts">facts</a> · <a href="#package-main">main</a> · <a href="#package-core">core</a> · <a href="#package-workflows">workflows</a> · <a href="#package-gen">cmd tools</a> · <a href="#package-status">core/status</a> · <a href="#package-graph">core/graph</a> · <a href="#package-web">web</a> · <a href="#package-webgraph">web/graph</a> · <a href="#package-dbos">dbos</a></nav>
+    <nav class="index" aria-label="Index">NAVIGATE — <a href="#contacts">contacts</a> · <a href="#facts">facts</a> · <a href="#gates">gates</a> · <a href="#package-main">main</a> · <a href="#package-core">core</a> · <a href="#package-workflows">workflows</a> · <a href="#package-gen">cmd tools</a> · <a href="#package-status">core/status</a> · <a href="#package-graph">core/graph</a> · <a href="#package-web">web</a> · <a href="#package-webgraph">web/graph</a> · <a href="#package-dbos">dbos</a></nav>
 
     <svg id="graph" viewBox="0 0 960 600" role="img" aria-labelledby="t d" tabindex="0">
       <title id="t">FlowDeck package dependency graph</title>
@@ -356,6 +357,56 @@
           </tr>
         </tbody>
       </table>
+    </section>
+
+    <section id="gates" class="pkg">
+      <a class="close" href="#graph">× CLOSE</a>
+      <h2>The load lines <span class="badge">THE STRUCTURE GATE</span></h2>
+      <p class="role">The machine-readable load lines: <code>scripts/structure-gate.sh</code> (the thresholds) + <code>.goimportmaps.yaml</code> (the import contract — the twin of this map's contacts table). CI runs the script; the agent runs it before and after a change. The baseline row: <code>code.md</code> — "Where this lives in this repo".</p>
+      <table>
+        <thead>
+          <tr><th>Gate</th><th>Tool</th><th>Threshold</th><th>What it guards</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>cyclomatic</td>
+            <td><code>gocyclo</code></td>
+            <td>9 (production)</td>
+            <td>function size (the complexity budget)</td>
+          </tr>
+          <tr>
+            <td>cognitive</td>
+            <td><code>gocognit</code></td>
+            <td>10 (production)</td>
+            <td>function size (the complexity budget)</td>
+          </tr>
+          <tr>
+            <td>nesting</td>
+            <td><code>nestif</code></td>
+            <td>5 (production)</td>
+            <td>nested-if depth</td>
+          </tr>
+          <tr>
+            <td>cycles</td>
+            <td><code>dependency-analysis</code></td>
+            <td>none</td>
+            <td>the "zero cycles" claim of this graph</td>
+          </tr>
+          <tr>
+            <td>contract</td>
+            <td><code>goimportmaps</code></td>
+            <td><code>.goimportmaps.yaml</code></td>
+            <td>the forbidden edges (core → web · web → workflows · the leaves import nothing internal)</td>
+          </tr>
+          <tr>
+            <td>coupling (signal)</td>
+            <td><code>goimportmaps</code></td>
+            <td>Ca ≤15 · Ce ≤18 · I ≤1.0</td>
+            <td>fan-out / instability drift — printed for the agent, never fails</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="role">Not gateable yet: <code>plimsoll</code> (the god-struct load line — broken on Go 1.27, export data v5) and <code>interfacebloat</code> (<code>Port</code> is a struct, not an interface — the check lands the moment <code>Port</code> is drawn as one).</p>
     </section>
 
     <!-- ============ main ============ -->
