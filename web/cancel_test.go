@@ -9,6 +9,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -20,16 +21,16 @@ import (
 // The detail page of a live run (running) offers the Cancel button
 // (POST /cancel/{id}, targeting the badge wrapper).
 func TestExecutionDetailCancelOnLiveRun(t *testing.T) {
-	detailer := func(id string) (core.DetailPath, error) {
-		return core.DetailPath{
-			ExecutionDetail: core.ExecutionDetail{
+	detailer := func(id string) (reads.DetailPath, error) {
+		return reads.DetailPath{
+			ExecutionDetail: reads.ExecutionDetail{
 				ID:        id,
 				Name:      "wf-alpha",
 				State:     status.Running,
 				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 				Attempts:  1,
 			},
-			RunPath: core.RunPath{State: status.Running},
+			RunPath: reads.RunPath{State: status.Running},
 		}, nil
 	}
 	d := testPort()
@@ -57,16 +58,16 @@ func TestExecutionDetailCancelOnLiveRun(t *testing.T) {
 func TestExecutionDetailNoCancelOnTerminal(t *testing.T) {
 	for _, st := range []status.State{status.Success, status.Error, status.Cancelled} {
 		t.Run(string(st), func(t *testing.T) {
-			detailer := func(id string) (core.DetailPath, error) {
-				return core.DetailPath{
-					ExecutionDetail: core.ExecutionDetail{
+			detailer := func(id string) (reads.DetailPath, error) {
+				return reads.DetailPath{
+					ExecutionDetail: reads.ExecutionDetail{
 						ID:        id,
 						Name:      "wf-alpha",
 						State:     st,
 						CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 						Attempts:  1,
 					},
-					RunPath: core.RunPath{State: st},
+					RunPath: reads.RunPath{State: st},
 				}, nil
 			}
 			d := testPort()
@@ -91,8 +92,8 @@ func TestExecutionDetailNoCancelOnTerminal(t *testing.T) {
 // The cancel of an id that is not known by the core is a clean 404 (the
 // core maps it to ErrUnknownExecution).
 func TestCancelUnknownIs404(t *testing.T) {
-	canceller := func(id string) (core.Execution, error) {
-		return core.Execution{}, core.ErrUnknownExecution
+	canceller := func(id string) (reads.Execution, error) {
+		return reads.Execution{}, reads.ErrUnknownExecution
 	}
 	d := testPort()
 	d.Cancel = canceller
@@ -112,8 +113,8 @@ func TestCancelUnknownIs404(t *testing.T) {
 // The cancel of a run that is not live is a clean 400 (the core maps it to
 // ErrNotCancellable).
 func TestCancelOfNotLiveIs400(t *testing.T) {
-	canceller := func(id string) (core.Execution, error) {
-		return core.Execution{}, core.ErrNotCancellable
+	canceller := func(id string) (reads.Execution, error) {
+		return reads.Execution{}, core.ErrNotCancellable
 	}
 	d := testPort()
 	d.Cancel = canceller
@@ -132,8 +133,8 @@ func TestCancelOfNotLiveIs400(t *testing.T) {
 
 // A core that is down maps to a clean 503.
 func TestCancelCoreDownIs503(t *testing.T) {
-	canceller := func(id string) (core.Execution, error) {
-		return core.Execution{}, boot.ErrNotLaunched
+	canceller := func(id string) (reads.Execution, error) {
+		return reads.Execution{}, boot.ErrNotLaunched
 	}
 	d := testPort()
 	d.Cancel = canceller

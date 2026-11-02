@@ -1,4 +1,4 @@
-package core
+package reads
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"flowdeck/core/status"
 )
 
-// mapState is the phase 2 contract: every DBOS state lands on one of the
+// MapState is the phase 2 contract: every DBOS state lands on one of the
 // five UI states, and unknown states are rejected, not guessed.
 func TestMapState(t *testing.T) {
 	for state, want := range map[dbos.WorkflowStatusType]status.State{
@@ -20,16 +20,16 @@ func TestMapState(t *testing.T) {
 		dbos.WorkflowStatusCancelled:                   status.Cancelled,
 		dbos.WorkflowStatusMaxRecoveryAttemptsExceeded: status.Error,
 	} {
-		got, err := mapState(state)
+		got, err := MapState(state)
 		if err != nil {
-			t.Fatalf("mapState(%s): %v", state, err)
+			t.Fatalf("MapState(%s): %v", state, err)
 		}
 		if got != want {
-			t.Errorf("mapState(%s): got %s, want %s", state, got, want)
+			t.Errorf("MapState(%s): got %s, want %s", state, got, want)
 		}
 	}
 
-	if _, err := mapState(dbos.WorkflowStatusType("bogus")); err == nil {
-		t.Error("mapState(bogus): expected error, got nil")
+	if _, err := MapState(dbos.WorkflowStatusType("bogus")); err == nil {
+		t.Error("MapState(bogus): expected error, got nil")
 	}
 }

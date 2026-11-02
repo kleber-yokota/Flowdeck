@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -111,7 +111,7 @@ func TestStatusBadgeNoStore(t *testing.T) {
 // An ID that is not known by the core is a clean 404.
 func TestStatusUnknownExecutionIs404(t *testing.T) {
 	statuser := func(workflowID string) (status.State, error) {
-		return "", core.ErrUnknownExecution
+		return "", reads.ErrUnknownExecution
 	}
 	d := testPort()
 	d.Status = statuser

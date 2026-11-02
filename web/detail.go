@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/core/reads"
 )
 
 // executionDetail is the data for the execution detail full page: the
 // badge (polling while live), the first execution date, the stored input
 // values, the attempts, and — on failure — the error and the failed step.
 type executionDetail struct {
-	core.ExecutionDetail
+	reads.ExecutionDetail
 	Badge   badge
 	Retries []retry
 	Steps   stepsView

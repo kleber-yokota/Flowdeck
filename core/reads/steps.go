@@ -1,4 +1,4 @@
-package core
+package reads
 
 import (
 	"fmt"
@@ -69,7 +69,7 @@ func childRows(c dbos.Context, childIDs []string) (map[string]childInfo, error) 
 	}
 	out := make(map[string]childInfo, len(children))
 	for _, s := range children {
-		st, err := mapState(s.Status)
+		st, err := MapState(s.Status)
 		if err != nil {
 			return nil, err
 		}
@@ -141,14 +141,14 @@ func Steps(workflowID string) (RunPath, error) {
 	if err != nil {
 		return RunPath{}, err
 	}
-	statuses, err := listByID(c, workflowID)
+	statuses, err := ListByID(c, workflowID)
 	if err != nil {
 		return RunPath{}, fmt.Errorf("core: steps %s: %w", workflowID, err)
 	}
 	if len(statuses) == 0 {
 		return RunPath{}, ErrUnknownExecution
 	}
-	state, err := mapState(statuses[0].Status)
+	state, err := MapState(statuses[0].Status)
 	if err != nil {
 		return RunPath{}, err
 	}

@@ -5,6 +5,7 @@ package core
 import (
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
 )
@@ -28,14 +29,14 @@ type Port struct {
 	// top of the workflow page.
 	Spec func(name string) (graph.Spec, error)
 	// Executions lists the runs of a workflow (phase 3, LIST).
-	Executions func(name string) ([]Execution, error)
+	Executions func(name string) ([]reads.Execution, error)
 
 	// Dispatch: start a run.
 	// Enqueue dispatches a registered workflow with the clean input
 	// (sanitized by the web against the workflow's spec — the clean input
 	// is what goes on the DBOS queue) and returns the new execution
 	// (id + state + created_at).
-	Enqueue func(name string, payload any) (Execution, error)
+	Enqueue func(name string, payload any) (reads.Execution, error)
 
 	// Run tracking: follow a run (the 2s polls).
 	// Status reports the state of a run (the read half of the dispatch,
@@ -45,22 +46,22 @@ type Port struct {
 	// and the steps that ran, in execution order — polled every 2s until
 	// the run is terminal; the state rides in the RunPath and is the poll
 	// control).
-	Steps func(workflowID string) (RunPath, error)
+	Steps func(workflowID string) (reads.RunPath, error)
 	// Detail reads the execution detail page in one read (phase 3, DETAIL ·
 	// STEP 3): the execution's row (badge, created_at, attempts, inputs,
 	// error + the failed step) and the executed path (the state + the steps
 	// that ran — the poll control rides on it).
-	Detail func(workflowID string) (DetailPath, error)
+	Detail func(workflowID string) (reads.DetailPath, error)
 
 	// Resume re-enqueues a failed run by id (phase 5, RESUME — the same
 	// stored input, restarting from the last completed step) and returns
 	// the ACK (the same id, enqueued again).
-	Resume func(workflowID string) (Execution, error)
+	Resume func(workflowID string) (reads.Execution, error)
 
 	// Cancel cancels a live run by id (queued/running — the guard; a
 	// terminal run is not cancellable) and returns the ACK (the same id,
 	// now cancelled).
-	Cancel func(workflowID string) (Execution, error)
+	Cancel func(workflowID string) (reads.Execution, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -74,12 +75,12 @@ func NewPort() Port {
 	return Port{
 		List:       registry.List,
 		Graph:      g,
-		Executions: Executions,
+		Executions: reads.Executions,
 		Spec:       registry.Spec,
 		Enqueue:    Enqueue,
-		Status:     Status,
-		Steps:      Steps,
-		Detail:     Detail,
+		Status:     reads.Status,
+		Steps:      reads.Steps,
+		Detail:     reads.Detail,
 		Resume:     Resume,
 		Cancel:     Cancel,
 	}

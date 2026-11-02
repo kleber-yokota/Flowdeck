@@ -8,6 +8,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/internal/testcore"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -42,7 +43,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	if st != status.Error {
 		t.Fatalf("failing run state: got %s, want error", st)
 	}
-	d, err := core.Detail(ex.ID)
+	d, err := reads.Detail(ex.ID)
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}

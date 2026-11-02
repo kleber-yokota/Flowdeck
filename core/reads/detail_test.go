@@ -1,9 +1,10 @@
-package core_test
+package reads_test
 
 import (
 	"errors"
 	"flowdeck/core"
 	"flowdeck/core/internal/testcore"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ func TestDetailShowsInputValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	d, err := core.Detail(ex.ID)
+	d, err := reads.Detail(ex.ID)
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
@@ -38,11 +39,11 @@ func TestDetailShowsStructInputValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	d, err := core.Detail(ex.ID)
+	d, err := reads.Detail(ex.ID)
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	want := []core.InputValue{{Name: "Name", Value: "Ada"}, {Name: "StartDate", Value: "2026-01-01"}}
+	want := []reads.InputValue{{Name: "Name", Value: "Ada"}, {Name: "StartDate", Value: "2026-01-01"}}
 	if len(d.Inputs) != len(want) {
 		t.Fatalf("inputs: got %+v, want %v", d.Inputs, want)
 	}
@@ -66,7 +67,7 @@ func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 	if st != status.Error {
 		t.Fatalf("failing run state: got %s, want error", st)
 	}
-	d, err := core.Detail(ex.ID)
+	d, err := reads.Detail(ex.ID)
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
@@ -85,7 +86,7 @@ func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 // maps it to a 404).
 func TestDetailOfUnknownExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Detail("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
+	if _, err := reads.Detail("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Detail unknown: got %v, want ErrUnknownExecution", err)
 	}
 }

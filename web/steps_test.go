@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -16,8 +16,8 @@ import (
 // executed-path SVG with the hx attributes that keep the 2s poll running.
 func TestStepsPartialPollsWhenRunning(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) {
-		return core.RunPath{State: status.Running, Steps: []core.Step{
+	d.Steps = func(id string) (reads.RunPath, error) {
+		return reads.RunPath{State: status.Running, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Success},
 		}}, nil
@@ -46,8 +46,8 @@ func TestStepsPartialPollsWhenRunning(t *testing.T) {
 // shows the path that ran.
 func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) {
-		return core.RunPath{State: status.Success, Steps: []core.Step{
+	d.Steps = func(id string) (reads.RunPath, error) {
+		return reads.RunPath{State: status.Success, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "store", State: status.Success},
 		}}, nil
@@ -75,8 +75,8 @@ func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 // successful steps keep the success color.
 func TestStepsPartialColorsTheFailedStep(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) {
-		return core.RunPath{State: status.Error, Steps: []core.Step{
+	d.Steps = func(id string) (reads.RunPath, error) {
+		return reads.RunPath{State: status.Error, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Error},
 		}}, nil
@@ -99,8 +99,8 @@ func TestStepsPartialColorsTheFailedStep(t *testing.T) {
 // The fragment keeps the steps in execution order (step_id asc).
 func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) {
-		return core.RunPath{State: status.Success, Steps: []core.Step{
+	d.Steps = func(id string) (reads.RunPath, error) {
+		return reads.RunPath{State: status.Success, Steps: []reads.Step{
 			{Name: "fetch", State: status.Success},
 			{Name: "parse", State: status.Success},
 			{Name: "store", State: status.Success},
@@ -127,7 +127,7 @@ func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 // A run the core does not know is a clean 404 (the Steps read maps it).
 func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) { return core.RunPath{}, core.ErrUnknownExecution }
+	d.Steps = func(id string) (reads.RunPath, error) { return reads.RunPath{}, reads.ErrUnknownExecution }
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -139,7 +139,7 @@ func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 // A core that is down maps to a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
 	d := testPort()
-	d.Steps = func(id string) (core.RunPath, error) { return core.RunPath{}, boot.ErrNotLaunched }
+	d.Steps = func(id string) (reads.RunPath, error) { return reads.RunPath{}, boot.ErrNotLaunched }
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -151,16 +151,16 @@ func TestStepsPartialCoreDownIs503(t *testing.T) {
 // The detail page embeds the executed path (phase 4, STEP 3): a live run
 // polls the steps partial every 2s.
 func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
-	detailer := func(id string) (core.DetailPath, error) {
-		return core.DetailPath{
-			ExecutionDetail: core.ExecutionDetail{
+	detailer := func(id string) (reads.DetailPath, error) {
+		return reads.DetailPath{
+			ExecutionDetail: reads.ExecutionDetail{
 				ID:        id,
 				Name:      "wf-alpha",
 				State:     status.Running,
 				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 				Attempts:  1,
 			},
-			RunPath: core.RunPath{State: status.Running, Steps: []core.Step{{Name: "greet", State: status.Success}}},
+			RunPath: reads.RunPath{State: status.Running, Steps: []reads.Step{{Name: "greet", State: status.Success}}},
 		}, nil
 	}
 	d := testPort()
@@ -187,16 +187,16 @@ func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
 // A terminal run on the detail page: the executed path is static (no
 // hx attributes) and the badge stops polling too.
 func TestExecutionDetailPageTerminalExecutedPath(t *testing.T) {
-	detailer := func(id string) (core.DetailPath, error) {
-		return core.DetailPath{
-			ExecutionDetail: core.ExecutionDetail{
+	detailer := func(id string) (reads.DetailPath, error) {
+		return reads.DetailPath{
+			ExecutionDetail: reads.ExecutionDetail{
 				ID:        id,
 				Name:      "wf-alpha",
 				State:     status.Success,
 				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
 				Attempts:  1,
 			},
-			RunPath: core.RunPath{State: status.Success, Steps: []core.Step{{Name: "greet", State: status.Success}}},
+			RunPath: reads.RunPath{State: status.Success, Steps: []reads.Step{{Name: "greet", State: status.Success}}},
 		}, nil
 	}
 	d := testPort()

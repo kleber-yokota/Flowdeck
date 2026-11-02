@@ -1,4 +1,4 @@
-package core
+package reads
 
 import (
 	"errors"
@@ -14,10 +14,10 @@ import (
 // known by the core (the web maps it to a 404).
 var ErrUnknownExecution = errors.New("core: unknown workflow execution")
 
-// listByID lists the status rows of one execution without loading
+// ListByID lists the status rows of one execution without loading
 // input/output: only the status row is needed (the 2s badge poll must
 // stay cheap).
-func listByID(c dbos.Context, workflowID string) ([]dbos.WorkflowStatus, error) {
+func ListByID(c dbos.Context, workflowID string) ([]dbos.WorkflowStatus, error) {
 	return dbos.ListWorkflows(c,
 		dbos.WithFilterWorkflowIDs(workflowID),
 		dbos.WithFilterLoadInput(false),
@@ -39,20 +39,20 @@ func Status(workflowID string) (status.State, error) {
 	if err != nil {
 		return "", err
 	}
-	statuses, err := listByID(c, workflowID)
+	statuses, err := ListByID(c, workflowID)
 	if err != nil {
 		return "", fmt.Errorf("core: status %s: %w", workflowID, err)
 	}
 	if len(statuses) == 0 {
 		return "", ErrUnknownExecution
 	}
-	return mapState(statuses[0].Status)
+	return MapState(statuses[0].Status)
 }
 
-// mapState maps a DBOS workflow state onto the UI states (the phase 2
+// MapState maps a DBOS workflow state onto the UI states (the phase 2
 // contract: every DBOS state lands on one of the five, unknown states are
 // rejected, not guessed).
-func mapState(s dbos.WorkflowStatusType) (status.State, error) {
+func MapState(s dbos.WorkflowStatusType) (status.State, error) {
 	switch s {
 	case dbos.WorkflowStatusEnqueued, dbos.WorkflowStatusDelayed:
 		return status.Queued, nil

@@ -7,6 +7,7 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -19,20 +20,20 @@ var ErrNotResumable = errors.New("core: run cannot be resumed")
 // puts the run back on the queue with the same stored input — the run
 // restarts from the last completed step. The ACK is the row read back:
 // the same id, now enqueued again.
-func Resume(workflowID string) (Execution, error) {
+func Resume(workflowID string) (reads.Execution, error) {
 	c, err := boot.CtxOrErr()
 	if err != nil {
-		return Execution{}, err
+		return reads.Execution{}, err
 	}
-	st, err := Status(workflowID)
+	st, err := reads.Status(workflowID)
 	if err != nil {
-		return Execution{}, err
+		return reads.Execution{}, err
 	}
 	if st != status.Error {
-		return Execution{}, fmt.Errorf("%w: state %s", ErrNotResumable, st)
+		return reads.Execution{}, fmt.Errorf("%w: state %s", ErrNotResumable, st)
 	}
 	if _, err := dbos.ResumeWorkflow[any](c, workflowID, dbos.WithResumeQueue(boot.QueueName)); err != nil {
-		return Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
+		return reads.Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
 	}
 	return resumeAck(c, workflowID)
 }
@@ -41,20 +42,20 @@ func Resume(workflowID string) (Execution, error) {
 // (the resume never touches the stored input). A row that stayed in a
 // failed state (a terminal error — the resume did not take) is not
 // resumable.
-func resumeAck(c dbos.Context, workflowID string) (Execution, error) {
-	statuses, err := listByID(c, workflowID)
+func resumeAck(c dbos.Context, workflowID string) (reads.Execution, error) {
+	statuses, err := reads.ListByID(c, workflowID)
 	if err != nil {
-		return Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
+		return reads.Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
 	}
 	if len(statuses) == 0 {
-		return Execution{}, ErrUnknownExecution
+		return reads.Execution{}, reads.ErrUnknownExecution
 	}
-	st, err := mapState(statuses[0].Status)
+	st, err := reads.MapState(statuses[0].Status)
 	if err != nil {
-		return Execution{}, err
+		return reads.Execution{}, err
 	}
 	if st == status.Error {
-		return Execution{}, fmt.Errorf("%w: state %s", ErrNotResumable, st)
+		return reads.Execution{}, fmt.Errorf("%w: state %s", ErrNotResumable, st)
 	}
-	return Execution{ID: workflowID, State: st, CreatedAt: statuses[0].CreatedAt}, nil
+	return reads.Execution{ID: workflowID, State: st, CreatedAt: statuses[0].CreatedAt}, nil
 }

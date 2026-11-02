@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/core/reads"
 	"flowdeck/web/graph"
 )
 
@@ -18,7 +19,7 @@ type stepsView struct {
 
 // newStepsView builds the steps partial of a run path (the steps that ran,
 // in execution order — the branch the run took).
-func newStepsView(workflowID string, path core.RunPath) stepsView {
+func newStepsView(workflowID string, path reads.RunPath) stepsView {
 	return stepsView{
 		WorkflowID: workflowID,
 		Terminal:   path.State.Terminal(),

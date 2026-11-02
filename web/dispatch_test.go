@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
 	"flowdeck/core/graph"
+	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 )
 
@@ -100,7 +100,7 @@ func TestRunBadIntIs400(t *testing.T) {
 func TestRunForwardsCleanValues(t *testing.T) {
 	var payload any
 	d := testPort()
-	d.Enqueue = func(name string, p any) (core.Execution, error) {
+	d.Enqueue = func(name string, p any) (reads.Execution, error) {
 		payload = p
 		return okEnqueuer(name, p)
 	}
@@ -122,8 +122,8 @@ func TestRunForwardsCleanValues(t *testing.T) {
 
 // A workflow that is not in the core registry is a clean 404.
 func TestRunUnknownWorkflowIs404(t *testing.T) {
-	enqueue := func(name string, payload any) (core.Execution, error) {
-		return core.Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
+	enqueue := func(name string, payload any) (reads.Execution, error) {
+		return reads.Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
 	}
 	d := testPort()
 	d.Enqueue = enqueue
@@ -142,8 +142,8 @@ func TestRunUnknownWorkflowIs404(t *testing.T) {
 
 // A core failure that is not "unknown workflow" is a clean 500.
 func TestRunEnqueueFailureIs500(t *testing.T) {
-	enqueue := func(name string, payload any) (core.Execution, error) {
-		return core.Execution{}, errors.New("boom")
+	enqueue := func(name string, payload any) (reads.Execution, error) {
+		return reads.Execution{}, errors.New("boom")
 	}
 	d := testPort()
 	d.Enqueue = enqueue

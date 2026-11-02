@@ -9,6 +9,7 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/internal/testcore"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -21,7 +22,7 @@ import (
 // ErrUnknownExecution (the web maps it to a 404).
 func TestCancelUnknownExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
+	if _, err := core.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Cancel unknown: got %v, want ErrUnknownExecution", err)
 	}
 }
@@ -55,7 +56,7 @@ func TestCancelQueuedRun(t *testing.T) {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	id := h.GetWorkflowID()
-	st, err := core.Status(id)
+	st, err := reads.Status(id)
 	if err != nil {
 		t.Fatalf("Status: %v", err)
 	}

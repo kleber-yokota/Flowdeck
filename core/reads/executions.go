@@ -1,4 +1,9 @@
-package core
+// Package reads is the execution reads of the core: the Executions (the
+// listing of a workflow's runs), the Status (the badge state — the poll
+// read), the Detail (the detail page's read model in one read) and the
+// Steps (the executed path — the poll control). Nothing is executed here:
+// the reads observe the durable state, the actions own the runs.
+package reads
 
 import (
 	"fmt"
@@ -38,7 +43,7 @@ func Executions(name string) ([]Execution, error) {
 	}
 	out := make([]Execution, 0, len(statuses))
 	for _, s := range statuses {
-		st, err := mapState(s.Status)
+		st, err := MapState(s.Status)
 		if err != nil {
 			return nil, err
 		}

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
 )
@@ -132,8 +132,8 @@ func TestWorkflowPageListsExecutions(t *testing.T) {
 	}
 	newer := time.Date(2026, 5, 13, 13, 40, 0, 0, time.Local)
 	older := time.Date(2026, 5, 13, 13, 30, 0, 0, time.Local)
-	listExecutions := func(name string) ([]core.Execution, error) {
-		return []core.Execution{
+	listExecutions := func(name string) ([]reads.Execution, error) {
+		return []reads.Execution{
 			{ID: "run-newer", State: status.Success, CreatedAt: newer},
 			{ID: "run-older", State: status.Queued, CreatedAt: older},
 		}, nil
@@ -176,7 +176,7 @@ func TestWorkflowPageCoreDownIs503(t *testing.T) {
 	fakeLister := func() []registry.Workflow {
 		return []registry.Workflow{{Name: "wf-alpha"}}
 	}
-	downExecutions := func(name string) ([]core.Execution, error) {
+	downExecutions := func(name string) ([]reads.Execution, error) {
 		return nil, boot.ErrNotLaunched
 	}
 	d := testPort()

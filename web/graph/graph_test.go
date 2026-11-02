@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -14,9 +14,9 @@ import (
 // labeled with the child's name and colored with the child's live badge
 // state (the row's own state is the dispatch's, not the child's).
 func TestExecutedPathToSVGChildNodeShowsChildNameAndBadge(t *testing.T) {
-	steps := []core.Step{
-		{Name: "DBOS.enqueue", Kind: core.KindChild, ChildID: "child-1", ChildName: "pipeline", ChildState: status.Running, State: status.Success},
-		{Name: "DBOS.getResult", Kind: core.KindWait, State: status.Success},
+	steps := []reads.Step{
+		{Name: "DBOS.enqueue", Kind: reads.KindChild, ChildID: "child-1", ChildName: "pipeline", ChildState: status.Running, State: status.Success},
+		{Name: "DBOS.getResult", Kind: reads.KindWait, State: status.Success},
 	}
 	svg := string(ExecutedPathToSVG(steps))
 	if !strings.Contains(svg, `class="g-node running"`) {
@@ -37,8 +37,8 @@ func TestExecutedPathToSVGChildNodeShowsChildNameAndBadge(t *testing.T) {
 // child's name (the child row is absent — defensive) renders the row name
 // and the row's own state.
 func TestExecutedPathToSVGChildFallbackUsesRowName(t *testing.T) {
-	steps := []core.Step{
-		{Name: "DBOS.enqueue", Kind: core.KindChild, ChildID: "child-1", State: status.Success},
+	steps := []reads.Step{
+		{Name: "DBOS.enqueue", Kind: reads.KindChild, ChildID: "child-1", State: status.Success},
 	}
 	svg := string(ExecutedPathToSVG(steps))
 	if !strings.Contains(svg, `class="g-node success"`) {
@@ -145,7 +145,7 @@ func TestNewGraphLayoutEmpty(t *testing.T) {
 // with the single row of the steps that ran — one node per step, one edge
 // per continuation, and every node colored by the step's state.
 func TestExecutedPathToSVGLinearChain(t *testing.T) {
-	steps := []core.Step{
+	steps := []reads.Step{
 		{Name: "fetch", State: status.Success},
 		{Name: "parse", State: status.Success},
 		{Name: "store", State: status.Success},
@@ -170,7 +170,7 @@ func TestExecutedPathToSVGLinearChain(t *testing.T) {
 // TestExecutedPathToSVGScale: the executed-path svg is scaled 1.25× too
 // (same readability scale as the block-DAG svg).
 func TestExecutedPathToSVGScale(t *testing.T) {
-	steps := []core.Step{{Name: "fetch", State: status.Success}}
+	steps := []reads.Step{{Name: "fetch", State: status.Success}}
 	svg := string(ExecutedPathToSVG(steps))
 	if !strings.Contains(svg, `<g transform="scale(1.25)">`) {
 		t.Fatalf("executed path svg: want the 1.25× scale group:\n%s", svg)
@@ -183,7 +183,7 @@ func TestExecutedPathToSVGScale(t *testing.T) {
 // TestExecutedPathToSVGFailedStep: a failed step is colored with the
 // failed state (the rest of the path keeps the success color).
 func TestExecutedPathToSVGFailedStep(t *testing.T) {
-	steps := []core.Step{
+	steps := []reads.Step{
 		{Name: "fetch", State: status.Success},
 		{Name: "parse", State: status.Error},
 	}

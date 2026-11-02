@@ -9,6 +9,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 )
 
@@ -20,7 +21,7 @@ func fail(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, registry.ErrUnknownWorkflow):
 		http.Error(w, "unknown workflow", http.StatusNotFound)
-	case errors.Is(err, core.ErrUnknownExecution):
+	case errors.Is(err, reads.ErrUnknownExecution):
 		http.Error(w, "unknown execution", http.StatusNotFound)
 	case errors.Is(err, core.ErrNotResumable):
 		http.Error(w, "run cannot be resumed", http.StatusBadRequest)

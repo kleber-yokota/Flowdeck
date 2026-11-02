@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -40,7 +41,7 @@ func badgeFor(id string, st status.State) badge {
 
 // row builds the execution row (badge + first execution date + id) — the
 // dispatch ACK and the rows of the workflow page.
-func row(ex core.Execution) badge {
+func row(ex reads.Execution) badge {
 	b := badgeFor(ex.ID, ex.State)
 	b.CreatedAt = ex.CreatedAt
 	return b

@@ -1,4 +1,4 @@
-package core
+package reads
 
 import (
 	"encoding/json"
@@ -70,7 +70,7 @@ func Detail(workflowID string) (DetailPath, error) {
 		return DetailPath{}, ErrUnknownExecution
 	}
 	s := statuses[0]
-	st, err := mapState(s.Status)
+	st, err := MapState(s.Status)
 	if err != nil {
 		return DetailPath{}, err
 	}

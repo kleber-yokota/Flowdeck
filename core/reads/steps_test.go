@@ -1,4 +1,4 @@
-package core_test
+package reads_test
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/internal/testcore"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -25,7 +26,7 @@ func TestStepsOfKitchenRun(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	path, err := core.Steps(ex.ID)
+	path, err := reads.Steps(ex.ID)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}
@@ -36,14 +37,14 @@ func TestStepsOfKitchenRun(t *testing.T) {
 		name string
 		kind string
 	}{
-		{"base", core.KindStep},
-		{"DBOS.sleep", core.KindWait},
-		{"pipeline", core.KindChild},
-		{"DBOS.getResult", core.KindWait},
-		{"side", core.KindStep},
-		{"DBOS.select", core.KindWait},
-		{"spin", core.KindStep},
-		{"spin", core.KindStep},
+		{"base", reads.KindStep},
+		{"DBOS.sleep", reads.KindWait},
+		{"pipeline", reads.KindChild},
+		{"DBOS.getResult", reads.KindWait},
+		{"side", reads.KindStep},
+		{"DBOS.select", reads.KindWait},
+		{"spin", reads.KindStep},
+		{"spin", reads.KindStep},
 	}
 	if len(path.Steps) != len(want) {
 		t.Fatalf("rows: got %d (%v), want %d", len(path.Steps), stepNames(path.Steps), len(want))
@@ -75,12 +76,12 @@ func TestStepsOfKitchenRun(t *testing.T) {
 // maps it to a 404).
 func TestStepsOfUnknownExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := core.Steps("00000000-0000-0000-0000-000000000000"); !errors.Is(err, core.ErrUnknownExecution) {
+	if _, err := reads.Steps("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Steps unknown: got %v, want ErrUnknownExecution", err)
 	}
 }
 
-func stepNames(steps []core.Step) []string {
+func stepNames(steps []reads.Step) []string {
 	names := make([]string, 0, len(steps))
 	for _, s := range steps {
 		names = append(names, s.Name)

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -53,7 +53,7 @@ func PollState(t *testing.T, id string, want status.State) (status.State, error)
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for {
-		st, err := core.Status(id)
+		st, err := reads.Status(id)
 		if err != nil {
 			return st, fmt.Errorf("Status: %w", err)
 		}
@@ -69,9 +69,9 @@ func PollState(t *testing.T, id string, want status.State) (status.State, error)
 
 // MustStepNames returns the step names of the run, failing the test if
 // the steps cannot be read.
-func MustStepNames(t *testing.T, ex core.Execution) []string {
+func MustStepNames(t *testing.T, ex reads.Execution) []string {
 	t.Helper()
-	path, err := core.Steps(ex.ID)
+	path, err := reads.Steps(ex.ID)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}

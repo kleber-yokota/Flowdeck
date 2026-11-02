@@ -13,6 +13,7 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
+	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
 
@@ -27,7 +28,7 @@ import (
 
 func emptyLister() []registry.Workflow { return nil }
 
-func okExecutions(name string) ([]core.Execution, error) { return nil, nil }
+func okExecutions(name string) ([]reads.Execution, error) { return nil, nil }
 
 // okSpec is the spec stub: a string input and one step with a default.
 func okSpec(name string) (graph.Spec, error) {
@@ -38,8 +39,8 @@ func okSpec(name string) (graph.Spec, error) {
 func okReady() error { return nil }
 
 // The ACK execution of okEnqueuer: id + queued state + created_at.
-func okEnqueuer(name string, payload any) (core.Execution, error) {
-	return core.Execution{
+func okEnqueuer(name string, payload any) (reads.Execution, error) {
+	return reads.Execution{
 		ID:        "00000000-0000-0000-0000-000000000001",
 		State:     status.Queued,
 		CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
@@ -52,27 +53,27 @@ func okStatuser(workflowID string) (status.State, error) {
 
 // okSteps returns the executed path of a clean run: the terminal state
 // (the poll stops) and a single successful step (phase 4, STEP 3 stub).
-func okSteps(workflowID string) (core.RunPath, error) {
-	return core.RunPath{
+func okSteps(workflowID string) (reads.RunPath, error) {
+	return reads.RunPath{
 		State: status.Success,
-		Steps: []core.Step{{Name: "greet", State: status.Success}},
+		Steps: []reads.Step{{Name: "greet", State: status.Success}},
 	}, nil
 }
 
 // okDetail is the detail-page stub: the unknown execution (the 404 twin of
 // the booted detail tests).
-func okDetail(id string) (core.DetailPath, error) {
-	return core.DetailPath{}, core.ErrUnknownExecution
+func okDetail(id string) (reads.DetailPath, error) {
+	return reads.DetailPath{}, reads.ErrUnknownExecution
 }
 
 // okResumer is the resume stub: the ACK is the same id, enqueued again.
-func okResumer(id string) (core.Execution, error) {
-	return core.Execution{ID: id, State: status.Queued}, nil
+func okResumer(id string) (reads.Execution, error) {
+	return reads.Execution{ID: id, State: status.Queued}, nil
 }
 
 // okCanceller is the cancel stub: the ACK is the same id, now cancelled.
-func okCanceller(id string) (core.Execution, error) {
-	return core.Execution{ID: id, State: status.Cancelled}, nil
+func okCanceller(id string) (reads.Execution, error) {
+	return reads.Execution{ID: id, State: status.Cancelled}, nil
 }
 
 // testPort builds the base stub port — the shared stubs above (and the

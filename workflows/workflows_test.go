@@ -8,6 +8,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -37,7 +38,7 @@ func needCore(t *testing.T) {
 
 // runToSuccess enqueues the workflow with the clean input (the values the
 // web sanitized against the spec) and polls until the run is terminal.
-func runToSuccess(t *testing.T, name string, payload any) core.Execution {
+func runToSuccess(t *testing.T, name string, payload any) reads.Execution {
 	t.Helper()
 	ex, err := core.Enqueue(name, payload)
 	if err != nil {
@@ -55,7 +56,7 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for {
-		st, err := core.Status(id)
+		st, err := reads.Status(id)
 		if err != nil {
 			return st, fmt.Errorf("Status: %w", err)
 		}
@@ -70,9 +71,9 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 }
 
 // stepNames returns the executed step names of the run.
-func stepNames(t *testing.T, ex core.Execution) []string {
+func stepNames(t *testing.T, ex reads.Execution) []string {
 	t.Helper()
-	path, err := core.Steps(ex.ID)
+	path, err := reads.Steps(ex.ID)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}
@@ -83,7 +84,7 @@ func stepNames(t *testing.T, ex core.Execution) []string {
 	return names
 }
 
-func assertStepNames(t *testing.T, ex core.Execution, want ...string) {
+func assertStepNames(t *testing.T, ex reads.Execution, want ...string) {
 	t.Helper()
 	got := stepNames(t, ex)
 	if len(got) != len(want) {

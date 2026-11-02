@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"flowdeck/core"
+	"flowdeck/core/reads"
 )
 
 // pathNode is a step node of the paths graph: the continuations are
@@ -165,7 +165,7 @@ func (g *graphLayout) svg() string {
 // steps that ran, in execution order: each node is colored by the step's
 // state (success/error — every executed step is terminal). It is separate
 // from the boot map: the path comes from Postgres, the map from the code.
-func ExecutedPathToSVG(steps []core.Step) template.HTML {
+func ExecutedPathToSVG(steps []reads.Step) template.HTML {
 	nodes := make([]pathNode, 0, len(steps))
 	for _, s := range steps {
 		// The child row renders as the child workflow: the node is labeled
@@ -174,7 +174,7 @@ func ExecutedPathToSVG(steps []core.Step) template.HTML {
 		// dispatch's, not the child's); a child row missing the child's
 		// name (defensive) falls back to the row name and the row's state.
 		name, state := s.Name, string(s.State)
-		if s.Kind == core.KindChild && s.ChildName != "" {
+		if s.Kind == reads.KindChild && s.ChildName != "" {
 			name, state = s.ChildName, string(s.ChildState)
 		}
 		nodes = append(nodes, pathNode{Step: name, State: state})
