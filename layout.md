@@ -97,14 +97,21 @@ way tests are the first line of the correctness budget.
 ## The decision procedure (per change)
 
 1. Which package owns this behavior? If none, that is a design decision —
-   stop and decide it; do not invent a folder.
+   stop and decide it; do not invent a folder. Name the module split, don't
+   infer it: a new package appears when a second consumer of the contract
+   appears (a new import edge with its own needs), not when a file holds two
+   responsibilities — intent splits are file splits (principle 1 · one file,
+   one intention · the 300-line rule).
 2. Does an existing file own it? Extend the file.
 3. No file owns it? Create a file named for the behavior + its test.
 4. A file now holds two responsibilities? Split it — as its own green step.
 5. Does the index know where this lives? Update it — as the last step of the
    same change.
-6. Never inside a change that is not about structure: a new package, a new
-   folder layer, a new naming convention.
+6. An explicit refactor is a structure change: it may move contracts (a
+   package edge, the Port surface, a read model) and process (a batched
+   query, a state that rides on the read) — the goal is the improvement,
+   done in green steps (principle 5). A change that is *not* about structure
+   adds no package, no folder layer, no naming convention.
 
 ## What this forbids
 
@@ -115,6 +122,8 @@ way tests are the first line of the correctness budget.
 - Two layout recipes for one kind of entity.
 - A test file that asserts two intentions (the parser and the spec in one
   file).
+- A Go file over 300 lines (a file this long has outgrown one responsibility
+  — split it).
 
 ## What this is not
 
