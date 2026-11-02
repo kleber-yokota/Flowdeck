@@ -50,23 +50,28 @@ or `package-map.html`; do not read the other `.html` files without a reason or u
 - Every agent enters with a **clean context**: only the handoff files, in their current state — no git
   tree, no history (machine view: `#handoffs` · `#artifacts` · `#rules` · `#terms` of the same file).
 
-## Package map (navigable)
+## Package map (navigable) — hub + 3 spokes
 
-- Ranked package graph (10 nodes, 17 edges, zero cycles): `main` → `web` → `core` + `web/graph`
-  → `core/status` + `core/graph` + `dbos` (third); edge labels = the functions that
-  contact across modules; `cmd/workflowgen` (build) and `cmd/svgdump` (diagnosis) are
-  main packages that are never imported;
-- `core` is the convergence point (fan-in 4: `main`, `web`, `web/graph`, `workflows`); the `web`↔`core`
-  contact is the single `Port`; `core/status` and `core/graph` are pure;
-- **Clickable nodes**: clicking a package shows its files, functions and contacts
-  — navigate without reading the code;
-- Navigation without JavaScript (anchors + `:target`): deep-link by hash, keyboard and
-  back button work; each detail section has drill-down links to the contact packages.
-- **One file, two readers**: the `#contacts` section (where the modules touch: per edge,
-  file/function + identifiers) and the `<section id="package-*">` blocks
-  (file | responsibility | functions) are the machine-readable map (AGENTS.md points to
-  them); the SVG is the human view of the same data. No separate map exists — if you
-  update it, it is here.
+19 packages (17 production · 2 test), 59 edges (49 runtime · 9 test · 1 build), zero cycles.
+
+- `package-map.html` (hub) — the ranked package graph: nodes are the packages (the fan-in badge
+  counts the runtime importers), the arrows are imports pointing at the imported package, the edge
+  labels are the functions that contact across modules; `cmd/workflowgen` (build) and `cmd/svgdump`
+  (diagnosis) are main packages that are never imported. Machine-readable sections: `#packages`
+  (package · group · role · fan-in · spoke), `#edges` (the contacts table — edge · where
+  (file · function) · what · kind; the single source of truth for the edges), `#facts`
+  (verified facts + evidence) and `#gates` (the structure gates);
+- The spokes — `package-map-core.html` (core · boot · registry · reads · actions · status · graph
+  · testcore), `package-map-web.html` (web · executions · catalog · render · webgraph · webtest),
+  `package-map-entry.html` (main · workflows · workflowgen · svgdump · dbos) — each has a mini map
+  (intra-group edges + the boundaries, the neighbours as stubs that link to their spoke) and
+  `#package-*` sections (role · file | provides · touches);
+- **Clickable nodes**: every SVG node links to its spoke section — navigate without reading the code;
+- Navigation without JavaScript (anchors + deep links): the hub hash deep-links into the spokes
+  (`package-map-core.html#package-boot`), keyboard and the back button work;
+- **Two readers**: the hub's `#edges` section is the machine-readable contacts (the "Contacts" input
+  of the diagram agent cycle — the spokes keep only roles, files and functions, no edge duplication);
+  the SVGs are the human view of the same data. No separate map exists — if you update it, it is here.
 
 ## Graph subsystem (deep dive)
 
@@ -142,10 +147,13 @@ shared layout are unchanged; the SVG shows state · child name per step.
 ## Files
 
 - `handoff-diagrams.md` (pending adjustments discussed but not yet applied — not part of the spec)
-- `css/` — one stylesheet per HTML file (`css/<name>.css`; `package-map.css` is exclusive)
+- `css/` — one stylesheet per HTML file (`css/<name>.css`); the package-map set inlines its CSS
 - `architecture.html`
 - `workflow-states.html`
-- `package-map.html`
+- `package-map.html` (package map hub — 19 nodes · 59 edges · `#packages` · `#edges` · `#facts` · `#gates`)
+- `package-map-core.html` (spoke — the core group: mini map + `#package-*` sections)
+- `package-map-web.html` (spoke — the web group)
+- `package-map-entry.html` (spoke — main · workflows · cmd · dbos)
 - `sequence-phase-1.html` (listing)
 - `sequence-phase-2.html` (dispatch, run, track)
 - `sequence-phase-3.html` (runs of a workflow)
