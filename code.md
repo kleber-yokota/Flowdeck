@@ -34,7 +34,9 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    file·function map ("file → responsibility · contacts · verified facts").
    The map is updated *by* the change that moved the code, as its last step —
    never as a separate chore. A map maintained apart from the code is a map
-   that lies.
+   that lies. The map's SVG is a diagram: an update that touches the drawing
+   (nodes, edges, labels, layout) loads the `diagram-design` skill first and
+   lets it guide the edit.
 
 5. **Changes are sequences of green steps.**
    Each step leaves the system compiling and tested. Small files are what
@@ -155,7 +157,7 @@ grep; in a behavior layout, it is a name.
 | The map (file · responsibility · contacts · verified facts) | `diagrams/package-map.html` |
 | The routing index (task → where to start) | the map's `#tasks` section |
 | The green steps | `tasks/*.md` (one step = one commit = one green state) |
-| The last-step map update | the last task of every set |
+| The last-step map update | the last task of every set (the SVG goes through the `diagram-design` skill) |
 | The clean-context actors | `agent-diagram.md` · `agent-write-task.md` · `agent-task.md` |
 | The uniform recipe (workflow) | `workflows/<name>/` + `go generate ./workflows` |
 | The complexity budget (function size) | `AGENTS.md` (gocyclo / gocognit baseline) |
