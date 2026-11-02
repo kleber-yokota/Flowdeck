@@ -178,6 +178,17 @@ func Ctx() dbos.Context {
 	return theCore.dbosCtx
 }
 
+// ctxOrErr returns the live DBOS context, or ErrNotLaunched — the read
+// guard of every query (the core must be booted and launched).
+func ctxOrErr() (dbos.Context, error) {
+	theCore.mu.RLock()
+	defer theCore.mu.RUnlock()
+	if !theCore.booted || !theCore.launched || theCore.dbosCtx == nil {
+		return nil, ErrNotLaunched
+	}
+	return theCore.dbosCtx, nil
+}
+
 // Ready reports whether the core is booted and launched — the health
 // contact (a different contact than Port: it is lifecycle state, not a
 // domain conversation). Used by the web's /healthz and the container
