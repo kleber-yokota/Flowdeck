@@ -15,15 +15,18 @@ import (
 // (retries 1..N-1 are recovered failures; the final attempt is the badge)
 // and, on failure, the error and the failed step.
 func TestExecutionDetailRendersFailure(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:         id,
-			Name:       "wf-alpha",
-			State:      status.Error,
-			CreatedAt:  time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:   3,
-			Error:      "boom: step failed",
-			FailedStep: "boom-step",
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:         id,
+				Name:       "wf-alpha",
+				State:      status.Error,
+				CreatedAt:  time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:   3,
+				Error:      "boom: step failed",
+				FailedStep: "boom-step",
+			},
+			RunPath: core.RunPath{State: status.Error},
 		}, nil
 	}
 	d := testPort()
@@ -64,9 +67,12 @@ func TestExecutionDetailRendersFailure(t *testing.T) {
 
 // A live run on the detail page keeps polling the badge every 2s.
 func TestExecutionDetailBadgePollsWhenRunning(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{ID: id, Name: "wf-alpha", State: status.Running, Attempts: 1,
-			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local)}, nil
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{ID: id, Name: "wf-alpha", State: status.Running, Attempts: 1,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local)},
+			RunPath: core.RunPath{State: status.Running},
+		}, nil
 	}
 	d := testPort()
 	d.Detail = detailer
@@ -95,13 +101,16 @@ func TestExecutionDetailBadgePollsWhenRunning(t *testing.T) {
 // A clean run (no error) shows zero retries: the counter is attempts − 1,
 // so a success on the first attempt has none.
 func TestExecutionDetailSuccessHasZeroRetries(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:        id,
-			Name:      "wf-alpha",
-			State:     status.Success,
-			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:  1,
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:        id,
+				Name:      "wf-alpha",
+				State:     status.Success,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+			},
+			RunPath: core.RunPath{State: status.Success},
 		}, nil
 	}
 	d := testPort()
@@ -144,8 +153,8 @@ func TestExecutionDetailUnknownIs404(t *testing.T) {
 
 // A core that is down maps to a clean 503.
 func TestExecutionDetailCoreDownIs503(t *testing.T) {
-	downDetail := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{}, core.ErrNotLaunched
+	downDetail := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{}, core.ErrNotLaunched
 	}
 	d := testPort()
 	d.Detail = downDetail

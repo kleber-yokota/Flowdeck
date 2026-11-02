@@ -150,20 +150,20 @@ func TestStepsPartialCoreDownIs503(t *testing.T) {
 // The detail page embeds the executed path (phase 4, STEP 3): a live run
 // polls the steps partial every 2s.
 func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:        id,
-			Name:      "wf-alpha",
-			State:     status.Running,
-			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:  1,
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:        id,
+				Name:      "wf-alpha",
+				State:     status.Running,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+			},
+			RunPath: core.RunPath{State: status.Running, Steps: []core.Step{{Name: "greet", State: status.Success}}},
 		}, nil
 	}
 	d := testPort()
 	d.Detail = detailer
-	d.Steps = func(id string) (core.RunPath, error) {
-		return core.RunPath{State: status.Running, Steps: []core.Step{{Name: "greet", State: status.Success}}}, nil
-	}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 
@@ -186,20 +186,20 @@ func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
 // A terminal run on the detail page: the executed path is static (no
 // hx attributes) and the badge stops polling too.
 func TestExecutionDetailPageTerminalExecutedPath(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:        id,
-			Name:      "wf-alpha",
-			State:     status.Success,
-			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:  1,
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:        id,
+				Name:      "wf-alpha",
+				State:     status.Success,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+			},
+			RunPath: core.RunPath{State: status.Success, Steps: []core.Step{{Name: "greet", State: status.Success}}},
 		}, nil
 	}
 	d := testPort()
 	d.Detail = detailer
-	d.Steps = func(id string) (core.RunPath, error) {
-		return core.RunPath{State: status.Success, Steps: []core.Step{{Name: "greet", State: status.Success}}}, nil
-	}
 	srv := httptest.NewServer(New(d, okReady))
 	defer srv.Close()
 

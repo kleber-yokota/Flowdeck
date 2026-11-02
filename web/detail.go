@@ -46,16 +46,11 @@ func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) 
 		fail(w, "detail", err)
 		return
 	}
-	path, err := p.Steps(id)
-	if err != nil {
-		fail(w, "steps", err)
-		return
-	}
 	page(w, "execution-detail.html", executionDetail{
-		ExecutionDetail: d,
-		Badge:           badgeFor(id, d.State),
+		ExecutionDetail: d.ExecutionDetail,
+		Badge:           badgeFor(id, d.ExecutionDetail.State),
 		Retries:         retriesFor(d.Attempts),
-		Steps:           newStepsView(id, path),
+		Steps:           newStepsView(id, d.RunPath),
 		Title:           "Execution " + id,
 	})
 }

@@ -57,8 +57,10 @@ func okSteps(workflowID string) (core.RunPath, error) {
 	}, nil
 }
 
-func okDetail(id string) (core.ExecutionDetail, error) {
-	return core.ExecutionDetail{}, core.ErrUnknownExecution
+// okDetail is the detail-page stub: the unknown execution (the 404 twin of
+// the booted detail tests).
+func okDetail(id string) (core.DetailPath, error) {
+	return core.DetailPath{}, core.ErrUnknownExecution
 }
 
 // okResumer is the resume stub: the ACK is the same id, enqueued again.

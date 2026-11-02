@@ -19,13 +19,16 @@ import (
 // The detail page of a live run (running) offers the Cancel button
 // (POST /cancel/{id}, targeting the badge wrapper).
 func TestExecutionDetailCancelOnLiveRun(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:        id,
-			Name:      "wf-alpha",
-			State:     status.Running,
-			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:  1,
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:        id,
+				Name:      "wf-alpha",
+				State:     status.Running,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+			},
+			RunPath: core.RunPath{State: status.Running},
 		}, nil
 	}
 	d := testPort()
@@ -53,13 +56,16 @@ func TestExecutionDetailCancelOnLiveRun(t *testing.T) {
 func TestExecutionDetailNoCancelOnTerminal(t *testing.T) {
 	for _, st := range []status.State{status.Success, status.Error, status.Cancelled} {
 		t.Run(string(st), func(t *testing.T) {
-			detailer := func(id string) (core.ExecutionDetail, error) {
-				return core.ExecutionDetail{
-					ID:        id,
-					Name:      "wf-alpha",
-					State:     st,
-					CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-					Attempts:  1,
+			detailer := func(id string) (core.DetailPath, error) {
+				return core.DetailPath{
+					ExecutionDetail: core.ExecutionDetail{
+						ID:        id,
+						Name:      "wf-alpha",
+						State:     st,
+						CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+						Attempts:  1,
+					},
+					RunPath: core.RunPath{State: st},
 				}, nil
 			}
 			d := testPort()

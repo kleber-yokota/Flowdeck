@@ -35,14 +35,26 @@ type InputValue struct {
 	Value string
 }
 
-// Detail reads one execution (phase 3, DETAIL: GET /executions/{id}) — the
-// status row (SELECT · workflow_id: status, retries, error, the stored
-// input) and the step rows (SELECT STEPS · id: the step that errored, on
-// failure).
-func Detail(workflowID string) (ExecutionDetail, error) {
+// DetailPath is the read model of the execution detail page (phase 3,
+// DETAIL · phase 4, STEP 3): the execution's row (the badge state, the
+// first execution date, the attempts, the stored input values, and — on
+// failure — the error and the failed step) and the executed path (the
+// state + the steps that ran, in execution order) — one read: the status
+// row, the step rows, and the child rows (only when the run dispatched a
+// child). The state rides on the path (the poll control).
+type DetailPath struct {
+	ExecutionDetail
+	RunPath
+}
+
+// Detail reads the execution detail page (phase 3, DETAIL: GET
+// /executions/{id}) — one read: the status row (SELECT · workflow_id:
+// status, retries, error, the stored input) and the step rows (SELECT
+// STEPS · id: the step that errored, on failure, and the executed path).
+func Detail(workflowID string) (DetailPath, error) {
 	c, err := ctxOrErr()
 	if err != nil {
-		return ExecutionDetail{}, err
+		return DetailPath{}, err
 	}
 	statuses, err := dbos.ListWorkflows(c,
 		dbos.WithFilterWorkflowIDs(workflowID),
@@ -50,31 +62,44 @@ func Detail(workflowID string) (ExecutionDetail, error) {
 		dbos.WithFilterLoadOutput(true), // the error payload loads with the output
 	)
 	if err != nil {
-		return ExecutionDetail{}, fmt.Errorf("core: detail %s: %w", workflowID, err)
+		return DetailPath{}, fmt.Errorf("core: detail %s: %w", workflowID, err)
 	}
 	if len(statuses) == 0 {
-		return ExecutionDetail{}, ErrUnknownExecution
+		return DetailPath{}, ErrUnknownExecution
 	}
 	s := statuses[0]
 	st, err := mapState(s.Status)
 	if err != nil {
-		return ExecutionDetail{}, err
+		return DetailPath{}, err
 	}
-	d := ExecutionDetail{ID: s.ID, Name: s.Name, State: st, CreatedAt: s.CreatedAt, Attempts: s.Attempts}
+	d := DetailPath{ExecutionDetail: ExecutionDetail{ID: s.ID, Name: s.Name, State: st, CreatedAt: s.CreatedAt, Attempts: s.Attempts}}
 	d.Inputs = inputValues(s.Input, s.Name)
 	if s.Error != nil {
 		d.Error = s.Error.Error()
 	}
-	steps, err := dbos.GetWorkflowSteps(c, workflowID, dbos.WithStepsLoadOutput(false))
+	rows, err := dbos.GetWorkflowSteps(c, workflowID, dbos.WithStepsLoadOutput(false))
 	if err != nil {
-		return ExecutionDetail{}, fmt.Errorf("core: detail steps %s: %w", workflowID, err)
+		return DetailPath{}, fmt.Errorf("core: detail path %s: %w", workflowID, err)
 	}
-	for _, step := range steps { // the last step that errored is the failed step
-		if step.Error != nil {
-			d.FailedStep = step.StepName
+	d.FailedStep = failedStepOf(rows)
+	steps, err := stepRows(c, rows)
+	if err != nil {
+		return DetailPath{}, err
+	}
+	d.RunPath = RunPath{State: st, Steps: steps}
+	return d, nil
+}
+
+// failedStepOf returns the name of the last step that errored ("" when
+// none errored) — the detail's "failed step" row.
+func failedStepOf(rows []dbos.StepInfo) string {
+	failed := ""
+	for _, row := range rows {
+		if row.Error != nil {
+			failed = row.StepName
 		}
 	}
-	return d, nil
+	return failed
 }
 
 // inputValues maps the stored input (DBOS keeps it as the JSON text of the

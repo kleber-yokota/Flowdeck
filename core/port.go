@@ -42,8 +42,11 @@ type Port struct {
 	// the run is terminal; the state rides in the RunPath and is the poll
 	// control).
 	Steps func(workflowID string) (RunPath, error)
-	// Detail reads one run for its page (phase 3, DETAIL).
-	Detail func(workflowID string) (ExecutionDetail, error)
+	// Detail reads the execution detail page in one read (phase 3, DETAIL ·
+	// STEP 3): the execution's row (badge, created_at, attempts, inputs,
+	// error + the failed step) and the executed path (the state + the steps
+	// that ran — the poll control rides on it).
+	Detail func(workflowID string) (DetailPath, error)
 
 	// Resume re-enqueues a failed run by id (phase 5, RESUME — the same
 	// stored input, restarting from the last completed step) and returns

@@ -16,15 +16,18 @@ import (
 // poll). A run that is not failed shows no button.
 
 func TestExecutionDetailShowsResumeOnFailed(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:         id,
-			Name:       "wf-alpha",
-			State:      status.Error,
-			CreatedAt:  time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:   1,
-			Error:      "boom: step failed",
-			FailedStep: "boom-step",
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:         id,
+				Name:       "wf-alpha",
+				State:      status.Error,
+				CreatedAt:  time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:   1,
+				Error:      "boom: step failed",
+				FailedStep: "boom-step",
+			},
+			RunPath: core.RunPath{State: status.Error},
 		}, nil
 	}
 	d := testPort()
@@ -48,13 +51,16 @@ func TestExecutionDetailShowsResumeOnFailed(t *testing.T) {
 }
 
 func TestExecutionDetailNoResumeOnSuccess(t *testing.T) {
-	detailer := func(id string) (core.ExecutionDetail, error) {
-		return core.ExecutionDetail{
-			ID:        id,
-			Name:      "wf-alpha",
-			State:     status.Success,
-			CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-			Attempts:  1,
+	detailer := func(id string) (core.DetailPath, error) {
+		return core.DetailPath{
+			ExecutionDetail: core.ExecutionDetail{
+				ID:        id,
+				Name:      "wf-alpha",
+				State:     status.Success,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+			},
+			RunPath: core.RunPath{State: status.Success},
 		}, nil
 	}
 	d := testPort()

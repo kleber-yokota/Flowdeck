@@ -131,10 +131,10 @@ type RunPath struct {
 // Steps returns the executed path of a run: the state and the steps that
 // ran, in execution order (step_id asc — the branch of the if the run
 // took), read from the step rows in Postgres (phase 4, STEP 3:
-// GET /executions/{id} → STEPS(id) → SELECT status · steps · id). It is
-// separate from the boot map of possible paths: the map is code, the path
-// is what ran. The child rows are one batched query by the child ids, and
-// only when the run dispatched a child.
+// GET /executions/{id}/steps → STEPS(id) → SELECT status · steps · id). It
+// is separate from the boot map of possible paths: the map is code, the
+// path is what ran. The row mapping (stepRows, the batched child query) is
+// the one the detail page's read (DetailPath) shares.
 func Steps(workflowID string) (RunPath, error) {
 	c, err := ctxOrErr()
 	if err != nil {
@@ -155,16 +155,28 @@ func Steps(workflowID string) (RunPath, error) {
 	if err != nil {
 		return RunPath{}, fmt.Errorf("core: steps %s: %w", workflowID, err)
 	}
-	children := map[string]childInfo{}
-	if ids := childIDsOf(rows); len(ids) > 0 {
-		children, err = childRows(c, ids)
-		if err != nil {
-			return RunPath{}, err
-		}
-	}
-	steps := make([]Step, 0, len(rows))
-	for _, row := range rows { // Postgres returns the rows step_id asc
-		steps = append(steps, stepRow(row, children))
+	steps, err := stepRows(c, rows)
+	if err != nil {
+		return RunPath{}, err
 	}
 	return RunPath{State: state, Steps: steps}, nil
+}
+
+// stepRows maps the run's step rows onto Step lines (Postgres returns the
+// rows step_id asc — the branch the run took): the child rows are one
+// batched query by the child ids, only when the run dispatched a child.
+func stepRows(c dbos.Context, rows []dbos.StepInfo) ([]Step, error) {
+	children := map[string]childInfo{}
+	if ids := childIDsOf(rows); len(ids) > 0 {
+		ch, err := childRows(c, ids)
+		if err != nil {
+			return nil, err
+		}
+		children = ch
+	}
+	steps := make([]Step, 0, len(rows))
+	for _, row := range rows {
+		steps = append(steps, stepRow(row, children))
+	}
+	return steps, nil
 }

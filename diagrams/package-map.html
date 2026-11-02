@@ -230,7 +230,7 @@
           <tr>
             <td><code>web → core</code></td>
             <td><code>web.go</code> · <code>New</code> + the per-behavior handlers · <code>render.go</code></td>
-            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.RunPath</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code> · <code>core.ErrNotCancellable</code></td>
+            <td><code>core.Port</code> (the whole contact: List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.DetailPath</code> · <code>core.RunPath</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code> · <code>core.ErrNotCancellable</code></td>
           </tr>
           <tr>
             <td><code>web → core/graph</code></td>
@@ -503,13 +503,13 @@
           </tr>
           <tr>
             <td><code>steps.go</code></td>
-            <td>The executed path (phase 4, STEP 3): the run's state + the steps that ran, in execution order — one read model (<code>RunPath</code>: the poll carries its own poll-control state) and one batched child query (by the child ids of the step rows, only when the run dispatched a child)</td>
-            <td><code>Steps</code> · <code>RunPath</code> · <code>Step</code> · <code>stepRow</code> · <code>childIDsOf</code> · <code>childRows</code> · <code>childInfo</code> · <code>kindOf</code> · <code>KindStep</code> · <code>KindChild</code> · <code>KindWait</code></td>
+            <td>The executed path (phase 4, STEP 3): the run's state + the steps that ran, in execution order — one read model (<code>RunPath</code>: the poll carries its own poll-control state); the row mapping (<code>stepRows</code>, with the batched child query) is the one the detail page's read (detail.go · <code>Detail</code>) shares</td>
+            <td><code>Steps</code> · <code>RunPath</code> · <code>Step</code> · <code>stepRows</code> · <code>stepRow</code> · <code>childIDsOf</code> · <code>childRows</code> · <code>childInfo</code> · <code>kindOf</code> · <code>KindStep</code> · <code>KindChild</code> · <code>KindWait</code></td>
           </tr>
           <tr>
             <td><code>detail.go</code></td>
-            <td>The execution detail (phase 3, DETAIL · phase 5): the badge state, first execution date, attempts, the stored input values (one per parameter/field), error + the failed step</td>
-            <td><code>Detail</code> · <code>ExecutionDetail</code> · <code>InputValue</code> · <code>inputValues</code> · <code>inputOf</code> · <code>structValues</code></td>
+            <td>The execution detail page's read model (phase 3, DETAIL · STEP 3 · phase 5): the execution's row (badge state, first execution date, attempts, the stored input values, error + the failed step) and the executed path — one read (the status row + the step rows + the child rows, only when the run dispatched a child); the state rides on the path (the poll control)</td>
+            <td><code>Detail</code> · <code>DetailPath</code> · <code>ExecutionDetail</code> · <code>InputValue</code> · <code>inputValues</code> · <code>inputOf</code> · <code>structValues</code></td>
           </tr>
           <tr>
             <td><code>spec.go</code></td>
@@ -1136,7 +1136,7 @@
           <tr>
             <td><a href="#package-core">core</a> → (domain)</td>
             <td>web.go · <code>New</code> · the per-behavior handlers (workflow.go · dispatch.go · badge.go · detail.go · steps.go · resume.go · cancel.go) · <code>badgeFor</code> · <code>row</code> · <code>newStepsView</code> · render.go · <code>fail</code></td>
-            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.RunPath</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code> · <code>core.ErrNotCancellable</code></td>
+            <td><code>core.Port</code> (List · Executions · Enqueue · Status · Steps · Detail · Graph · Spec · Resume · Cancel) · <code>core.Workflow</code> · <code>core.Execution</code> · <code>core.ExecutionDetail</code> · <code>core.DetailPath</code> · <code>core.RunPath</code> · <code>core.Step</code> · <code>core.ErrUnknownWorkflow</code> · <code>core.ErrUnknownExecution</code> · <code>core.ErrNotLaunched</code> · <code>core.ErrNotResumable</code> · <code>core.ErrNotCancellable</code></td>
           </tr>
           <tr>
             <td><a href="#package-graph">core/graph</a> →</td>
@@ -1202,7 +1202,7 @@
           </tr>
           <tr>
             <td><code>handleExecutionDetail</code> · GET /executions/{id}</td>
-            <td><code>Detail</code> · <code>Steps</code></td>
+            <td><code>Detail</code> (one read: detail + path)</td>
             <td>the detail page + the executed path</td>
           </tr>
           <tr>

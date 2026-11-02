@@ -45,7 +45,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	if d.State != status.Error || d.FailedStep != "boom-step" {
+	if d.ExecutionDetail.State != status.Error || d.FailedStep != "boom-step" {
 		t.Fatalf("Detail: %+v", d)
 	}
 }
