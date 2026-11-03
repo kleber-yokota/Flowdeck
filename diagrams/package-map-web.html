@@ -106,7 +106,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 <a href="package-map-core.html#package-core" id="mini-core" aria-label="core"><g><rect class="stub" x="330" y="260" width="260" height="80" rx="4"/><text class="name" x="460" y="290" text-anchor="middle">core</text><text class="node-sub" x="460" y="308" text-anchor="middle">the Port (stub)</text></g></a>
 <a href="#package-catalog" id="mini-catalog" aria-label="web/catalog"><g><rect class="node" x="630" y="260" width="260" height="80" rx="4"/><text class="name" x="760" y="290" text-anchor="middle">web/catalog</text><text class="node-sub" x="760" y="308" text-anchor="middle">dashboard · workflow page</text><rect class="badge" x="856" y="268" width="24" height="14" rx="2"/><text class="badge-t" x="868" y="278">1</text></g></a>
 <a href="#package-render" id="mini-render" aria-label="web/render"><g><rect class="node" x="30" y="400" width="260" height="80" rx="4"/><text class="name" x="160" y="430" text-anchor="middle">web/render</text><text class="node-sub" x="160" y="448" text-anchor="middle">HTMX renderer</text><rect class="badge" x="256" y="408" width="24" height="14" rx="2"/><text class="badge-t" x="268" y="418">2</text></g></a>
-<a href="#package-webgraph" id="mini-webgraph" aria-label="web/graph"><g><rect class="node" x="630" y="400" width="260" height="80" rx="4"/><text class="name" x="760" y="430" text-anchor="middle">web/graph</text><text class="node-sub" x="760" y="448" text-anchor="middle">block SVG · executed SVG</text><rect class="badge" x="856" y="408" width="24" height="14" rx="2"/><text class="badge-t" x="868" y="418">3</text></g></a>
+<a href="#package-webgraph" id="mini-webgraph" aria-label="web/graph"><g><rect class="node" x="630" y="400" width="260" height="80" rx="4"/><text class="name" x="760" y="430" text-anchor="middle">web/graph</text><text class="node-sub" x="760" y="448" text-anchor="middle">block SVG · executed path (grouped · top-down)</text><rect class="badge" x="856" y="408" width="24" height="14" rx="2"/><text class="badge-t" x="868" y="418">3</text></g></a>
 <a href="#package-webtest" id="mini-webtest" aria-label="web/internal/webtest"><g><rect class="node test" x="330" y="540" width="260" height="56" rx="4"/><text class="name" x="460" y="566" text-anchor="middle">web/internal/webtest</text><text class="node-sub" x="460" y="582" text-anchor="middle">fake Port</text></g></a>
 </svg>
   </section>
@@ -118,7 +118,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <p class="role">The router: middlewares (recovery · request log), <code>healthz</code>, static serving; talks to core only through <code>core.Port</code> and the <code>Ready</code> guard.</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>web.go</code></td><td><code>New (wires catalog.Register + executions.Register + healthz + static)</code></td></tr><tr><td><code>health.go</code></td><td><code>handleHealthz</code></td></tr><tr><td><code>middleware.go</code></td><td><code>withRecovery · withRequestLog</code></td></tr></tbody>
+        <tbody><tr><td><code>web.go</code></td><td><code>New (wires catalog.Register + executions.Register + healthz + static)</code></td></tr><tr><td><code>health.go</code></td><td><code>handleHealthz</code></td></tr><tr><td><code>middleware.go</code></td><td><code>withRecovery · withRequestLog</code></td></tr><tr><td><code>static/style.css</code></td><td><code>the CSS (· .g-text font 16px · .executed-path svg · the badge states)</code></td></tr><tr><td><code>web_test.go</code></td><td><code>TestMain · _ "flowdeck/workflows" (the registration seam: a test binary registers workflows only if it imports the workflow packages; the subpackages register via init() on the env-driven ctx)</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>web</code>).</p>
     </div>
@@ -128,7 +128,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <p class="role">The run handlers: dispatch (form → clean payload), badge (2s poll), detail, steps, resume, cancel; owns the <code>Badge</code>/<code>Row</code> models shared with catalog.</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>register.go</code></td><td><code>Register · 6 handlers</code></td></tr><tr><td><code>badge.go</code></td><td><code>Badge · badgeLabels · BadgeFor · Row · handleBadge</code></td></tr><tr><td><code>dispatch.go</code></td><td><code>handleRunDispatch · formValues</code></td></tr><tr><td><code>detail.go · steps.go</code></td><td><code>handleExecutionDetail · handleExecutionSteps · newStepsView</code></td></tr><tr><td><code>resume.go · cancel.go</code></td><td><code>handleResume · retriesFor · handleCancel</code></td></tr></tbody>
+        <tbody><tr><td><code>register.go</code></td><td><code>Register · 6 handlers</code></td></tr><tr><td><code>badge.go</code></td><td><code>Badge · badgeLabels · BadgeFor · Row · handleBadge</code></td></tr><tr><td><code>dispatch.go</code></td><td><code>handleRunDispatch · formValues</code></td></tr><tr><td><code>detail.go · steps.go</code></td><td><code>handleExecutionDetail · executionDetail · childViews · handleExecutionSteps · newStepsView</code></td></tr><tr><td><code>resume.go · cancel.go</code></td><td><code>handleResume · retriesFor · handleCancel</code></td></tr><tr><td><code>server_test.go</code></td><td><code>TestMain · _ "flowdeck/workflows" (the same registration seam for the executions handlers)</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>web/executions</code>).</p>
     </div>
@@ -148,17 +148,17 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <p class="role">The HTMX renderer: <code>Page</code> (full), <code>Partial</code> (fragment), <code>Fail</code> (maps the core errors to statuses — <code>ErrNotResumable</code> · <code>ErrNotCancellable</code> · <code>ErrNotLaunched</code> · <code>ErrUnknownExecution</code> · <code>ErrUnknownWorkflow</code>).</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>render.go</code></td><td><code>Page · Partial · Fail · ok</code></td></tr><tr><td><code>templates/</code></td><td><code>the HTMX templates (embedded)</code></td></tr></tbody>
+        <tbody><tr><td><code>render.go</code></td><td><code>Page · Partial · Fail · ok</code></td></tr><tr><td><code>templates/</code></td><td><code>the HTMX templates (embedded · execution-detail.html: the child list · the Resume button on error + cancelled)</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>web/render</code>).</p>
     </div>
 
     <div class="pkg" id="package-webgraph">
       <h2>web/graph <span class="badge">FAN-IN 3</span></h2>
-      <p class="role">The SVG rendering: the possible-paths block (<code>BlockToSVG</code>) and the executed path (<code>ExecutedPathToSVG</code>).</p>
+      <p class="role">The SVG rendering: the possible-paths block (<code>BlockToSVG</code>) and the executed path (<code>ExecutedPathToSVG</code>) — <code>groupPath</code> groups the runtime rows (parallel from <code>[StartedAt, CompletedAt]</code> overlap · loop from repeated names · child boxes · wait rows · collapse &gt;4 into one <code>×N</code> box with the full member list in <code>&lt;title&gt;</code>) and the layout is transposed top-down (depth → y · leaves → columns · parent centers on children's x · edges down); the geometry is box 48 · font 16 · charW 11 · scale 1.25 (the block canvas is 180×150).</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>graph.go</code></td><td><code>ExecutedPathToSVG</code></td></tr><tr><td><code>block.go · block_layout.go</code></td><td><code>blockBox · blockOutline · blockEdge · layoutColumn</code></td></tr><tr><td><code>block_svg.go</code></td><td><code>BlockToSVG</code></td></tr><tr><td><code>metrics.go · svg.go</code></td><td><code>nodeBoxW · arrowDefs</code></td></tr></tbody>
+        <tbody><tr><td><code>graph.go</code></td><td><code>ExecutedPathToSVG · groupPath · buildRow · firstParallelGroup · appendParallelGroup · loopGroupEnd · parallelGroupEnd · groupBox · stepNode</code></td></tr><tr><td><code>layout.go</code></td><td><code>graphLayout · measure · place · collect · the edge append (top-down: depth → y · leaves → columns)</code></td></tr><tr><td><code>layout_svg.go</code></td><td><code>svg · svgNode · svgEdge · the glyph symbols · the ∥ marks</code></td></tr><tr><td><code>block.go · block_layout.go</code></td><td><code>blockBox · blockOutline · blockEdge · layoutColumn</code></td></tr><tr><td><code>block_svg.go</code></td><td><code>BlockToSVG</code></td></tr><tr><td><code>metrics.go · svg.go</code></td><td><code>baseBoxW · nodeBoxW · the geometry (box 48 · charW 11) · graphScale (1.25) · arrowDefs</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>web/graph</code>).</p>
     </div>
@@ -176,7 +176,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
   </section>
   <footer class="foot">
     <span>flowdeck · diagrams/package-map-web.html</span>
-    <span>contacts live in the hub · verified 2026-11-02</span>
+    <span>contacts live in the hub · verified 2026-11-03</span>
   </footer>
 
 </div>

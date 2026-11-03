@@ -139,7 +139,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <p class="role">The <code>Port</code> — the single contract between web and core (10 function fields: <code>List · Graph · Spec · Executions · Enqueue · Status · Steps · Detail · Resume · Cancel</code>). <code>NewPort</code> wires the live core instance; web never touches DBOS.</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>port.go</code></td><td><code>Port · NewPort (the 10 members)</code></td></tr><tr><td><code>core_test.go</code></td><td><code>TestMain</code></td></tr><tr><td><code>e2e_test.go</code></td><td><code>TestE2EEnqueueRunsToSuccess · TestE2EDetailOfFailedRun · TestE2EResumeOfFailedRun · TestE2EStepsOfBranchedRun</code></td></tr><tr><td><code>paths_test.go</code></td><td><code>TestPathsGraphFromWorkflowsTree</code></td></tr></tbody>
+        <tbody><tr><td><code>port.go</code></td><td><code>Port · NewPort (the 10 members)</code></td></tr><tr><td><code>core_test.go</code></td><td><code>TestMain</code></td></tr><tr><td><code>e2e_test.go</code></td><td><code>TestE2EEnqueueRunsToSuccess · TestE2EDetailOfFailedRun · TestE2EResumeOfFailedRun · TestE2EResumeOfCancelledRun · TestE2EStepsOfBranchedRun · TestE2EDetailChildrenOfKitchenRun</code></td></tr><tr><td><code>paths_test.go</code></td><td><code>TestPathsGraphFromWorkflowsTree</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core</code>).</p>
     </div>
@@ -149,7 +149,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <p class="role">Launches the DBOS context, embeds the workflow source tree, owns the single queue and readiness; clean shutdown via <code>defer boot.Shutdown</code>.</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>lifecycle.go</code></td><td><code>SetWorkflowsSource · Launch · Ready · Shutdown · Ctx · CtxOrErr · QueueName · Paths · ErrNotLaunched</code></td></tr><tr><td><code>sqlite_driver.go</code></td><td><code>sqlite driver (blank import)</code></td></tr><tr><td><code>lifecycle_test.go</code></td><td><code>TestLaunch · TestShutdown</code></td></tr></tbody>
+        <tbody><tr><td><code>lifecycle.go</code></td><td><code>SetWorkflowsSource · Launch · Ready · Shutdown · Ctx · CtxOrErr · QueueName · Paths · ErrNotLaunched</code></td></tr><tr><td><code>sqlite_driver.go</code></td><td><code>sqlite driver (blank import)</code></td></tr><tr><td><code>lifecycle_test.go</code></td><td><code>TestLaunch · TestShutdown</code> · <code>os.DirFS("../../workflows")</code> (the env-driven source-graph read)</td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/boot</code>).</p>
     </div>
@@ -166,20 +166,20 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 
     <div class="pkg" id="package-reads">
       <h2>core/reads <span class="badge">FAN-IN 5</span></h2>
-      <p class="role">The read models: the executions list, the badge row (status + created), the execution detail (with stored input values), and the executed path (state + steps).</p>
+      <p class="role">The read models: the executions list, the badge row (status + created), the execution detail (with stored input values + the run's children), and the executed path (state + steps).</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>executions.go</code></td><td><code>Executions · Execution</code></td></tr><tr><td><code>status.go</code></td><td><code>ListByID · MapState · Status · ErrUnknownExecution</code></td></tr><tr><td><code>steps.go</code></td><td><code>Steps · RunPath · childIDsOf · childRows · childInfo</code></td></tr><tr><td><code>detail.go</code></td><td><code>Detail · DetailPath · inputValues · inputOf</code></td></tr></tbody>
+        <tbody><tr><td><code>executions.go</code></td><td><code>Executions · Execution</code></td></tr><tr><td><code>status.go</code></td><td><code>ListByID · MapState · Status · ErrUnknownExecution</code></td></tr><tr><td><code>steps.go</code></td><td><code>Steps · RunPath · childIDsOf · childRows · childInfo</code></td></tr><tr><td><code>detail.go</code></td><td><code>Detail · DetailPath · ExecutionDetail · ChildRef · childrenOf · inputValues · inputOf</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/reads</code>).</p>
     </div>
 
     <div class="pkg" id="package-actions">
       <h2>core/actions <span class="badge">FAN-IN 2</span></h2>
-      <p class="role">The write side: dispatch (<code>Enqueue</code>), <code>Resume</code>, <code>Cancel</code> — each reads the row back after the mutation; owns the error map (<code>ErrNotResumable</code> · <code>ErrNotCancellable</code>).</p>
+      <p class="role">The write side: dispatch (<code>Enqueue</code>), <code>Resume</code> (guard <code>error | cancelled</code>: failed → <code>RewindWorkflow</code> · cancelled → <code>ResumeWorkflow</code>), <code>Cancel</code> — each reads the row back after the mutation; owns the error map (<code>ErrNotResumable</code> · <code>ErrNotCancellable</code>).</p>
       <table>
         <thead><tr><th>file</th><th>provides</th></tr></thead>
-        <tbody><tr><td><code>dispatch.go</code></td><td><code>Enqueue · dispatch</code></td></tr><tr><td><code>resume.go</code></td><td><code>Resume · ErrNotResumable</code></td></tr><tr><td><code>cancel.go</code></td><td><code>Cancel · ErrNotCancellable · cancelAck</code></td></tr></tbody>
+        <tbody><tr><td><code>dispatch.go</code></td><td><code>Enqueue · dispatch</code></td></tr><tr><td><code>resume.go</code></td><td><code>Resume · ErrNotResumable · rewindCut · resumeAck</code></td></tr><tr><td><code>cancel.go</code></td><td><code>Cancel · ErrNotCancellable · cancelAck</code></td></tr></tbody>
       </table>
       <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>core/actions</code>).</p>
     </div>
@@ -217,7 +217,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
   </section>
   <footer class="foot">
     <span>flowdeck · diagrams/package-map-core.html</span>
-    <span>contacts live in the hub · verified 2026-11-02</span>
+    <span>contacts live in the hub · verified 2026-11-03</span>
   </footer>
 
 </div>
