@@ -30,8 +30,8 @@
 {{end}}
     </ul>
 {{end}}
-{{if eq (printf "%s" .State) "error"}}
-    <!-- Phase 5, RESUME: a failed run can be resumed by id — the
+{{if or (eq (printf "%s" .State) "error") (eq (printf "%s" .State) "cancelled")}}
+    <!-- Phase 5, RESUME: a failed or cancelled run can be resumed by id —
          re-enqueue carries the same stored input; the ACK badge replaces
          this badge (the 2s poll takes over). -->
     <button type="button"

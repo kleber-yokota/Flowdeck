@@ -3,10 +3,12 @@
 package core_test
 
 import (
-	"errors"
 	"testing"
 
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
 	"flowdeck/core/actions"
+	"flowdeck/core/boot"
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -53,8 +55,8 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 }
 
 // Phase 5, RESUME, E2E: the resume of a failed (retries-exhausted) run on
-// Postgres is not resumable today (the SDK's ResumeWorkflow is a no-op on
-// ERROR rows — bug.md); the Postgres twin of the unit test above.
+// Postgres — the rewind re-enqueues the same id and the run reaches
+// success (the Postgres twin of the unit test above).
 func TestE2EResumeOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
 	t.Cleanup(func() { testcore.FlakyFail = false })
@@ -66,8 +68,36 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
 		t.Fatalf("poll to failed: %v", err)
 	}
-	if _, err := actions.Resume(ex.ID); !errors.Is(err, actions.ErrNotResumable) {
-		t.Fatalf("Resume of failed run: got %v, want ErrNotResumable", err)
+	testcore.FlakyFail = false
+	if _, err := actions.Resume(ex.ID); err != nil {
+		t.Fatalf("Resume of failed run: %v", err)
+	}
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+}
+
+// The resume of a cancelled run on Postgres (the Postgres twin of the unit
+// test above): the SDK resume re-enqueues the CANCELLED row and the
+// executor runs it to success.
+func TestE2EResumeOfCancelledRun(t *testing.T) {
+	testcore.NeedCore(t)
+	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
+		t.Fatalf("RegisterQueue: %v", err)
+	}
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	id := h.GetWorkflowID()
+	if _, err := actions.Cancel(id); err != nil {
+		t.Fatalf("Cancel: %v", err)
+	}
+	if _, err := actions.Resume(id); err != nil {
+		t.Fatalf("Resume of cancelled: %v", err)
+	}
+	if _, err := testcore.PollState(t, id, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
 	}
 }
 
