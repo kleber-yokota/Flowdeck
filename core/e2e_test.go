@@ -3,13 +3,14 @@
 package core_test
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
+	"flowdeck/core/boot"
+	"flowdeck/core/internal/testcore"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -19,12 +20,12 @@ import (
 // engine. Packages run with -p 1 so only one executor polls the queue at a
 // time (a job claimed by a process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("hello-world", "FlowDeck")
+	testcore.NeedCore(t)
+	ex, err := actions.Enqueue("hello-world", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if st, err := pollState(t, ex.ID, status.Success); err != nil {
+	if st, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v (state %s)", err, st)
 	}
 }
@@ -32,98 +33,110 @@ func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 // A failing run on Postgres: the retries run out, and Detail shows the error
 // and the failed step (phase 3, DETAIL).
 func TestE2EDetailOfFailedRun(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("failing-test", nil)
+	testcore.NeedCore(t)
+	ex, err := actions.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	st, err := pollState(t, ex.ID, status.Error)
+	st, err := testcore.PollState(t, ex.ID, status.Error)
 	if err != nil {
 		t.Fatalf("poll to error: %v (state %s)", err, st)
 	}
 	if st != status.Error {
 		t.Fatalf("failing run state: got %s, want error", st)
 	}
-	d, err := core.Detail(ex.ID)
+	d, err := reads.Detail(ex.ID)
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	if d.State != status.Error || d.FailedStep != "boom-step" {
+	if d.ExecutionDetail.State != status.Error || d.FailedStep != "boom-step" {
 		t.Fatalf("Detail: %+v", d)
 	}
 }
 
-// Phase 5, RESUME, E2E: the resume re-enqueues a failed (canceled) run by
-// id on Postgres — the same stored input, restarting from the last
-// completed step.
-func TestE2EResumeRestartsWithSameInput(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("pause", nil)
+// Phase 5, RESUME, E2E: the resume of a failed (retries-exhausted) run on
+// Postgres — the rewind re-enqueues the same id and the run reaches
+// success (the Postgres twin of the unit test above).
+func TestE2EResumeOfFailedRun(t *testing.T) {
+	testcore.NeedCore(t)
+	t.Cleanup(func() { testcore.FlakyFail = false })
+	testcore.FlakyFail = true
+	ex, err := actions.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Running); err != nil {
-		t.Fatalf("poll to running: %v", err)
+	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
+		t.Fatalf("poll to failed: %v", err)
 	}
-	if err := dbos.CancelWorkflow(core.Ctx(), ex.ID); err != nil {
-		t.Fatalf("CancelWorkflow: %v", err)
+	testcore.FlakyFail = false
+	if _, err := actions.Resume(ex.ID); err != nil {
+		t.Fatalf("Resume of failed run: %v", err)
 	}
-	if st, err := pollState(t, ex.ID, status.Error); err != nil {
-		t.Fatalf("poll to failed: %v (state %s)", err, st)
-	}
-
-	ack, err := core.Resume(ex.ID)
-	if err != nil {
-		t.Fatalf("Resume: %v", err)
-	}
-	if ack.ID != ex.ID || (ack.State != status.Queued && ack.State != status.Running) {
-		t.Fatalf("ACK: %+v", ack)
-	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
-	}
-
-	// The same stored input: the resume re-enqueues the stored input
-	// (the workflow has no input — it stays nil) and the restarted run's
-	// output is the step's fixed return.
-	var out string
-	if err := readStoredOutput(t, ex.ID, &out); err != nil {
-		t.Fatalf("stored output: %v", err)
-	}
-	if out != "paused" {
-		t.Fatalf("output: got %q, want %q", out, "paused")
 	}
 }
 
-// readStoredOutput reads the stored output of a finished run (the JSON of
-// the workflow's return value).
-func readStoredOutput(t *testing.T, id string, out *string) error {
-	t.Helper()
-	statuses, err := dbos.ListWorkflows(core.Ctx(),
-		dbos.WithFilterWorkflowIDs(id),
-		dbos.WithFilterLoadInput(false),
-		dbos.WithFilterLoadOutput(true),
-	)
+// The resume of a cancelled run on Postgres (the Postgres twin of the unit
+// test above): the SDK resume re-enqueues the CANCELLED row and the
+// executor runs it to success.
+func TestE2EResumeOfCancelledRun(t *testing.T) {
+	testcore.NeedCore(t)
+	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
+		t.Fatalf("RegisterQueue: %v", err)
+	}
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
 	if err != nil {
-		return fmt.Errorf("ListWorkflows: %w", err)
+		t.Fatalf("Enqueue: %v", err)
 	}
-	if len(statuses) != 1 {
-		return fmt.Errorf("ListWorkflows: %d rows, want 1", len(statuses))
+	id := h.GetWorkflowID()
+	if _, err := actions.Cancel(id); err != nil {
+		t.Fatalf("Cancel: %v", err)
 	}
-	return json.Unmarshal([]byte(statuses[0].Output.(string)), out)
+	if _, err := actions.Resume(id); err != nil {
+		t.Fatalf("Resume of cancelled: %v", err)
+	}
+	if _, err := testcore.PollState(t, id, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
 }
 
 // The executed path of a branched run on Postgres (phase 4, STEP 3).
 func TestE2EStepsOfBranchedRun(t *testing.T) {
-	needCore(t)
-	ex, err := core.Enqueue("decide", "left")
+	testcore.NeedCore(t)
+	ex, err := actions.Enqueue("decide", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := pollState(t, ex.ID, status.Success); err != nil {
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	if got := mustStepNames(t, ex); len(got) != 2 || got[0] != "base" || got[1] != "left" {
+	if got := testcore.MustStepNames(t, ex); len(got) != 2 || got[0] != "base" || got[1] != "left" {
 		t.Fatalf("decide left steps: got %v", got)
+	}
+}
+
+// The children of a kitchen run on Postgres (the Postgres twin of
+// TestDetailChildrenOfChildDispatchingRun): the detail lists the child
+// pipeline with its id and badge state.
+func TestE2EDetailChildrenOfKitchenRun(t *testing.T) {
+	testcore.NeedCore(t)
+	ex, err := actions.Enqueue("kitchen", "FlowDeck")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+	d, err := reads.Detail(ex.ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if len(d.Children) != 1 {
+		t.Fatalf("children: got %v, want exactly one", d.Children)
+	}
+	c := d.Children[0]
+	if c.ID == "" || c.Name != "pipeline" || c.State != status.Success {
+		t.Fatalf("child: got %+v, want pipeline (success)", c)
 	}
 }

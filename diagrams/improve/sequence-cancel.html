@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Improve — Cancel a run (CancelWorkflow)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/sequence-cancel.css">
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sequence · FlowDeck · improve · /executions/{id}</p>
+    <h1>Improve — Cancel a run (CancelWorkflow)</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sc-title sc-desc">
+        <title id="sc-title">Improve — Cancel a run (CancelWorkflow)</title>
+        <desc id="sc-desc">Proposed cancel: the user clicks Cancel on the execution page (guard: state queued/running, anything else is a 400); the web POSTs to /cancel/{id} and the core calls dbos.CancelWorkflow, which sets workflow_status.status to CANCELLED and removes the run from the queue — the running step is not interrupted (it completes and is recorded) and the workflow stops at the start of the next step — and the ACK renders the cancelled badge (terminal, the poll stops); on the 2s poll the core's mapState now maps CANCELLED to the new cancelled state (it used to map to failed) and renders the new fifth badge — steel #8f96a3: cancelled is the operator's explicit stop, failed is the process's error.</desc>
+        <defs>
+          <marker id="sc-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <marker id="sc-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff9142"/>
+          </marker>
+          <marker id="sc-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#7cc0ff"/>
+          </marker>
+          <linearGradient id="sc-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e4e8"/>
+            <stop offset="0.45" stop-color="#8d939e"/>
+            <stop offset="1" stop-color="#b7bcc4"/>
+          </linearGradient>
+          <linearGradient id="sc-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- frame: cancel (the new write path) -->
+        <rect x="72" y="144" width="816" height="222" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="144" width="56" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="100" y="155" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">CANCEL</text>
+
+        <!-- frame: track (the 2s poll picks the state up) -->
+        <rect x="72" y="388" width="816" height="222" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="388" width="100" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="122" y="399" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">TRACK (2s POLL)</text>
+
+        <!-- lifelines -->
+        <line x1="120" y1="124" x2="120" y2="630" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="630" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="630" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="630" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- guard note: only a live run can be cancelled -->
+        <text x="84" y="172" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">[queued / running · success / failed / cancelled → 400]</text>
+
+        <!-- activation bars -->
+        <rect x="116" y="192" width="8" height="160" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="192" width="8" height="160" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="224" width="8" height="96" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="256" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="116" y="424" width="8" height="160" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="424" width="8" height="160" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="456" width="8" height="96" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="488" width="8" height="32" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+
+        <!-- messages: cancel -->
+        <line x1="120" y1="192" x2="340" y2="192" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#sc-arrow-link)"/>
+        <line x1="340" y1="224" x2="560" y2="224" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#sc-arrow)"/>
+        <line x1="560" y1="256" x2="800" y2="256" stroke="#ff9142" stroke-width="1.2" marker-end="url(#sc-arrow-accent)"/>
+        <line x1="800" y1="288" x2="560" y2="288" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sc-arrow)"/>
+        <line x1="560" y1="320" x2="340" y2="320" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sc-arrow)"/>
+        <line x1="340" y1="352" x2="120" y2="352" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sc-arrow)"/>
+
+        <!-- messages: track -->
+        <line x1="120" y1="424" x2="340" y2="424" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#sc-arrow-link)"/>
+        <line x1="340" y1="456" x2="560" y2="456" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#sc-arrow)"/>
+        <line x1="560" y1="488" x2="800" y2="488" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#sc-arrow)"/>
+        <line x1="800" y1="520" x2="560" y2="520" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sc-arrow)"/>
+        <line x1="560" y1="552" x2="340" y2="552" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sc-arrow)"/>
+        <line x1="340" y1="584" x2="120" y2="584" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sc-arrow)"/>
+
+        <!-- message labels: cancel -->
+        <rect x="190" y="176" width="80" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="185" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">POST /cancel/{id}</text>
+
+        <rect x="421" y="208" width="58" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="217" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CANCEL (ID)</text>
+
+        <rect x="632" y="240" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="249" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CANCELWORKFLOW (ID)</text>
+
+        <rect x="666" y="272" width="28" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="281" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK</text>
+
+        <rect x="411" y="304" width="78" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="313" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK · CANCELLED</text>
+
+        <rect x="184" y="336" width="92" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="345" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · CANCELLED</text>
+
+        <!-- notes: cancel semantics (SDK facts) -->
+        <text x="616" y="304" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">status = CANCELLED + out of the queue</text>
+        <text x="616" y="318" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">the running step completes · stops at the next step</text>
+
+        <!-- message labels: track -->
+        <rect x="182" y="408" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="417" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">GET /status/{id} (2s)</text>
+
+        <rect x="417" y="440" width="66" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="449" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">STATUS (ID)</text>
+
+        <rect x="641" y="472" width="78" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="481" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">READ STATUS ROW</text>
+
+        <rect x="656" y="504" width="48" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="513" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CANCELLED</text>
+
+        <rect x="400" y="536" width="100" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="545" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CANCELLED · MAPSTATE</text>
+
+        <rect x="173" y="568" width="114" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="577" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · CANCELLED · STOP</text>
+
+        <!-- notes: the new fifth state -->
+        <text x="616" y="536" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">mapState: + CANCELLED → cancelled (was → failed)</text>
+        <text x="616" y="550" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">new fifth badge · #8f96a3 (steel) — the explicit decision</text>
+        <text x="616" y="564" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">cancelled = the operator stopped it · failed = the process errored</text>
+
+        <!-- actors -->
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="url(#sc-panel)" stroke="url(#sc-steel)" stroke-width="1"/>
+        <rect x="48" y="66" width="20" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="58" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+        <text x="120" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Browser</text>
+        <text x="120" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">chrome · htmx</text>
+
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="url(#sc-panel)" stroke="url(#sc-steel)" stroke-width="1"/>
+        <rect x="268" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="282" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WEB</text>
+        <text x="340" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">FlowDeck Web</text>
+        <text x="340" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">go · webserver · :8080</text>
+
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
+        <rect x="488" y="66" width="32" height="12" rx="2" fill="transparent" stroke="rgba(255,145,66,0.50)" stroke-width="0.8"/>
+        <text x="504" y="75" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+        <text x="560" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">DBOS Core</text>
+        <text x="560" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">dbos · executor</text>
+
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="url(#sc-panel)" stroke="url(#sc-steel)" stroke-width="1"/>
+        <rect x="728" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="742" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+        <text x="800" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Postgres 18</text>
+        <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">compose · :5432</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="654" x2="930" y2="654" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="687" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <line x1="130" y1="686" x2="174" y2="686" stroke="#7cc0ff" stroke-width="1.2"/>
+        <text x="182" y="689" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HTMX REQUEST</text>
+
+        <line x1="300" y1="686" x2="344" y2="686" stroke="#b8bcc4" stroke-width="1.2"/>
+        <text x="352" y="689" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CALL</text>
+
+        <line x1="430" y1="686" x2="474" y2="686" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="482" y="689" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETURN</text>
+
+        <line x1="600" y1="686" x2="644" y2="686" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="652" y="689" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE · CANCELWORKFLOW</text>
+      </svg>
+    </div>
+
+    <footer>FlowDeck · diagram-design · improve · 2026-11-03</footer>
+  </div>
+</body>
+</html>

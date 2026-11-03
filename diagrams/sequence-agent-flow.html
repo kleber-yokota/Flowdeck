@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent flow — the design-to-code pipeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/sequence-agent-flow.css">
+</head>
+<body>
+  <div class="frame" id="top">
+    <p class="eyebrow">Sequence · FlowDeck · agent process</p>
+    <h1>Agent flow — the design-to-code pipeline</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="af-title af-desc">
+        <title id="af-title">Agent flow — the design-to-code pipeline</title>
+        <desc id="af-desc">The agent pipeline: the user's WANT goes to agent-diagram, which writes the improvement diagrams (improve/*.html) and loops with the user until approved, deleting any bug.md from a previous cycle; clean-context handoffs then pass improve/*.html to agent-write-task, which writes tasks/*.md and tasks/fact.md, and tasks/ to agent-task, which implements red to green task by task; when all tasks are green the ephemeral artifacts are deleted and DONE is reported, and when a bug is found (an existing test fails outside the task surface) bug.md is written and the run stops — the user reads bug.md and starts over, and bug.md is deleted when the new diagrams are created.</desc>
+        <defs>
+          <marker id="af-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <marker id="af-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff9142"/>
+          </marker>
+          <marker id="af-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#7cc0ff"/>
+          </marker>
+          <linearGradient id="af-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e4e8"/>
+            <stop offset="0.45" stop-color="#8d939e"/>
+            <stop offset="1" stop-color="#b7bcc4"/>
+          </linearGradient>
+          <linearGradient id="af-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- frame: alt (green | bug) -->
+        <rect x="72" y="480" width="816" height="208" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="480" width="36" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="90" y="491" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+
+        <!-- lifelines -->
+        <line x1="120" y1="124" x2="120" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- activation bars -->
+        <rect x="116" y="188" width="8" height="108" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="116" y="528" width="8" height="148" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="188" width="8" height="164" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="344" width="8" height="80" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="416" width="8" height="260" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+
+        <!-- messages -->
+        <line x1="120" y1="192" x2="340" y2="192" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#af-arrow-link)"/>
+        <path d="M 344 220 L 456 220 L 456 236 L 346 236" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <line x1="340" y1="260" x2="120" y2="260" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <line x1="120" y1="292" x2="340" y2="292" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#af-arrow)"/>
+        <line x1="340" y1="348" x2="560" y2="348" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <path d="M 564 376 L 676 376 L 676 392 L 566 392" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <line x1="560" y1="420" x2="800" y2="420" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <path d="M 804 448 L 878 448 L 878 464 L 806 464" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <line x1="800" y1="536" x2="120" y2="536" stroke="#ff9142" stroke-width="1.2" marker-end="url(#af-arrow-accent)"/>
+        <path d="M 804 632 L 878 632 L 878 648 L 806 648" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#af-arrow)"/>
+        <line x1="800" y1="672" x2="120" y2="672" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#af-arrow)"/>
+
+        <!-- message labels -->
+        <rect x="206" y="176" width="48" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="185" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WANT</text>
+
+        <rect x="352" y="206" width="96" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="400" y="214" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WRITE improve/*.html</text>
+
+        <rect x="205" y="244" width="50" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="253" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">REVIEW</text>
+
+        <rect x="204" y="276" width="52" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="285" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">APPROVED</text>
+
+        <rect x="394" y="332" width="112" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="341" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">HANDOFF · CLEAN CONTEXT</text>
+
+        <rect x="562" y="360" width="116" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="620" y="368" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WRITE tasks/*.md + fact.md</text>
+
+        <rect x="624" y="404" width="112" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="413" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">HANDOFF · CLEAN CONTEXT</text>
+
+        <rect x="769" y="432" width="144" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="841" y="440" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RED → GREEN · PER TASK, IN ORDER</text>
+
+        <rect x="444" y="520" width="32" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="460" y="529" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">DONE</text>
+
+        <rect x="812" y="616" width="58" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="841" y="624" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">WRITE bug.md</text>
+
+        <rect x="407" y="656" width="106" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="460" y="665" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">STOP · REPORT AND WAIT</text>
+
+        <!-- notes -->
+        <text x="356" y="314" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">repeat until approved (the user validates)</text>
+        <text x="356" y="326" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">delete bug.md here if present</text>
+
+        <text x="572" y="340" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">context = improve/*.html + package-map + code</text>
+
+        <!-- alt guards -->
+        <text x="84" y="508" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[ALL TASKS GREEN]</text>
+        <line x1="80" y1="588" x2="880" y2="588" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="84" y="608" fill="#ff5450" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[A BUG: AN EXISTING TEST FAILS OUTSIDE THE TASK SURFACE]</text>
+        <text x="84" y="640" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">agent-write-task also writes bug.md (a bug in the diagram)</text>
+
+        <!-- notes: green cleanup -->
+        <text x="460" y="560" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.04em">delete improve/*.html + tasks/ (ephemeral)</text>
+        <text x="460" y="572" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.04em">last task: the package-map map update (#facts)</text>
+
+        <!-- actors -->
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="url(#af-panel)" stroke="url(#af-steel)" stroke-width="1"/>
+        <rect x="48" y="66" width="44" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="70" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">HUMAN</text>
+        <text x="120" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">User</text>
+        <text x="120" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">wants · validates · restarts</text>
+
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="url(#af-panel)" stroke="url(#af-steel)" stroke-width="1"/>
+        <rect x="268" y="66" width="44" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="290" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">DESIGN</text>
+        <text x="340" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">agent-diagram</text>
+        <text x="340" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">improve/*.html · user review</text>
+
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="url(#af-panel)" stroke="url(#af-steel)" stroke-width="1"/>
+        <rect x="488" y="66" width="44" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="510" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">AUTHOR</text>
+        <text x="560" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">agent-write-task</text>
+        <text x="560" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">tasks/*.md · fact.md</text>
+
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="url(#af-panel)" stroke="url(#af-steel)" stroke-width="1"/>
+        <rect x="728" y="66" width="56" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="756" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">EXECUTOR</text>
+        <text x="800" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">agent-task</text>
+        <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">red → green · bug.md</text>
+
+        <!-- bug loop (next cycle) -->
+        <text x="72" y="732" fill="#ff5450" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">BUG LOOP:</text>
+        <text x="124" y="732" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">the user reads bug.md and starts over — a new WANT (next cycle)</text>
+        <text x="72" y="744" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">bug.md is deleted when the new diagrams are created</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="760" x2="930" y2="760" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="791" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <line x1="130" y1="788" x2="174" y2="788" stroke="#7cc0ff" stroke-width="1.2"/>
+        <text x="182" y="791" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">WANT · USER INPUT</text>
+
+        <line x1="300" y1="788" x2="344" y2="788" stroke="#b8bcc4" stroke-width="1.2"/>
+        <text x="352" y="791" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HANDOFF · CLEAN CONTEXT</text>
+
+        <line x1="520" y1="788" x2="564" y2="788" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="572" y="791" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETURN · APPROVED / STOP</text>
+
+        <line x1="740" y1="788" x2="784" y2="788" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="792" y="791" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE · DONE</text>
+      </svg>
+    </div>
+
+    <p class="index">READ · <a href="#handoffs">HANDOFFS</a> · <a href="#artifacts">ARTIFACTS</a> · <a href="#rules">RULES</a> · <a href="#terms">TERMS</a></p>
+
+    <!-- ============ handoffs ============ -->
+    <section id="handoffs" class="pkg">
+      <a class="close" href="#top">× CLOSE</a>
+      <h2>Handoffs — the clean context <span class="badge">3 HANDOFFS</span></h2>
+      <p class="role">Every agent enters with a clean context: it reads only the files in this table, in their current state — no git history, no previous conversation. The handoff is the whole context.</p>
+      <table>
+        <thead>
+          <tr><th>Handoff</th><th>From</th><th>To</th><th>Receives (files · current state)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>WANT</code></td>
+            <td>User</td>
+            <td>agent-diagram</td>
+            <td>the user's input — what to do (free text)</td>
+          </tr>
+          <tr>
+            <td><code>HANDOFF 1</code></td>
+            <td>agent-diagram</td>
+            <td>agent-write-task</td>
+            <td><code>diagrams/improve/*.html</code> · <code>diagrams/package-map.html</code> · the code (call sites · tests)</td>
+          </tr>
+          <tr>
+            <td><code>HANDOFF 2</code></td>
+            <td>agent-write-task</td>
+            <td>agent-task</td>
+            <td><code>tasks/*.md</code> · <code>tasks/fact.md</code></td>
+          </tr>
+          <tr>
+            <td><code>NO GIT</code></td>
+            <td>—</td>
+            <td>every agent</td>
+            <td>files in their current state: no git tree, no archaeology, no conversation history</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ artifacts ============ -->
+    <section id="artifacts" class="pkg">
+      <a class="close" href="#top">× CLOSE</a>
+      <h2>Artifacts — created and deleted <span class="badge">5 ARTIFACTS</span></h2>
+      <p class="role">The ephemeral files of the cycle: what each agent creates, who reads it, and when it is deleted.</p>
+      <table>
+        <thead>
+          <tr><th>Artifact</th><th>Created by</th><th>Read by</th><th>Deleted when</th><th>Lifetime</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>diagrams/improve/*.html</code></td>
+            <td>agent-diagram</td>
+            <td>user (review) · agent-write-task</td>
+            <td>after implementation (the last step of agent-task)</td>
+            <td>ephemeral · per cycle</td>
+          </tr>
+          <tr>
+            <td><code>tasks/*.md</code></td>
+            <td>agent-write-task</td>
+            <td>agent-task</td>
+            <td>after implementation (the last step of the set)</td>
+            <td>ephemeral · per cycle</td>
+          </tr>
+          <tr>
+            <td><code>tasks/fact.md</code></td>
+            <td>agent-write-task (seed) · agent-task (appends)</td>
+            <td>agent-task</td>
+            <td>promoted into <code>package-map.html</code> <code>#facts</code>, then deleted (the last step of the set)</td>
+            <td>per cycle</td>
+          </tr>
+          <tr>
+            <td><code>bug.md</code> (repo root)</td>
+            <td>agent-task — or agent-write-task</td>
+            <td>user · the next agent-diagram</td>
+            <td>when the new diagrams are created (agent-diagram)</td>
+            <td>per bug</td>
+          </tr>
+          <tr>
+            <td><code>diagrams/package-map.html</code></td>
+            <td>the last task of the set (the map update)</td>
+            <td>all the agents</td>
+            <td>never (persistent)</td>
+            <td>permanent</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="role">The set's ephemeral files (<code>improve/*.html</code> + <code>tasks/</code>) are deleted by the last step of the last task of the set — after the map update, so <code>fact.md</code> is promoted first.</p>
+    </section>
+
+    <!-- ============ rules ============ -->
+    <section id="rules" class="pkg">
+      <a class="close" href="#top">× CLOSE</a>
+      <h2>Rules — the hard constraints <span class="badge">7 RULES</span></h2>
+      <ol class="rules">
+        <li><b>Clean context</b> every agent enters clean: the context is only the handoff files — no git tree (files in their current state), no previous conversation.</li>
+        <li><b>Ephemeral</b> <code>improve/*.html</code> and <code>tasks/</code> are deleted after implementation (the last step of the set); <code>bug.md</code> is deleted when the new diagrams are created.</li>
+        <li><b>Bug</b> a bug is the task's behavior affecting something the task does not name — caught by the existing tests (a red test).</li>
+        <li><b>Stop</b> a red test, a bug, or a step that cannot be done stops the run: report and wait — never skip ahead.</li>
+        <li><b>Validate</b> the diagrams are user-validated before they become tasks (agent-diagram ↔ user, until approved).</li>
+        <li><b>Two readers</b> every generated diagram: the human SVG + the machine-readable sections, in the same file.</li>
+        <li><b>Green state</b> one task = one commit = one green state: the suite passes after every task.</li>
+      </ol>
+    </section>
+
+    <!-- ============ terms ============ -->
+    <section id="terms" class="pkg">
+      <a class="close" href="#top">× CLOSE</a>
+      <h2>Terms <span class="badge">7 TERMS</span></h2>
+      <table>
+        <thead>
+          <tr><th>Term</th><th>Definition</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>WANT</code></td>
+            <td>the user's input to the cycle: what to do, in free text.</td>
+          </tr>
+          <tr>
+            <td><code>Cycle</code></td>
+            <td>one pass of WANT → DONE (or STOP) through the three agents.</td>
+          </tr>
+          <tr>
+            <td><code>Clean context</code></td>
+            <td>the rule that each agent reads only its handoff files (no git, no history).</td>
+          </tr>
+          <tr>
+            <td><code>Ephemeral</code></td>
+            <td>deleted after the cycle: <code>improve/*.html</code>, <code>tasks/</code>, <code>bug.md</code>.</td>
+          </tr>
+          <tr>
+            <td><code>Bug</code></td>
+            <td>the task's behavior affected something it does not name (caught by the existing tests); documented in <code>bug.md</code>.</td>
+          </tr>
+          <tr>
+            <td><code>Red → Green</code></td>
+            <td>TDD: the failing test first, then the smallest code that makes it pass.</td>
+          </tr>
+          <tr>
+            <td><code>Map update</code></td>
+            <td>the last task of the set: promote <code>tasks/fact.md</code> into <code>package-map.html</code> <code>#facts</code> and refresh the contact rows.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>FlowDeck · diagram-design · agent process · 2026-10-31</footer>
+  </div>
+</body>
+</html>

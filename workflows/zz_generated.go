@@ -6,6 +6,16 @@
 package workflows
 
 import (
+	_ "flowdeck/workflows/branch"
 	_ "flowdeck/workflows/buy"
+	_ "flowdeck/workflows/compose"
+	_ "flowdeck/workflows/decide"
+	_ "flowdeck/workflows/fanout"
+	_ "flowdeck/workflows/hello"
+	_ "flowdeck/workflows/kitchen"
+	_ "flowdeck/workflows/loop"
 	_ "flowdeck/workflows/pause"
+	_ "flowdeck/workflows/pipeline"
+	_ "flowdeck/workflows/schedule"
+	_ "flowdeck/workflows/steps"
 )

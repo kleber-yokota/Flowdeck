@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
+	"flowdeck/web/internal/webtest"
 )
 
 // E2E (against the real Postgres 18 of the e2e job): the full stack on the
@@ -20,22 +22,22 @@ import (
 // time.
 func TestE2EDispatchRunsToSuccess(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/run/hello-world")
+	resp, err := webtest.Post(t, srv.URL+"/run/hello-world")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -51,22 +53,22 @@ func TestE2EDispatchRunsToSuccess(t *testing.T) {
 // the left, the executed path shows it).
 func TestE2EFormDispatchTakesBranch(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -75,7 +77,7 @@ func TestE2EFormDispatchTakesBranch(t *testing.T) {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	code, steps := get(t, srv.URL+"/executions/"+id+"/steps")
+	code, steps := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 	if code != http.StatusOK {
 		t.Fatalf("steps: %d", code)
 	}
@@ -88,10 +90,10 @@ func TestE2EFormDispatchTakesBranch(t *testing.T) {
 // is a clean 404 on Postgres.
 func TestE2EResumeUnknownIs404(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
+	resp, err := webtest.Post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
 	if err != nil {
 		t.Fatalf("POST /resume: %v", err)
 	}
@@ -106,18 +108,18 @@ func TestE2EResumeUnknownIs404(t *testing.T) {
 // terminal state, and the detail page shows the badge of the finished run.
 func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := post(t, srv.URL+"/run/pipeline")
+	resp, err := webtest.Post(t, srv.URL+"/run/pipeline")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	// Poll the executed path partial the same way the page does, until it
 	// holds the full linear path with a terminal badge.
@@ -125,9 +127,9 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 	var code int
 	var body string
 	for {
-		code, body = get(t, srv.URL+"/executions/"+id+"/steps")
+		code, body = webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 		if code == http.StatusOK &&
-			containsAll(body, ">fetch<", ">parse<", ">transform<", ">store<") &&
+			webtest.ContainsAll(body, ">fetch<", ">parse<", ">transform<", ">store<") &&
 			strings.Contains(body, `class="g-node success"`) {
 			break
 		}
@@ -138,7 +140,7 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 	}
 
 	// The detail page of the same run shows the finished badge.
-	code, detail := get(t, srv.URL+"/executions/"+id)
+	code, detail := webtest.Get(t, srv.URL+"/executions/"+id)
 	if code != http.StatusOK || !strings.Contains(detail, `class="badge success terminal"`) {
 		t.Fatalf("detail: %d, %s", code, detail)
 	}
@@ -149,22 +151,22 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 // as the zero value: the decide run branches to the right.
 func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"   "}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/decide", url.Values{"msg": {"   "}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -173,7 +175,7 @@ func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	code, steps := get(t, srv.URL+"/executions/"+id+"/steps")
+	code, steps := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 	if code != http.StatusOK {
 		t.Fatalf("steps: %d", code)
 	}
@@ -187,23 +189,23 @@ func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 // it renders.
 func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	const raw = `<script>alert('xss')</script>`
-	resp, err := postForm(t, srv.URL+"/run/hello-world", url.Values{"msg": {raw}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/hello-world", url.Values{"msg": {raw}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -215,7 +217,7 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	// The rendered pages (the execution detail and the workflow list) never
 	// carry the raw markup.
 	for _, page := range []string{"/executions/" + id, "/workflows/hello-world"} {
-		code, body := get(t, srv.URL+page)
+		code, body := webtest.Get(t, srv.URL+page)
 		if code != http.StatusOK {
 			t.Fatalf("GET %s: %d", page, code)
 		}
@@ -230,12 +232,12 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 // the execution detail shows the stored input values the run used.
 func TestE2EScheduleDispatchShowsInputValues(t *testing.T) {
 	needCore(t)
-	srv := httptest.NewServer(New(core.NewPort(), core.Ready))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	// The form of the schedule workflow: one item per input, prefilled
 	// with the defaults of the source.
-	code, page := get(t, srv.URL+"/workflows/schedule")
+	code, page := webtest.Get(t, srv.URL+"/workflows/schedule")
 	if code != http.StatusOK {
 		t.Fatalf("schedule page: %d", code)
 	}
@@ -245,25 +247,25 @@ func TestE2EScheduleDispatchShowsInputValues(t *testing.T) {
 		}
 	}
 
-	resp, err := postForm(t, srv.URL+"/run/schedule", url.Values{
+	resp, err := webtest.PostForm(t, srv.URL+"/run/schedule", url.Values{
 		"Name":      {"Ada"},
 		"StartDate": {"2026-02-01"},
 	})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
-	ack := readAll(t, resp)
+	ack := webtest.ReadAll(t, resp)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("dispatch: %d", resp.StatusCode)
 	}
 	if !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("ACK: %s", ack)
 	}
-	id := executionID(t, ack)
+	id := webtest.ExecutionID(t, ack)
 
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
 		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
 			break
 		}
@@ -272,7 +274,7 @@ func TestE2EScheduleDispatchShowsInputValues(t *testing.T) {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	code, detail := get(t, srv.URL+"/executions/"+id)
+	code, detail := webtest.Get(t, srv.URL+"/executions/"+id)
 	if code != http.StatusOK {
 		t.Fatalf("detail: %d", code)
 	}

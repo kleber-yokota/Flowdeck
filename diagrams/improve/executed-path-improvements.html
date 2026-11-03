@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Improve — Executed path (runtime groups · top-down · child name + id)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/executed-path-improvements.css">
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Data flow · FlowDeck · improve · /executions/{id}</p>
+    <h1>Improve — Executed path (runtime groups · top-down · child id)</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 546" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ep-title ep-desc">
+        <title id="ep-title">Improve — Executed path (runtime groups · top-down · child name + id)</title>
+        <desc id="ep-desc">The improved executed path for /executions/{id}: the Postgres rows (workflow_status, operation_outputs, child rows by the parent filter) feed core/reads (Steps · Detail); a grouping pass in web/graph turns row times and names into runtime parallel groups (overlap of [started_at, completed_at]) and loop groups (repeated step name); the layout is transposed top-down with larger boxes (36 to 48 pixels, font 14 to 16 pixels, scale 1.25); groups render with a parallel outline, a loop arc and count, members beyond four collapse into one annotated box (full list in the title); and in the graph itself a child step renders as a box labeled with the child workflow NAME (read from the child's own workflow_status.name row) plus a live badge — not just "child"; the detail page additionally lists the child workflow ids (link to /executions/{id}). Facts: the seven DBOS statuses map to the five UI states, step rows are written on completion (no step-level running state), and the AST map is valid only when it matches the execution's application_version — the executed path is Postgres-only.</desc>
+        <defs>
+          <marker id="ep-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <linearGradient id="ep-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- arrows (z-order: before the boxes) -->
+        <line x1="180" y1="158" x2="206" y2="158" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#ep-arrow)"/>
+        <line x1="370" y1="158" x2="396" y2="158" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#ep-arrow)"/>
+        <line x1="560" y1="158" x2="586" y2="158" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#ep-arrow)"/>
+        <line x1="750" y1="158" x2="776" y2="158" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#ep-arrow)"/>
+
+        <!-- arrow labels -->
+        <text x="193" y="150" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">rows</text>
+        <text x="383" y="150" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">steps</text>
+        <text x="573" y="150" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">groups</text>
+        <text x="763" y="150" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">svg</text>
+
+        <!-- column 1: postgres rows -->
+        <rect x="20" y="100" width="160" height="116" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="32" y="116" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', system-ui, sans-serif">POSTGRES 18 · DBOS</text>
+        <text x="32" y="134" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">workflow_status: status ·</text>
+        <text x="32" y="148" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">name · queue · attempts ·</text>
+        <text x="32" y="162" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">application_version</text>
+        <text x="32" y="176" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">operation_outputs:</text>
+        <text x="32" y="190" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">function_name · child_id ·</text>
+        <text x="32" y="204" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">error · started_at · completed</text>
+
+        <!-- column 2: core read -->
+        <rect x="210" y="100" width="160" height="116" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="222" y="116" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', system-ui, sans-serif">CORE · READ</text>
+        <text x="222" y="134" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">Executions · Status (Port)</text>
+        <text x="222" y="148" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">Steps · Detail (mapState)</text>
+        <text x="222" y="162" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">Step{Name,State,Kind,ChildID,</text>
+        <text x="222" y="176" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">StartedAt,CompletedAt}</text>
+        <text x="222" y="190" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">Detail (+Children) NEW: id ·</text>
+        <text x="222" y="204" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">name · state (the id list)</text>
+        <rect x="318" y="106" width="42" height="12" rx="2" fill="none" stroke="#7cc0ff" stroke-width="0.8"/>
+        <text x="339" y="115" fill="#7cc0ff" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CHANGED</text>
+
+        <!-- column 3: grouping pass (new) -->
+        <rect x="400" y="100" width="160" height="116" rx="6" fill="rgba(255,145,66,0.06)" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="412" y="116" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', system-ui, sans-serif">groupPath (NEW)</text>
+        <text x="412" y="134" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">overlap [started_at,</text>
+        <text x="412" y="148" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">completed_at] → parallel (∥)</text>
+        <text x="412" y="162" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">repeated name → loop (×N)</text>
+        <text x="412" y="176" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">child box: name + badge</text>
+        <text x="412" y="190" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">source: row times + names</text>
+        <text x="412" y="204" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">only (not the AST map)</text>
+        <rect x="526" y="106" width="26" height="12" rx="2" fill="none" stroke="#ff9142" stroke-width="0.8"/>
+        <text x="539" y="115" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">NEW</text>
+
+        <!-- column 4: layout + render (changed) -->
+        <rect x="590" y="100" width="160" height="116" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="602" y="116" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', system-ui, sans-serif">graphLayout · svg()</text>
+        <text x="602" y="134" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">transposed: depth → y ·</text>
+        <text x="602" y="148" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">leaves → columns · top-down</text>
+        <text x="602" y="162" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">boxes 36→48 · font 14→16 · 1.25</text>
+        <text x="602" y="176" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">&gt;4 → ×N box · list in &lt;title&gt;</text>
+        <text x="602" y="190" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">child box: child workflow</text>
+        <text x="602" y="204" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">name + live badge</text>
+        <rect x="698" y="106" width="42" height="12" rx="2" fill="none" stroke="#7cc0ff" stroke-width="0.8"/>
+        <text x="719" y="115" fill="#7cc0ff" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CHANGED</text>
+
+        <!-- column 5: ui -->
+        <rect x="780" y="100" width="160" height="116" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="792" y="116" fill="#e8e6e1" font-size="9" font-weight="600" font-family="'Geist', system-ui, sans-serif">UI · 2s POLL</text>
+        <text x="792" y="134" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">steps fragment (poll · stops</text>
+        <text x="792" y="148" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">at terminal · every 2s)</text>
+        <text x="792" y="162" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">child list (NEW): id →</text>
+        <text x="792" y="176" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">/executions/{child-id}</text>
+        <text x="792" y="190" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">badge · cancel · resume</text>
+        <text x="792" y="204" fill="#b8bcc4" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">(see the detail map)</text>
+        <rect x="914" y="106" width="26" height="12" rx="2" fill="none" stroke="#ff9142" stroke-width="0.8"/>
+        <text x="927" y="115" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">NEW</text>
+
+        <!-- fact 1: discovered states -->
+        <line x1="20" y1="244" x2="940" y2="244" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="20" y="266" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">DISCOVERED · DBOS v1.7.0 (sdk.go)</text>
+        <text x="20" y="284" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">ENQUEUED · DELAYED → queued · PENDING → running</text>
+        <text x="20" y="298" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">SUCCESS → success · ERROR · MAX_RECOVERY_ATTEMPTS_</text>
+        <text x="20" y="312" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">EXCEEDED → failed · CANCELLED → cancelled (5th badge)</text>
+        <text x="20" y="326" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">step rows are written on completion — no step-level</text>
+        <text x="20" y="340" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">running state · child rows: full row by parent filter</text>
+        <text x="20" y="354" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">wait names: getResult · select · recv · sleep</text>
+
+        <!-- fact 2: row fields -->
+        <text x="340" y="266" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">ROW FACTS (operation_outputs)</text>
+        <text x="340" y="284" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">step_id · function_name · child_workflow_id</text>
+        <text x="340" y="298" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">error per step → the failed step</text>
+        <text x="340" y="312" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">started_at · completed_at per step (overlap =</text>
+        <text x="340" y="326" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">parallel) · kind: step · wait · child</text>
+        <text x="340" y="340" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">child rows: name · state · updated_at · attempts</text>
+
+        <!-- fact 3: app-version safety -->
+        <text x="660" y="266" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">APP-VERSION SAFETY</text>
+        <text x="660" y="284" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">workflow_status.application_version — the AST</text>
+        <text x="660" y="298" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">map (workflows/) is valid only when it equals</text>
+        <text x="660" y="312" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">the execution's version.</text>
+        <text x="660" y="326" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">Executed path: Postgres rows only — the AST</text>
+        <text x="660" y="340" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">map never draws an executed step.</text>
+
+        <!-- glyph strip: how the boxes render -->
+        <line x1="20" y1="376" x2="940" y2="376" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="20" y="396" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">GRAPH GLYPHS (AS RENDERED) · THE CHILD BOX SHOWS THE CHILD WORKFLOW NAME + LIVE BADGE</text>
+
+        <!-- sample 1: step box -->
+        <rect x="30" y="410" width="110" height="48" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="85" y="439" fill="#e8e6e1" font-size="16" font-weight="500" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">fetch</text>
+        <text x="30" y="476" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">step box · 48px · 16px</text>
+
+        <!-- sample 2: parallel group -->
+        <rect x="170" y="402" width="176" height="64" rx="8" fill="none" stroke="#8f96a3" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="180" y="416" fill="#8f96a3" font-size="9" font-family="'Geist Mono', ui-monospace, monospace">∥</text>
+        <rect x="184" y="418" width="64" height="32" rx="4" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="216" y="439" fill="#e8e6e1" font-size="11" font-weight="500" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">alpha</text>
+        <rect x="256" y="418" width="76" height="32" rx="4" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="294" y="439" fill="#e8e6e1" font-size="11" font-weight="500" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">beta</text>
+        <text x="170" y="476" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">overlap → ∥ outline</text>
+
+        <!-- sample 3: loop -->
+        <rect x="376" y="410" width="110" height="48" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="431" y="439" fill="#e8e6e1" font-size="16" font-weight="500" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">spin</text>
+        <text x="498" y="439" fill="#b8bcc4" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">×5</text>
+        <text x="376" y="476" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">repeated name → loop ×N</text>
+
+        <!-- sample 4: child box (name + live badge) -->
+        <rect x="536" y="410" width="150" height="48" rx="6" fill="rgba(255,145,66,0.06)" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="611" y="433" fill="#e8e6e1" font-size="16" font-weight="500" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">◉ buy</text>
+        <rect x="594" y="442" width="44" height="12" rx="2" fill="none" stroke="#7cc0ff" stroke-width="0.8"/>
+        <text x="616" y="451" fill="#7cc0ff" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">queued</text>
+        <text x="536" y="476" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">name = the child's workflow</text>
+        <text x="536" y="488" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">_status.name · badge = child</text>
+        <text x="536" y="500" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">live state</text>
+
+        <!-- sample 5: collapse -->
+        <rect x="730" y="410" width="150" height="48" rx="6" fill="url(#ep-panel)" stroke="rgba(184,188,196,0.40)" stroke-width="1"/>
+        <text x="805" y="439" fill="#e8e6e1" font-size="16" font-weight="500" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">spin ×5</text>
+        <text x="730" y="476" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">&gt;4 members → one box ·</text>
+        <text x="730" y="488" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">full list in &lt;title&gt;</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="516" x2="930" y2="516" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="535" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <rect x="110" y="527" width="34" height="12" rx="2" fill="none" stroke="#8f96a3" stroke-width="0.8"/>
+        <text x="127" y="536" fill="#8f96a3" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">KEEP</text>
+
+        <rect x="154" y="527" width="26" height="12" rx="2" fill="none" stroke="#ff9142" stroke-width="0.8"/>
+        <text x="167" y="536" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">NEW</text>
+
+        <rect x="190" y="527" width="42" height="12" rx="2" fill="none" stroke="#7cc0ff" stroke-width="0.8"/>
+        <text x="211" y="536" fill="#7cc0ff" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CHANGED</text>
+
+        <text x="262" y="536" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">∥ parallel · arc + ×N loop · ×N collapse (&gt;4) · ◉ child · … wait</text>
+        <text x="930" y="536" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">SOURCE OF TRUTH: POSTGRES (DBOS) — NOT THE AST MAP</text>
+      </svg>
+    </div>
+
+    <footer>FlowDeck · diagram-design · improve · 2026-11-03</footer>
+  </div>
+</body>
+</html>

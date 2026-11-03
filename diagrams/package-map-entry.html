@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowDeck · entry spoke</title>
+<style>
+:root{
+  --bg:#0b0c0e; --panel:#101216; --panel2:#14171c;
+  --line:#b8bcc4; --line2:#8f96a3; --ink:#e8e6e1; --dim:#9aa0ab;
+  --acc:#ff9142; --success:#46d19a; --ext:#8f96a3; --test:#9aa0ab;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,sans-serif}
+.frame{max-width:1120px;margin:0 auto;padding:28px 20px 40px}
+h1{font-size:1.35rem;letter-spacing:.14em;text-transform:uppercase;margin:0}
+h1 span{color:var(--acc);font-weight:400}
+.desc{color:var(--dim);font-size:.8rem;margin:8px 0 0;line-height:1.5}
+.desc code{font-family:ui-monospace,monospace;font-size:.74rem;color:var(--ink)}
+nav{margin-top:12px;font-size:.75rem;color:var(--dim);line-height:1.8}
+nav a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+nav a:hover,nav a:focus{color:var(--acc);border-color:var(--acc)}
+nav span{color:var(--acc);letter-spacing:.08em;font-size:.65rem}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--dim);font-size:.7rem;margin:14px 0 0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:2px solid var(--line2);display:inline-block;flex:none}
+.sw.cmd{border-color:var(--acc)}
+.sw.leaf{border-color:var(--success)}
+.sw.test{border:2px dashed var(--test);background:none}
+.sw.ext{border:2px dashed var(--ext);background:none}
+svg{width:100%;height:auto;display:block;margin-top:10px}
+.arrow{fill:var(--line2)}
+.edge{fill:none;stroke:var(--line2);stroke-width:1.4}
+.edge.test{stroke:var(--test);stroke-dasharray:4 3;opacity:.65}
+.edge.build{stroke:var(--test);stroke-dasharray:2 3;opacity:.65}
+.edge-label rect{fill:var(--bg)}
+.edge-label text{fill:var(--dim);font:600 9px ui-monospace,monospace;letter-spacing:.06em}
+a{cursor:pointer}
+.node{fill:var(--panel);stroke:var(--line2);stroke-width:1.5}
+.node.cmd{stroke:var(--acc)}
+.node.leaf{stroke:var(--success);stroke-width:1.2}
+.node.ext{stroke:var(--ext);stroke-dasharray:5 3;fill:transparent}
+.node.test{stroke:var(--test);stroke-dasharray:4 3}
+.stub{fill:transparent;stroke:var(--line2);stroke-dasharray:5 3}
+text.name,text.node-sub,text.node-fn,text.badge-t{text-anchor:middle;pointer-events:none}
+text.name{fill:var(--ink);font:600 15px ui-monospace,monospace}
+text.node-sub{fill:var(--dim);font:400 10px ui-monospace,monospace}
+text.node-fn{fill:var(--dim);font:400 9px ui-monospace,monospace}
+.badge{fill:rgba(255,145,66,.14);stroke:var(--acc)}
+.badge-t{fill:var(--acc);font:700 9px ui-monospace,monospace;letter-spacing:.08em}
+a:hover .node,a:focus .node,a:hover .stub,a:focus .stub{stroke:var(--acc);stroke-width:2.5}
+section{margin-top:34px}
+h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--line2);padding-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h2 .badge{font:700 9px ui-monospace,monospace;color:var(--acc);letter-spacing:.08em;border:1px solid var(--acc);padding:2px 6px;text-transform:none;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:10px}
+th{color:var(--dim);text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;padding:8px 16px;border-bottom:1px solid #262a31}
+td{padding:8px 16px;border-bottom:1px solid #1c1f24;vertical-align:top}
+td code{font-family:ui-monospace,monospace;font-size:.76rem;color:var(--ink)}
+tr:last-child td{border-bottom:none}
+td a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
+.role{padding:10px 16px 0;color:var(--dim);font-size:.82rem;line-height:1.5}
+.role a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+.role a:hover,.role a:focus{color:var(--acc);border-color:var(--acc)}
+.pkg{margin-top:34px;border:1px solid var(--line2);background:var(--panel)}
+.pkg h2{margin:0;border:none;border-bottom:1px solid var(--line2);padding:12px 16px;background:var(--panel2)}
+.foot{margin-top:26px;color:var(--dim);font-size:.72rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media print{
+  .frame{max-width:none}
+  nav{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="frame">
+<header>
+    <h1>FlowDeck <span>entry spoke</span></h1>
+    <p class="desc">The entry group — main + workflows + the cmd tools + DBOS (third-party). Mini map: intra-group edges + boundaries to the neighbours (stubs link to their spoke). Full edge table: package-map.html#edges.</p>
+    <nav><a href="package-map.html">← package map (hub)</a> · <a href="package-map-core.html">core</a> · <a href="package-map-web.html">web</a></nav>
+  </header>
+  <section id="graph">
+    <h2>entry group <span class="badge">MINI MAP</span></h2>
+    <svg viewBox="0 0 920 560" role="img" aria-labelledby="mini-entry-title mini-entry-desc" aria-describedby="mini-entry-desc" id="mini-entry">
+<title id="mini-entry-title">entry group — mini map</title>
+<desc id="mini-entry-desc">Mini map of the entry group: the group's packages and their import edges to neighbouring packages (stubs link to their spoke). Full edge table: package-map.html#edges.</desc>
+<defs><marker id="mini-entry-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L9,4.5 L0,9 Z" class="arrow"/></marker></defs>
+<path class="edge" d="M 460 100 L 460 180" marker-end="url(#mini-entry-arrow)"/>
+<path class="edge" d="M 400 100 L 400 150 L 310 150 L 310 320 L 330 320" marker-end="url(#mini-entry-arrow)"/>
+<path class="edge" d="M 520 100 L 520 150 L 610 150 L 610 336 L 630 336" marker-end="url(#mini-entry-arrow)"/>
+<path class="edge build" d="M 290 220 L 330 220" marker-end="url(#mini-entry-arrow)"/>
+<path class="edge" d="M 460 260 L 460 276 L 300 276 L 300 456 L 330 456" marker-end="url(#mini-entry-arrow)"/>
+<path class="edge" d="M 760 260 L 760 320" marker-end="url(#mini-entry-arrow)"/>
+<a href="#package-main" id="mini-main" aria-label="main"><g><rect class="node" x="330" y="20" width="260" height="80" rx="4"/><text class="name" x="460" y="50" text-anchor="middle">main</text><text class="node-sub" x="460" y="68" text-anchor="middle">flags · launch · wiring</text></g></a>
+<a href="#package-workflowgen" id="mini-workflowgen" aria-label="cmd/workflowgen"><g><rect class="node cmd" x="30" y="180" width="260" height="80" rx="4"/><text class="name" x="160" y="210" text-anchor="middle">cmd/workflowgen</text><text class="node-sub" x="160" y="228" text-anchor="middle">codegen (build-time)</text></g></a>
+<a href="#package-workflows" id="mini-workflows" aria-label="workflows"><g><rect class="node" x="330" y="180" width="260" height="80" rx="4"/><text class="name" x="460" y="210" text-anchor="middle">workflows</text><text class="node-sub" x="460" y="228" text-anchor="middle">12 subpackages</text><rect class="badge" x="556" y="188" width="24" height="14" rx="2"/><text class="badge-t" x="568" y="198">1</text></g></a>
+<a href="#package-svgdump" id="mini-svgdump" aria-label="cmd/svgdump"><g><rect class="node cmd" x="630" y="180" width="260" height="80" rx="4"/><text class="name" x="760" y="210" text-anchor="middle">cmd/svgdump</text><text class="node-sub" x="760" y="228" text-anchor="middle">static SVG dump</text></g></a>
+<a href="package-map-web.html#package-web" id="mini-web" aria-label="web"><g><rect class="stub" x="330" y="320" width="260" height="56" rx="4"/><text class="name" x="460" y="346" text-anchor="middle">web</text><text class="node-sub" x="460" y="362" text-anchor="middle">router (stub)</text></g></a>
+<a href="package-map-core.html#package-core" id="mini-core" aria-label="core"><g><rect class="stub" x="630" y="320" width="260" height="56" rx="4"/><text class="name" x="760" y="346" text-anchor="middle">core</text><text class="node-sub" x="760" y="362" text-anchor="middle">the Port (stub)</text></g></a>
+<a href="#package-dbos" id="mini-dbos" aria-label="dbos"><g><rect class="node ext" x="330" y="440" width="260" height="80" rx="4"/><text class="name" x="460" y="470" text-anchor="middle">dbos</text><text class="node-sub" x="460" y="488" text-anchor="middle">DBOS (third-party)</text><rect class="badge" x="556" y="448" width="24" height="14" rx="2"/><text class="badge-t" x="568" y="458">5</text></g></a>
+</svg>
+  </section>
+  <section id="packages">
+    <h2>packages <span class="badge">5</span></h2>
+
+    <div class="pkg" id="package-main">
+      <h2>main </h2>
+      <p class="role">The binary: flags (<code>loadConfig</code>), the launch sequence (<code>SetWorkflowsSource → Launch → listen → web.New</code>), and the healthcheck-exit polling.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>main.go</code></td><td><code>main · loadConfig · run · healthcheckExit · //go:embed workflows</code></td></tr><tr><td><code>main_test.go</code></td><td><code>TestLoadConfigRequiresEnv · TestLoadConfigDefaults · TestLoadConfigEnvOverrides · TestLoadConfigInvalidDurationFallsBack</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>main</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-workflows">
+      <h2>workflows <span class="badge">FAN-IN 1</span></h2>
+      <p class="role">12 subpackages — each registers its workflow in <code>init()</code> (<code>WithWorkflowName</code> · <code>WithMaxRecoveryAttempts(3)</code>): <code>branch · buy · compose · decide · fanout · hello · kitchen · loop · pause · pipeline · schedule</code> + <code>steps</code> (the step helpers: <code>GreetStep · EchoStep · ChargeStep · ScheduleArgs</code>; <code>pauseStep</code> · <code>pauseDuration</code> 10s).</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>workflows.go</code></td><td><code>the package doc + test harness</code></td></tr><tr><td><code>zz_generated.go</code></td><td><code>blank imports (the 11 registered subpackages) — written by cmd/workflowgen</code></td></tr><tr><td><code>pause/pause.go</code></td><td><code>pauseStep · pauseDuration = 10s</code></td></tr><tr><td><code>steps/steps.go</code></td><td><code>GreetStep · EchoStep · ChargeStep · ScheduleArgs</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>workflows</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-workflowgen">
+      <h2>cmd/workflowgen <span class="badge">BUILD</span></h2>
+      <p class="role">Codegen (build-time, not imported at runtime): reads the workflow sources and writes <code>workflows/zz_generated.go</code> so the binary links every registration.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>main.go</code></td><td><code>main · run · subpackages · render · moduleLine · moduleName</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>cmd/workflowgen</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-svgdump">
+      <h2>cmd/svgdump </h2>
+      <p class="role">Static diagnostic: dumps the possible-paths block + paths to stdout for every workflow.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>main.go</code></td><td><code>main · printBlock</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>cmd/svgdump</code>).</p>
+    </div>
+
+    <div class="pkg" id="package-dbos">
+      <h2>dbos <span class="badge">FAN-IN 5 · THIRD-PARTY</span></h2>
+      <p class="role">The DBOS Go SDK (v1.7.0) — the workflow engine behind every run.</p>
+      <table>
+        <thead><tr><th>file</th><th>provides</th></tr></thead>
+        <tbody><tr><td><code>surface used</code></td><td><code>RegisterWorkflow · WithWorkflowName · WithMaxRecoveryAttempts · NewContext · Launch · Shutdown · Enqueue · RegisterQueue · ListWorkflows · GetWorkflowStatuses · GetWorkflowSteps · ResumeWorkflow · CancelWorkflow · Step · Go · Context · the sqlite driver</code></td></tr></tbody>
+      </table>
+      <p class="role">Edges: <a href="package-map.html#edges">package-map.html#edges</a> (filter by <code>dbos</code>).</p>
+    </div>
+
+  </section>
+  <footer class="foot">
+    <span>flowdeck · diagrams/package-map-entry.html</span>
+    <span>contacts live in the hub · verified 2026-11-02</span>
+  </footer>
+
+</div>
+</body>
+</html>

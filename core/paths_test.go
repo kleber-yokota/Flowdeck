@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/core/graph"
 )
 
@@ -13,7 +14,7 @@ import (
 // workflow is in the graph, with its steps and the if forks — including
 // the subpackage workflow, found by the recursive walk of the tree.
 func TestPathsGraphFromWorkflowsTree(t *testing.T) {
-	if err := core.SetWorkflowsSource(os.DirFS("../workflows")); err != nil {
+	if err := boot.SetWorkflowsSource(os.DirFS("../workflows")); err != nil {
 		t.Fatalf("SetWorkflowsSource: %v", err)
 	}
 	g := core.NewPort().Graph

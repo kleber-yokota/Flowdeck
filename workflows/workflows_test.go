@@ -6,18 +6,20 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core"
+	"flowdeck/core/actions"
+	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
-// The workflows run through the env-driven core: core.init() created the
+// The workflows run through the env-driven core: boot.init() created the
 // DBOS context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL (see
 // .env.test), this package's inits registered the workflows, and the
 // TestMain starts the executor once — the same lifecycle as production.
 func TestMain(m *testing.M) {
-	core.SetWorkflowsSource(os.DirFS("."))
-	if c := core.Ctx(); c != nil {
-		if err := core.Launch(); err != nil {
+	boot.SetWorkflowsSource(os.DirFS("."))
+	if c := boot.Ctx(); c != nil {
+		if err := boot.Launch(); err != nil {
 			fmt.Fprintln(os.Stderr, "workflows_test: launch:", err)
 			os.Exit(1)
 		}
@@ -29,16 +31,16 @@ func TestMain(m *testing.M) {
 // vars were not exported before the test binary started).
 func needCore(t *testing.T) {
 	t.Helper()
-	if core.Ctx() == nil {
+	if boot.Ctx() == nil {
 		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
 	}
 }
 
 // runToSuccess enqueues the workflow with the clean input (the values the
 // web sanitized against the spec) and polls until the run is terminal.
-func runToSuccess(t *testing.T, name string, payload any) core.Execution {
+func runToSuccess(t *testing.T, name string, payload any) reads.Execution {
 	t.Helper()
-	ex, err := core.Enqueue(name, payload)
+	ex, err := actions.Enqueue(name, payload)
 	if err != nil {
 		t.Fatalf("Enqueue %s: %v", name, err)
 	}
@@ -54,7 +56,7 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for {
-		st, err := core.Status(id)
+		st, err := reads.Status(id)
 		if err != nil {
 			return st, fmt.Errorf("Status: %w", err)
 		}
@@ -69,20 +71,20 @@ func pollState(t *testing.T, id string, want status.State) (status.State, error)
 }
 
 // stepNames returns the executed step names of the run.
-func stepNames(t *testing.T, ex core.Execution) []string {
+func stepNames(t *testing.T, ex reads.Execution) []string {
 	t.Helper()
-	steps, err := core.Steps(ex.ID)
+	path, err := reads.Steps(ex.ID)
 	if err != nil {
 		t.Fatalf("Steps: %v", err)
 	}
-	names := make([]string, 0, len(steps))
-	for _, s := range steps {
+	names := make([]string, 0, len(path.Steps))
+	for _, s := range path.Steps {
 		names = append(names, s.Name)
 	}
 	return names
 }
 
-func assertStepNames(t *testing.T, ex core.Execution, want ...string) {
+func assertStepNames(t *testing.T, ex reads.Execution, want ...string) {
 	t.Helper()
 	got := stepNames(t, ex)
 	if len(got) != len(want) {

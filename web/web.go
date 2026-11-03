@@ -1,269 +1,50 @@
-// Package web is the HTMX web server — the presentation layer over the
-// core: full pages plus HTMX fragments, core errors mapped onto HTTP,
-// and the dispatch POST that enqueues a run on the core.
+// Package web is the wiring of FlowDeck's HTMX presentation layer: the
+// router (the catalog routes and the execution routes each register
+// themselves in their subpackage), the healthz, the static assets, and
+// the middlewares. It talks to the core through core.Port and to the
+// graphs through core/graph and web/graph — it never touches DBOS/Postgres.
 package web
 
 import (
 	"embed"
-	"fmt"
-	"html/template"
 	"io/fs"
 	"net/http"
-	"slices"
 
 	"flowdeck/core"
-	corespec "flowdeck/core/graph"
-	"flowdeck/web/graph"
+	"flowdeck/web/catalog"
+	"flowdeck/web/executions"
 )
 
-//go:embed templates/*.html static/*
+// staticFS holds the vendored HTMX and the stylesheet (served as-is, no
+// CDN at runtime). The templates live in web/render (their own embed).
+//
+//go:embed static
 var staticFS embed.FS
 
-var templates = template.Must(template.ParseFS(staticFS, "templates/*.html"))
+// static is the static filesystem (served as-is, no CDN at runtime).
+var static fs.FS
 
-// New builds the HTMX web server over two contacts: the domain port
-// (how the web talks to the core — the web never touches DBOS/Postgres
-// directly) and the health probe (is the core ready?).
+func init() {
+	sub, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		panic("web: static fs: " + err.Error())
+	}
+	static = sub
+}
+
+// New wires the router: the catalog routes (the dashboard and the
+// workflow pages) and the execution routes (the dispatch, the badge, the
+// detail, the steps, the resume and the cancel) each register themselves
+// (their own subpackage), the healthz goes through the injected readiness
+// check (core.Ready in production — the same single contact), and the
+// static assets are served as-is.
 func New(p core.Port, ready func() error) http.Handler {
-	static, err := fs.Sub(staticFS, "static")
-	if err != nil {
-		panic(fmt.Sprintf("static: %v", err))
-	}
-
 	mux := http.NewServeMux()
-
-	// Full page (serves the HTMX shell)
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
-		page(w, "index.html", indexPage{Title: "FlowDeck"})
-	})
-
-	// HTMX partial: fragment with the workflows registered in the core
-	mux.HandleFunc("GET /workflows", func(w http.ResponseWriter, _ *http.Request) {
-		partial(w, "workflows.html", p.List())
-	})
-
-	// Full page: one registered workflow — the dispatch button, the
-	// possible paths (phase 4, STEP 2, overview) and the runs of it
-	// (phase 3, LIST): every execution the core knows, newest first —
-	// workflow ID + badge.
-	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
-		handleWorkflowPage(w, r, p)
-	})
-
-	// HTMX partial: POST run — dispatch (phase 2). The core enqueues the run
-	// on the DBOS queue; the response is the execution row fragment ("queued"
-	// badge + visible workflow ID — the ACK), prepended to the executions
-	// list on the workflow page.
-	mux.HandleFunc("POST /run/{name}", func(w http.ResponseWriter, r *http.Request) {
-		handleRunDispatch(w, r, p)
-	})
-
-	// HTMX partial: the execution badge for the 2s poll (phase 2). Returns
-	// only the badge fragment. Terminal badges carry no hx attributes, so the
-	// swapped-in element has nothing left to re-trigger and the poll
-	// stops.
-	mux.HandleFunc("GET /status/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		state, err := p.Status(id)
-		if err != nil {
-			fail(w, "status", err)
-			return
-		}
-		partial(w, "badge.html", badgeFor(id, state))
-	})
-
-	// Full page: the detail of one execution (phase 3, DETAIL).
-	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleExecutionDetail(w, r, p)
-	})
-
-	// HTMX partial: the executed path of a run (phase 4, STEP 3, polling).
-	mux.HandleFunc("GET /executions/{id}/steps", func(w http.ResponseWriter, r *http.Request) {
-		handleExecutionSteps(w, r, p)
-	})
-
-	// HTMX partial: POST resume — the re-enqueue of a failed run by id
-	// (phase 5, RESUME: the same stored input, restarting from the last
-	// completed step). The response is the badge fragment (the ACK,
-	// enqueued again), swapped into the badge of the detail page.
-	mux.HandleFunc("POST /resume/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleResume(w, r, p)
-	})
-
-	// Health: the web asks the core if it is ready (core.Ready); the
-	// container healthcheck pings this
+	catalog.Register(mux, p)
+	executions.Register(mux, p)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		if err := ready(); err != nil {
-			http.Error(w, "core not ready", http.StatusServiceUnavailable)
-			return
-		}
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("ok"))
+		handleHealthz(w, ready)
 	})
-
-	// Vendored static assets (htmx) — no CDN at runtime
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
-
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(static))))
 	return withRecovery(withRequestLog(mux))
-}
-
-// handleRunDispatch is the POST /run/{name} handler (phase 2, dispatch
-// with the form values — phase 5, EXECUTE): the web sanitizes the values
-// against the workflow's spec (from the core) and forwards the clean input
-// to the core, which enqueues; the response is the execution row fragment
-// (the ACK), prepended to the executions list on the workflow page.
-func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
-	name := r.PathValue("name")
-	values, err := formValues(r)
-	if err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
-		return
-	}
-	payload := any(nil)
-	if values != nil {
-		// Phase 5, EXECUTE: sanitize the values against the spec before
-		// the enqueue (the clean input is what goes on the queue) — the
-		// core trusts the caller.
-		spec, specErr := p.Spec(name)
-		if specErr != nil {
-			fail(w, "spec", specErr)
-			return
-		}
-		payload, err = spec.Sanitize(values)
-		if err != nil {
-			http.Error(w, "invalid input", http.StatusBadRequest)
-			return
-		}
-	}
-	ex, err := p.Enqueue(name, payload)
-	if err != nil {
-		fail(w, "enqueue", err)
-		return
-	}
-	partial(w, "execution.html", row(ex))
-}
-
-// handleResume is the POST /resume/{id} handler (phase 5, RESUME): the
-// re-enqueue of a failed run by id — the same stored input, restarting
-// from the last completed step. The response is the badge fragment (the
-// ACK, enqueued again), swapped into the badge of the detail page.
-func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
-	id := r.PathValue("id")
-	ex, err := p.Resume(id)
-	if err != nil {
-		fail(w, "resume", err)
-		return
-	}
-	partial(w, "badge.html", badgeFor(ex.ID, ex.State))
-}
-
-// formValues reads the raw values of the dispatch form (the fields the
-// form posts, one value per field). A POST with no body (or an empty
-// form) is the zero payload — nil.
-func formValues(r *http.Request) (map[string]string, error) {
-	if err := r.ParseForm(); err != nil {
-		return nil, err
-	}
-	values := make(map[string]string, len(r.PostForm))
-	for name, vals := range r.PostForm {
-		if len(vals) > 0 {
-			values[name] = vals[0]
-		}
-	}
-	if len(values) == 0 {
-		return nil, nil
-	}
-	return values, nil
-}
-
-// handleWorkflowPage renders the full page of one registered workflow:
-// the parameter form on top (phase 5, DISPLAY), the dispatch, the possible
-// paths (phase 4, STEP 2, overview) and the runs of it
-// (phase 3, LIST): every execution the core knows, newest first — workflow ID + badge.
-func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
-	name := r.PathValue("name")
-	if !registered(p.List(), name) {
-		http.Error(w, "unknown workflow", http.StatusNotFound)
-		return
-	}
-	exs, err := p.Executions(name)
-	if err != nil {
-		fail(w, "executions", err)
-		return
-	}
-	rows := make([]badge, 0, len(exs))
-	for _, e := range exs {
-		rows = append(rows, row(e))
-	}
-	// Phase 5, DISPLAY: the spec (input + step defaults) comes from the
-	// core (parsed from the source at boot) — never hardcoded in the web.
-	// A registered workflow without a parsed spec (a test-only
-	// registration) renders without the form: the dispatch still works
-	// with the zero payload.
-	var spec *corespec.Spec
-	if s, specErr := p.Spec(name); specErr == nil {
-		spec = &s
-	}
-	// Phase 4, STEP 2: the block model comes from the graph component (the
-	// boot map: map lookup, no re-parse, no DB) — never hardcoded in the web.
-	page(w, "workflow.html", workflowPage{
-		Title:      name + " · FlowDeck",
-		Name:       name,
-		Spec:       spec,
-		Graph:      graph.BlockToSVG(p.Graph.Of(name)),
-		Executions: rows,
-	})
-}
-
-// handleExecutionDetail renders the full page of one execution (phase 3,
-// DETAIL — click on the workflow ID in the list): badge state, the
-// attempts (retries 1..N-1 are the failures recovered by a retry, retry N
-// the final status), on failure the error and the step that failed, and
-// the executed path (phase 4, STEP 3, polling).
-func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) {
-	id := r.PathValue("id")
-	d, err := p.Detail(id)
-	if err != nil {
-		fail(w, "detail", err)
-		return
-	}
-	exSteps, err := p.Steps(id)
-	if err != nil {
-		fail(w, "steps", err)
-		return
-	}
-	page(w, "execution-detail.html", executionDetail{
-		ExecutionDetail: d,
-		Title:           d.ID + " · FlowDeck",
-		Badge:           badgeFor(d.ID, d.State),
-		Retries:         retriesFor(d.Attempts),
-		Steps:           newStepsView(id, d.State, exSteps),
-	})
-}
-
-// handleExecutionSteps renders the HTMX partial of the executed path of a
-// run (phase 4, STEP 3, polling): the SVG of the steps that ran, in
-// execution order (the branch the run took), read from Postgres per poll —
-// separate from the boot map of possible paths. Polled every 2s while the
-// run is live; the fragment drops the hx attributes when the run is
-// terminal and the poll stops.
-func handleExecutionSteps(w http.ResponseWriter, r *http.Request, p core.Port) {
-	id := r.PathValue("id")
-	state, err := p.Status(id)
-	if err != nil {
-		fail(w, "status", err)
-		return
-	}
-	exSteps, err := p.Steps(id)
-	if err != nil {
-		fail(w, "steps", err)
-		return
-	}
-	partial(w, "steps.html", newStepsView(id, state, exSteps))
-}
-
-// registered reports whether name is in the core's workflow registry (the
-// single source of truth — the web never hardcodes a workflow).
-func registered(workflows []core.Workflow, name string) bool {
-	return slices.ContainsFunc(workflows, func(wf core.Workflow) bool { return wf.Name == name })
 }

@@ -5,30 +5,70 @@ import (
 	"strings"
 	"testing"
 
-	"flowdeck/core"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
-// TestNewGraphLayoutLinearRow: a chain without an if runs in one row, left
-// to right, with one edge per continuation.
+// TestExecutedPathToSVGChildNodeShowsChildNameAndBadge: the child row
+// (a RunWorkflow dispatch) renders as the child workflow — the node is
+// labeled with the child's name and colored with the child's live badge
+// state (the row's own state is the dispatch's, not the child's).
+func TestExecutedPathToSVGChildNodeShowsChildNameAndBadge(t *testing.T) {
+	steps := []reads.Step{
+		{Name: "DBOS.enqueue", Kind: reads.KindChild, ChildID: "child-1", ChildName: "pipeline", ChildState: status.Running, State: status.Success},
+		{Name: "DBOS.getResult", Kind: reads.KindWait, State: status.Success},
+	}
+	svg := string(ExecutedPathToSVG(steps))
+	if !strings.Contains(svg, `class="g-node running"`) {
+		t.Errorf("child node missing the child's live state: %s", svg)
+	}
+	if !strings.Contains(svg, ">pipeline<") {
+		t.Errorf("child node missing the child's name: %s", svg)
+	}
+	if !strings.Contains(svg, `class="g-node success"`) {
+		t.Errorf("wait node missing its own state: %s", svg)
+	}
+	if !strings.Contains(svg, ">DBOS.getResult<") {
+		t.Errorf("wait node missing the row name: %s", svg)
+	}
+}
+
+// TestExecutedPathToSVGChildFallbackUsesRowName: a child row missing the
+// child's name (the child row is absent — defensive) renders the row name
+// and the row's own state.
+func TestExecutedPathToSVGChildFallbackUsesRowName(t *testing.T) {
+	steps := []reads.Step{
+		{Name: "DBOS.enqueue", Kind: reads.KindChild, ChildID: "child-1", State: status.Success},
+	}
+	svg := string(ExecutedPathToSVG(steps))
+	if !strings.Contains(svg, `class="g-node success"`) {
+		t.Errorf("fallback node missing the row's state: %s", svg)
+	}
+	if !strings.Contains(svg, ">DBOS.enqueue<") {
+		t.Errorf("fallback node missing the row name: %s", svg)
+	}
+}
+
+// TestNewGraphLayoutLinearRow: the linear path runs top to bottom — one
+// box per depth (y increases), all in the same column (x).
 func TestNewGraphLayoutLinearRow(t *testing.T) {
 	g := newGraphLayout([]pathNode{{Step: "a", Children: []pathNode{{Step: "b", Children: []pathNode{{Step: "c"}}}}}})
 	if len(g.nodes) != 3 || len(g.edges) != 2 {
 		t.Fatalf("nodes/edges: got %d/%d, want 3/2", len(g.nodes), len(g.edges))
 	}
-	row := g.nodes[0].y
+	col := g.nodes[0].x
 	for i, n := range g.nodes {
-		if n.y != row {
-			t.Errorf("node %d on another row: y=%v want %v", i, n.y, row)
+		if n.x != col {
+			t.Errorf("node %d on another column: x=%v want %v", i, n.x, col)
 		}
-		if i > 0 && n.x <= g.nodes[i-1].x {
-			t.Errorf("node %d not to the right of node %d: x=%v vs %v", i, i-1, n.x, g.nodes[i-1].x)
+		if i > 0 && n.y <= g.nodes[i-1].y {
+			t.Errorf("node %d not below node %d: y=%v vs %v", i, i-1, n.y, g.nodes[i-1].y)
 		}
 	}
 }
 
-// TestNewGraphLayoutForks: the if forks the branches on distinct rows and
-// the parent centers on its children.
+// TestNewGraphLayoutForks: the fork puts the children on distinct columns
+// below the parent, and the parent centers on its children's x.
 func TestNewGraphLayoutForks(t *testing.T) {
 	g := newGraphLayout([]pathNode{{Step: "base", Children: []pathNode{{Step: "left"}, {Step: "right"}}}})
 	if len(g.nodes) != 3 || len(g.edges) != 2 {
@@ -46,19 +86,19 @@ func TestNewGraphLayoutForks(t *testing.T) {
 	if !ok {
 		t.Fatal("layout missing the right node")
 	}
-	if base.y != (left.y+right.y)/2 {
-		t.Errorf("parent not centered: y=%v want %v", base.y, (left.y+right.y)/2)
+	if base.x != (left.x+right.x)/2 {
+		t.Errorf("parent not centered: x=%v want %v", base.x, (left.x+right.x)/2)
 	}
-	if left.x <= base.x || right.x <= base.x {
-		t.Error("fork children must be to the right of the parent")
+	if left.y <= base.y {
+		t.Error("fork children must be below the parent (left.y > base.y)")
 	}
-	if n := distinctRows(g); n != 3 {
-		t.Errorf("rows: got %d, want 3 (base, left, right)", n)
+	if n := distinctCols(g); n != 3 {
+		t.Errorf("columns: got %d, want 3 (base, left, right)", n)
 	}
 }
 
-// TestNewGraphLayoutNestedFork: a fork inside a fork keeps the rows tidy —
-// every node centers on its children.
+// TestNewGraphLayoutNestedFork: a fork inside a fork keeps the columns
+// tidy — every node centers on its children's x.
 func TestNewGraphLayoutNestedFork(t *testing.T) {
 	g := newGraphLayout([]pathNode{{Step: "a", Children: []pathNode{{Step: "b", Children: []pathNode{{Step: "c"}, {Step: "d"}}}, {Step: "e"}}}})
 	a, ok := findNode(g, "a")
@@ -81,11 +121,11 @@ func TestNewGraphLayoutNestedFork(t *testing.T) {
 	if !ok {
 		t.Fatal("layout missing the e node")
 	}
-	if b.y != (c.y+d.y)/2 {
-		t.Errorf("b not centered on c/d: y=%v want %v", b.y, (c.y+d.y)/2)
+	if b.x != (c.x+d.x)/2 {
+		t.Errorf("b not centered on c/d: x=%v want %v", b.x, (c.x+d.x)/2)
 	}
-	if a.y != (b.y+e.y)/2 {
-		t.Errorf("a not centered on b/e: y=%v want %v", a.y, (b.y+e.y)/2)
+	if a.x != (b.x+e.x)/2 {
+		t.Errorf("a not centered on b/e: x=%v want %v", a.x, (b.x+e.x)/2)
 	}
 }
 
@@ -105,7 +145,7 @@ func TestNewGraphLayoutEmpty(t *testing.T) {
 // with the single row of the steps that ran — one node per step, one edge
 // per continuation, and every node colored by the step's state.
 func TestExecutedPathToSVGLinearChain(t *testing.T) {
-	steps := []core.Step{
+	steps := []reads.Step{
 		{Name: "fetch", State: status.Success},
 		{Name: "parse", State: status.Success},
 		{Name: "store", State: status.Success},
@@ -130,7 +170,7 @@ func TestExecutedPathToSVGLinearChain(t *testing.T) {
 // TestExecutedPathToSVGScale: the executed-path svg is scaled 1.25× too
 // (same readability scale as the block-DAG svg).
 func TestExecutedPathToSVGScale(t *testing.T) {
-	steps := []core.Step{{Name: "fetch", State: status.Success}}
+	steps := []reads.Step{{Name: "fetch", State: status.Success}}
 	svg := string(ExecutedPathToSVG(steps))
 	if !strings.Contains(svg, `<g transform="scale(1.25)">`) {
 		t.Fatalf("executed path svg: want the 1.25× scale group:\n%s", svg)
@@ -143,7 +183,7 @@ func TestExecutedPathToSVGScale(t *testing.T) {
 // TestExecutedPathToSVGFailedStep: a failed step is colored with the
 // failed state (the rest of the path keeps the success color).
 func TestExecutedPathToSVGFailedStep(t *testing.T) {
-	steps := []core.Step{
+	steps := []reads.Step{
 		{Name: "fetch", State: status.Success},
 		{Name: "parse", State: status.Error},
 	}
@@ -177,10 +217,10 @@ func findNode(g *graphLayout, step string) (graphNode, bool) {
 	return graphNode{}, false
 }
 
-func distinctRows(g *graphLayout) int {
-	ys := map[float64]bool{}
+func distinctCols(g *graphLayout) int {
+	xs := map[float64]bool{}
 	for _, n := range g.nodes {
-		ys[n.y] = true
+		xs[n.x] = true
 	}
-	return len(ys)
+	return len(xs)
 }

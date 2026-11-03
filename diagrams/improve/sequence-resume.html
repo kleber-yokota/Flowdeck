@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Improve — Resume a run (RewindWorkflow · ResumeWorkflow)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/sequence-resume.css">
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Sequence · FlowDeck · improve · /executions/{id}</p>
+    <h1>Improve — Resume a run (RewindWorkflow · ResumeWorkflow)</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sr-title sr-desc">
+        <title id="sr-title">Improve — Resume a run (RewindWorkflow · ResumeWorkflow)</title>
+        <desc id="sr-desc">Resume a run (improve): the guard now accepts failed and cancelled (anything else is a 400 ErrNotResumable). In the failed region (bug.md) the core reads the step rows, takes the cut (the first failed step) and calls dbos.RewindWorkflow(id, queue, cut) — the SDK ResumeWorkflow is a silent no-op on ERROR rows because its SQL excludes SUCCESS and ERROR, which is today's 400. In the cancelled region the core calls dbos.ResumeWorkflow(id, queue): the SDK SQL (status NOT IN (SUCCESS, ERROR)) re-enqueues the CANCELLED row and it resumes after the last completed step. Both ACKs return enqueued: the badge goes back to queued and the 2s poll resumes.</desc>
+        <defs>
+          <marker id="sr-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
+          </marker>
+          <marker id="sr-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff9142"/>
+          </marker>
+          <marker id="sr-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#7cc0ff"/>
+          </marker>
+          <linearGradient id="sr-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e4e8"/>
+            <stop offset="0.45" stop-color="#8d939e"/>
+            <stop offset="1" stop-color="#b7bcc4"/>
+          </linearGradient>
+          <linearGradient id="sr-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#191a1f"/>
+            <stop offset="1" stop-color="#101114"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#0b0c0e"/>
+
+        <!-- alt frame: the two resume paths -->
+        <rect x="72" y="252" width="816" height="352" rx="4" fill="rgba(232,230,225,0.04)" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <rect x="72" y="252" width="40" height="16" rx="2" fill="#0b0c0e" stroke="rgba(232,230,225,0.22)" stroke-width="1"/>
+        <text x="92" y="263" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+
+        <!-- lifelines -->
+        <line x1="120" y1="124" x2="120" y2="692" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="692" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="692" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="692" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+
+        <!-- guard note: the improved guard -->
+        <text x="84" y="156" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">[queued / running / success → 400 · ErrNotResumable]</text>
+
+        <!-- activation bars -->
+        <rect x="116" y="184" width="8" height="16" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="336" y="184" width="8" height="488" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="556" y="216" width="8" height="424" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="796" y="304" width="8" height="252" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+        <rect x="116" y="656" width="8" height="16" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
+
+        <!-- messages: request + guard -->
+        <line x1="120" y1="192" x2="340" y2="192" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#sr-arrow-link)"/>
+        <line x1="340" y1="224" x2="560" y2="224" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#sr-arrow)"/>
+
+        <!-- messages: failed region (rewind — bug.md) -->
+        <line x1="560" y1="312" x2="800" y2="312" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#sr-arrow)"/>
+        <line x1="560" y1="344" x2="800" y2="344" stroke="#ff9142" stroke-width="1.2" marker-end="url(#sr-arrow-accent)"/>
+        <line x1="800" y1="376" x2="560" y2="376" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sr-arrow)"/>
+
+        <!-- messages: cancelled region (resume — new) -->
+        <line x1="560" y1="516" x2="800" y2="516" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#sr-arrow)"/>
+        <line x1="800" y1="548" x2="560" y2="548" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sr-arrow)"/>
+
+        <!-- messages: ack + render -->
+        <line x1="560" y1="632" x2="340" y2="632" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sr-arrow)"/>
+        <line x1="340" y1="664" x2="120" y2="664" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#sr-arrow)"/>
+
+        <!-- message labels: request + guard -->
+        <rect x="190" y="176" width="80" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="185" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">POST /resume/{id}</text>
+
+        <rect x="417" y="208" width="66" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="217" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RESUME (ID)</text>
+
+        <!-- region 1 guard + chip -->
+        <text x="84" y="282" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">[st == error · bug.md — the SDK resume no-ops here]</text>
+        <rect x="315" y="272" width="44" height="12" rx="2" fill="none" stroke="#7cc0ff" stroke-width="0.8"/>
+        <text x="337" y="281" fill="#7cc0ff" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CHANGED</text>
+
+        <!-- message labels: failed region -->
+        <rect x="626" y="296" width="108" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="305" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">STEP ROWS · CUT READ</text>
+
+        <rect x="599" y="328" width="161" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="337" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">REWINDWORKFLOW (ID · QUEUE · CUT)</text>
+
+        <rect x="640" y="360" width="79" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="369" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK · ENQUEUED</text>
+
+        <!-- notes: rewind semantics (SDK facts) -->
+        <text x="616" y="404" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">delete operation_outputs · events · notifications · output</text>
+        <text x="616" y="418" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">from the cut onward · input survives · recovery_attempts 0</text>
+        <text x="616" y="432" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">· same id · re-enqueues on the queue</text>
+
+        <!-- alt region divider -->
+        <line x1="80" y1="456" x2="880" y2="456" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+
+        <!-- region 2 guard + chip -->
+        <text x="84" y="486" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">[st == cancelled · new path]</text>
+        <rect x="225" y="476" width="28" height="12" rx="2" fill="none" stroke="#ff9142" stroke-width="0.8"/>
+        <text x="239" y="485" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">NEW</text>
+
+        <!-- message labels: cancelled region -->
+        <rect x="614" y="500" width="132" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="509" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RESUMEWORKFLOW (ID · QUEUE)</text>
+
+        <rect x="640" y="532" width="79" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="680" y="541" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK · ENQUEUED</text>
+
+        <!-- notes: resume semantics (SDK facts) -->
+        <text x="616" y="576" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">SDK resume: WHERE status NOT IN (SUCCESS, ERROR)</text>
+        <text x="616" y="590" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">→ CANCELLED is re-enqueued · resumes after the last step</text>
+
+        <!-- message labels: ack + render -->
+        <rect x="410" y="616" width="79" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="450" y="625" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">ACK · ENQUEUED</text>
+
+        <rect x="149" y="648" width="161" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="657" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RENDER · QUEUED (2s POLL RESUMES)</text>
+
+        <!-- bug strip: the no-op the fix moves off -->
+        <rect x="36" y="700" width="2.5" height="44" fill="#ff9142"/>
+        <text x="48" y="708" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">bug.md — dbos.ResumeWorkflow (v1.7.0) is a silent no-op on ERROR rows: the resume SQL excludes SUCCESS and ERROR</text>
+        <text x="48" y="722" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">→ the row stays ERROR → today's ACK reads error → 400 (ErrNotResumable) · the ERROR path moves to dbos.RewindWorkflow</text>
+        <text x="48" y="736" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">(terminal-only · an active row is rejected · success stays guarded · web: unknown id → 404 · unexpected → 500)</text>
+
+        <!-- actors -->
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="40" y="60" width="160" height="64" rx="6" fill="url(#sr-panel)" stroke="url(#sr-steel)" stroke-width="1"/>
+        <rect x="48" y="66" width="20" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="58" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+        <text x="120" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Browser</text>
+        <text x="120" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">chrome · htmx</text>
+
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="260" y="60" width="160" height="64" rx="6" fill="url(#sr-panel)" stroke="url(#sr-steel)" stroke-width="1"/>
+        <rect x="268" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="282" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">WEB</text>
+        <text x="340" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">FlowDeck Web</text>
+        <text x="340" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">go · webserver · :8080</text>
+
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="480" y="60" width="160" height="64" rx="6" fill="rgba(255,145,66,0.10)" stroke="#ff9142" stroke-width="1.2"/>
+        <rect x="488" y="66" width="32" height="12" rx="2" fill="transparent" stroke="rgba(255,145,66,0.50)" stroke-width="0.8"/>
+        <text x="504" y="75" fill="#ff9142" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+        <text x="560" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">DBOS Core</text>
+        <text x="560" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">dbos · executor</text>
+
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
+        <rect x="720" y="60" width="160" height="64" rx="6" fill="url(#sr-panel)" stroke="url(#sr-steel)" stroke-width="1"/>
+        <rect x="728" y="66" width="28" height="12" rx="2" fill="transparent" stroke="rgba(184,188,196,0.40)" stroke-width="0.8"/>
+        <text x="742" y="75" fill="#b8bcc4" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+        <text x="800" y="102" fill="#e8e6e1" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Postgres 18</text>
+        <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">compose · :5432</text>
+
+        <!-- legend strip -->
+        <line x1="30" y1="764" x2="930" y2="764" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
+        <text x="30" y="787" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <line x1="130" y1="784" x2="174" y2="784" stroke="#7cc0ff" stroke-width="1.2"/>
+        <text x="182" y="787" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HTMX REQUEST</text>
+
+        <line x1="300" y1="784" x2="344" y2="784" stroke="#b8bcc4" stroke-width="1.2"/>
+        <text x="352" y="787" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">CALL</text>
+
+        <line x1="430" y1="784" x2="474" y2="784" stroke="#b8bcc4" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="482" y="787" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">RETURN</text>
+
+        <line x1="600" y1="784" x2="644" y2="784" stroke="#ff9142" stroke-width="1.2"/>
+        <text x="652" y="787" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">HEADLINE · REWINDWORKFLOW</text>
+      </svg>
+    </div>
+
+    <footer>FlowDeck · diagram-design · improve · 2026-11-03</footer>
+  </div>
+</body>
+</html>

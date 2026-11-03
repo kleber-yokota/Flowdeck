@@ -25,17 +25,19 @@ jobs:
         run: |
           go generate ./workflows
           git diff --exit-code workflows/zz_generated.go
-      - name: Install complexity tools
+      - name: Install structure tools
         run: |
           go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
           go install github.com/uudashr/gocognit/cmd/gocognit@latest
-      # Gates at the AGENTS.md baseline: production (non-test) functions may
-      # not exceed cyclomatic 9 / cognitive 10. To raise it, change the
-      # threshold here and update the baseline in AGENTS.md together.
-      - name: Cyclomatic complexity gate (production max 9)
-        run: gocyclo -over 9 -ignore '_test\.go$' .
-      - name: Cognitive complexity gate (production max 10)
-        run: gocognit -over 10 -ignore '_test\.go$' .
+          go install github.com/nakabonne/nestif/cmd/nestif@latest
+          go install github.com/sandstorm/dependency-analysis@latest
+          go install github.com/mickamy/goimportmaps/cmd/goimportmaps@latest
+      # The structure load lines: production functions may not exceed
+      # cyclomatic 9 / cognitive 10, nesting may not exceed 5, and the
+      # import contract (.goimportmaps.yaml) must hold. The thresholds live
+      # in scripts/structure-gate.sh — raise one there and in code.md.
+      - name: Structure gate (complexity, nesting, cycles, import contract)
+        run: bash scripts/structure-gate.sh
       - name: Test (race, count=2, shuffled — catches registry/state leaks)
         run: |
           set -a && source .env.test && set +a

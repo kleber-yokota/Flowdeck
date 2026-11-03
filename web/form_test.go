@@ -2,10 +2,10 @@ package web
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
-	"time"
+
+	"flowdeck/web/internal/webtest"
 )
 
 // Phase 5, DISPLAY: the top of the workflow page is the parameter form —
@@ -16,7 +16,7 @@ func TestWorkflowPageShowsParameters(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	code, body := get(t, srv.URL+"/workflows/pipeline")
+	code, body := webtest.Get(t, srv.URL+"/workflows/pipeline")
 	if code != http.StatusOK {
 		t.Fatalf("pipeline page: %d", code)
 	}
@@ -48,7 +48,7 @@ func TestWorkflowPageHasNoStepDefaultsList(t *testing.T) {
 	defer srv.Close()
 
 	for _, name := range []string{"pipeline", "decide"} {
-		code, body := get(t, srv.URL+"/workflows/"+name)
+		code, body := webtest.Get(t, srv.URL+"/workflows/"+name)
 		if code != http.StatusOK {
 			t.Fatalf("%s page: %d", name, code)
 		}
@@ -56,53 +56,4 @@ func TestWorkflowPageHasNoStepDefaultsList(t *testing.T) {
 			t.Errorf("%s page carries the step-defaults list", name)
 		}
 	}
-}
-
-// Phase 5, EXECUTE: the dispatch posts the form values — the core
-// sanitizes them and the run takes the value: the decide run branches to
-// the left (the executed path shows it, no right).
-func TestRunPostWithFormValuesTakesBranch(t *testing.T) {
-	srv := bootedTestServer(t)
-	defer srv.Close()
-
-	resp, err := postForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
-	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch: %d", resp.StatusCode)
-	}
-	ack := readAll(t, resp)
-	if !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("ACK: %s", ack)
-	}
-	id := executionID(t, ack)
-
-	// The run completes taking the branch the value picked.
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		code, row := get(t, srv.URL+"/executions/"+id)
-		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("no success badge: %d, %s", code, row)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	code, steps := get(t, srv.URL+"/executions/"+id+"/steps")
-	if code != http.StatusOK {
-		t.Fatalf("steps: %d", code)
-	}
-	if !strings.Contains(steps, ">left<") || strings.Contains(steps, ">right<") {
-		t.Fatalf("executed path without the left branch: %s", steps)
-	}
-}
-
-// postForm posts a urlencoded form and returns the open response (the
-// caller closes it).
-func postForm(t *testing.T, url string, form url.Values) (*http.Response, error) {
-	t.Helper()
-	return http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
 }

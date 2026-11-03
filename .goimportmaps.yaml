@@ -1,0 +1,55 @@
+# The import contract — the machine-readable twin of the package map's
+# contacts table (diagrams/package-map.html).
+#
+# Rules are regexes matched against the full import path:
+#   source  regex of the importing package
+#   imports regexes of the forbidden imports
+# Gate: scripts/structure-gate.sh (step 5) — `goimportmaps check ./...`.
+# Adding a contact that is not listed here (or that is forbidden below)
+# fails CI; fix the code or redraw the contact, never both silently.
+
+forbidden:
+  # core is the contract under web: it never reaches sideways or up.
+  - source: ^flowdeck/core$
+    imports:
+      - ^flowdeck/web
+      - ^flowdeck/workflows
+  # the core subpackages (boot · registry · reads · actions) implement the
+  # Port behind the scenes: they never import the core root back (the root
+  # imports them — the direction of the Port).
+  - source: ^flowdeck/core/(boot|registry|reads|actions)(/.*)?$
+    imports:
+      - ^flowdeck/core$
+  # the leaves import nothing internal (a verified fact in the map).
+  - source: ^flowdeck/core/(graph|status)$
+    imports:
+      - ^flowdeck
+  # the web subpackages (executions · catalog · render) hang off the web
+  # root (it wires them): they never import the root back.
+  - source: ^flowdeck/web/
+    imports:
+      - ^flowdeck/web$
+  # web renders; it does not execute — no workflow code.
+  - source: ^flowdeck/web
+    imports:
+      - ^flowdeck/workflows
+  # workflows execute; they do not render — no web.
+  - source: ^flowdeck/workflows
+    imports:
+      - ^flowdeck/web
+
+# Coupling thresholds for the metrics SIGNAL (`goimportmaps ./... --metrics`).
+# The signal never fails; it flags packages drifting past these lines so the
+# agent sees a fan-out or instability drift before it becomes a god package.
+# The max_* lines are the measured baseline (2026-11-02): today's heaviest
+# package sits exactly on its line — growth beyond it flags, the baseline
+# itself stays green.
+metrics:
+  enabled: true
+  coupling:
+    max_efferent: 16      # baseline: main (16) — the boot wiring (flag · env · boot · core · web · workflows)
+    max_afferent: 18      # baseline: core/boot (18) — the subpackages hang off it; dbos (17)
+    max_instability: 1.0  # main and the cmd/ tools are structurally 1.0
+    warn_efferent: 11     # today's hotspot: core/boot · web/internal/webtest · web/render (11)
+    warn_afferent: 9      # today's second hub: workflows/steps (9)
+    warn_instability: 0.9 # today's hotspot: workflows (0.92)
