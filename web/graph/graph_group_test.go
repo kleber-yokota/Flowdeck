@@ -68,6 +68,39 @@ func TestGroupPathOverlapIsAParallelGroup(t *testing.T) {
 	}
 }
 
+// TestGroupPathFanoutWaitRowIsTheContinuation: the fanout's rows (go
+// alpha · go beta · the select that waits on them) are written by the SDK
+// in the same millisecond, so they all overlap — but the wait row is the
+// continuation of the steps it waits on, never a parallel member: the
+// group node is the root (alpha ∥ beta), and the select hangs off the last
+// member, below the group.
+func TestGroupPathFanoutWaitRowIsTheContinuation(t *testing.T) {
+	base := time.Date(2026, 7, 15, 10, 0, 0, 0, time.UTC)
+	steps := []reads.Step{
+		{Name: "alpha", State: status.Success, StartedAt: base, CompletedAt: base},
+		{Name: "beta", State: status.Success, StartedAt: base, CompletedAt: base.Add(time.Millisecond)},
+		{Name: "DBOS.select", Kind: reads.KindWait, State: status.Success, StartedAt: base, CompletedAt: base.Add(time.Millisecond)},
+	}
+	g := groupPath(steps)
+	if len(g) != 1 || g[0].Step != "" || len(g[0].Children) != 2 {
+		t.Fatalf("fanout: want the group node root with two members, got %v", g)
+	}
+	if g[0].Children[0].Step != "alpha" || g[0].Children[1].Step != "beta" {
+		t.Fatalf("fanout: want alpha and beta as the members, got %q and %q", g[0].Children[0].Step, g[0].Children[1].Step)
+	}
+	beta := g[0].Children[1]
+	if len(beta.Children) != 2 || beta.Children[0].Step != "DBOS.select" {
+		t.Fatalf("fanout: want the select as the continuation below the group, got %+v", beta.Children)
+	}
+	svg := string(ExecutedPathToSVG(steps))
+	if !strings.Contains(svg, `class="async-symbol"`) {
+		t.Errorf("fanout: want the ∥ mark between alpha and beta:\n%s", svg)
+	}
+	if !strings.Contains(svg, `>DBOS.select</text>`) {
+		t.Errorf("fanout: want the select box:\n%s", svg)
+	}
+}
+
 // TestGroupPathRepeatedNameIsALoop: consecutive rows of the repeated step
 // name (the loop body) are the loop group — one box, the loop-symbol arc,
 // the ×N count.

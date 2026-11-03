@@ -36,43 +36,56 @@ type pathNode struct {
 // 02): the consecutive rows of the repeated step name are the loop group
 // (one box, ×N); the consecutive rows whose [StartedAt, CompletedAt]
 // intervals overlap are the parallel group (the previous box forks the
-// invisible group node — the continuation hangs off the last member); the
-// rest are plain steps (the child/wait rows carry their glyph). A group of
-// more than 4 members collapses into one annotated box (×N, the full
-// member list in the box's <title>).
+// invisible group node — the continuation hangs off the last member; the
+// group is first: the group node is the root); the wait rows are the
+// continuation of the steps they wait on (never parallel members — the
+// fanout's select hangs below the go group); the rest are plain steps
+// (the child/wait rows carry their glyph). A group of more than 4 members
+// collapses into one annotated box (×N, the full member list in the box's
+// <title>).
 func groupPath(steps []reads.Step) []pathNode {
-	boxes := groupBoxes(steps)
+	boxes := make([]*pathNode, 0, len(steps))
+	var root *pathNode
+	for i := 0; i < len(steps); {
+		var r *pathNode
+		i, boxes, r = buildRow(i, steps, boxes)
+		if r != nil {
+			root = r
+		}
+	}
+	chainContinuations(boxes)
+	if root != nil {
+		return []pathNode{*root}
+	}
 	if len(boxes) == 0 {
 		return nil
 	}
-	chainContinuations(boxes)
 	return []pathNode{*boxes[0]}
 }
 
-// groupBoxes walks the rows in order and appends one box per group: the
-// loop group (one ×N box), the parallel group (the forked member boxes or
-// the collapse box), and the plain steps (the child/wait rows carry their
-// glyph).
-func groupBoxes(steps []reads.Step) []*pathNode {
-	boxes := make([]*pathNode, 0, len(steps))
-	i := 0
-	for i < len(steps) {
-		if end := loopGroupEnd(i, steps); end > i {
-			n := groupBox(steps[i:end], true)
-			boxes = append(boxes, &n)
-			i = end
-			continue
-		}
-		if end := parallelGroupEnd(i, steps); end > i {
-			boxes = appendParallelGroup(boxes, steps, i, end)
-			i = end
-			continue
-		}
-		n := stepNode(steps[i])
-		boxes = append(boxes, &n)
-		i++
+// buildRow appends the boxes for the row at i (the loop group, the
+// parallel group, or the plain step — the wait row is the plain box, the
+// continuation of the steps it waits on) and returns the next index, the
+// updated chain, and the group node root (the first parallel group — the
+// group node is the root, never chained).
+func buildRow(i int, steps []reads.Step, boxes []*pathNode) (int, []*pathNode, *pathNode) {
+	if end := loopGroupEnd(i, steps); end > i {
+		n := groupBox(steps[i:end], true)
+		return end, append(boxes, &n), nil
 	}
-	return boxes
+	if steps[i].Kind == reads.KindWait {
+		n := stepNode(steps[i])
+		return i + 1, append(boxes, &n), nil
+	}
+	if end := parallelGroupEnd(i, steps); end > i {
+		if end-i <= 4 && len(boxes) == 0 {
+			root, boxes := firstParallelGroup(steps, i, end)
+			return end, boxes, root
+		}
+		return end, appendParallelGroup(boxes, steps, i, end), nil
+	}
+	n := stepNode(steps[i])
+	return i + 1, append(boxes, &n), nil
 }
 
 // loopGroupEnd returns the exclusive end of the run of consecutive rows
@@ -92,10 +105,12 @@ func loopGroupEnd(i int, steps []reads.Step) int {
 
 // parallelGroupEnd returns the exclusive end of the run of consecutive
 // rows whose [StartedAt, CompletedAt] intervals overlap (runtime
-// parallelism — the fanout's go+select members).
+// parallelism — the fanout's go members). The scan stops at the wait rows
+// (select · recv · getResult are the continuation of the steps they wait
+// on — never parallel members).
 func parallelGroupEnd(i int, steps []reads.Step) int {
 	k := i
-	for k+1 < len(steps) && intervalsOverlap(steps[k], steps[k+1]) {
+	for k+1 < len(steps) && steps[k+1].Kind != reads.KindWait && intervalsOverlap(steps[k], steps[k+1]) {
 		k++
 	}
 	if k == i {
@@ -104,11 +119,22 @@ func parallelGroupEnd(i int, steps []reads.Step) int {
 	return k + 1
 }
 
+// firstParallelGroup is the parallel group at the start of the path: there
+// is no previous box to fork from — the group node is the root, holding
+// every member box, and the continuation hangs off the last member (the
+// group node itself is never chained).
+func firstParallelGroup(steps []reads.Step, start, end int) (*pathNode, []*pathNode) {
+	members := make([]pathNode, 0, end-start)
+	for r := start; r < end; r++ {
+		members = append(members, stepNode(steps[r]))
+	}
+	return &pathNode{Children: members}, []*pathNode{&members[len(members)-1]}
+}
+
 // appendParallelGroup appends the parallel group's boxes: more than 4
 // members collapse into one annotated box; otherwise the previous box
-// forks the invisible group node (the group is first: the first member is
-// the fork, holding the remaining members), and the continuation hangs off
-// the last member.
+// forks the invisible group node (holding every member), and the
+// continuation hangs off the last member.
 func appendParallelGroup(boxes []*pathNode, steps []reads.Step, start, end int) []*pathNode {
 	if end-start > 4 {
 		n := groupBox(steps[start:end], false)
@@ -118,15 +144,8 @@ func appendParallelGroup(boxes []*pathNode, steps []reads.Step, start, end int) 
 	for r := start; r < end; r++ {
 		members = append(members, stepNode(steps[r]))
 	}
-	if len(boxes) > 0 {
-		// The previous box forks the invisible group node.
-		boxes[len(boxes)-1].Children = []pathNode{{Children: members}}
-	} else {
-		// The group is first: the first member is the fork.
-		fork := &members[0]
-		fork.Children = []pathNode{{Children: members[1:]}}
-		boxes = append(boxes, fork)
-	}
+	// The previous box forks the invisible group node.
+	boxes[len(boxes)-1].Children = []pathNode{{Children: members}}
 	// The continuation hangs off the last member.
 	return append(boxes, &members[len(members)-1])
 }
