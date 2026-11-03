@@ -78,8 +78,9 @@ func TestBlockToSVGScale(t *testing.T) {
 	if !strings.Contains(svg, `<g transform="scale(1.25)">`) {
 		t.Fatalf("block svg: want the 1.25× scale group:\n%s", svg)
 	}
-	// The canvas of this loop graph is 133.6×108 → the svg is 167×135.
-	if !strings.Contains(svg, `width="167" height="135"`) {
+	// The canvas of this loop graph is 144×120 → the svg is 180×150
+	// (11px/char boxes, 48px tall — the readability geometry, fact 18).
+	if !strings.Contains(svg, `width="180" height="150"`) {
 		t.Fatalf("block svg: want the scaled canvas 167×135:\n%s", svg)
 	}
 	if err := xml.Unmarshal([]byte(svg), new(struct{})); err != nil {
@@ -171,8 +172,8 @@ func TestBlockToSVGJoinOutline(t *testing.T) {
 	if !ok {
 		t.Fatalf("want the select box:\n%s", svg)
 	}
-	boxY := selY - 23 // the label is box.y + 18 + 5
-	if boxY < l1y || boxY+36 > l1y+l1h {
+	boxY := selY - 29 // the label is box.y + 24 + 5
+	if boxY < l1y || boxY+48 > l1y+l1h {
 		t.Fatalf("want the select box inside the L1 outline (y %v..%v), got box y %v", l1y, l1y+l1h, boxY)
 	}
 	if !strings.Contains(svg, `class="async-symbol"`) {

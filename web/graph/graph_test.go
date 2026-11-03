@@ -49,26 +49,26 @@ func TestExecutedPathToSVGChildFallbackUsesRowName(t *testing.T) {
 	}
 }
 
-// TestNewGraphLayoutLinearRow: a chain without an if runs in one row, left
-// to right, with one edge per continuation.
+// TestNewGraphLayoutLinearRow: the linear path runs top to bottom — one
+// box per depth (y increases), all in the same column (x).
 func TestNewGraphLayoutLinearRow(t *testing.T) {
 	g := newGraphLayout([]pathNode{{Step: "a", Children: []pathNode{{Step: "b", Children: []pathNode{{Step: "c"}}}}}})
 	if len(g.nodes) != 3 || len(g.edges) != 2 {
 		t.Fatalf("nodes/edges: got %d/%d, want 3/2", len(g.nodes), len(g.edges))
 	}
-	row := g.nodes[0].y
+	col := g.nodes[0].x
 	for i, n := range g.nodes {
-		if n.y != row {
-			t.Errorf("node %d on another row: y=%v want %v", i, n.y, row)
+		if n.x != col {
+			t.Errorf("node %d on another column: x=%v want %v", i, n.x, col)
 		}
-		if i > 0 && n.x <= g.nodes[i-1].x {
-			t.Errorf("node %d not to the right of node %d: x=%v vs %v", i, i-1, n.x, g.nodes[i-1].x)
+		if i > 0 && n.y <= g.nodes[i-1].y {
+			t.Errorf("node %d not below node %d: y=%v vs %v", i, i-1, n.y, g.nodes[i-1].y)
 		}
 	}
 }
 
-// TestNewGraphLayoutForks: the if forks the branches on distinct rows and
-// the parent centers on its children.
+// TestNewGraphLayoutForks: the fork puts the children on distinct columns
+// below the parent, and the parent centers on its children's x.
 func TestNewGraphLayoutForks(t *testing.T) {
 	g := newGraphLayout([]pathNode{{Step: "base", Children: []pathNode{{Step: "left"}, {Step: "right"}}}})
 	if len(g.nodes) != 3 || len(g.edges) != 2 {
@@ -86,19 +86,19 @@ func TestNewGraphLayoutForks(t *testing.T) {
 	if !ok {
 		t.Fatal("layout missing the right node")
 	}
-	if base.y != (left.y+right.y)/2 {
-		t.Errorf("parent not centered: y=%v want %v", base.y, (left.y+right.y)/2)
+	if base.x != (left.x+right.x)/2 {
+		t.Errorf("parent not centered: x=%v want %v", base.x, (left.x+right.x)/2)
 	}
-	if left.x <= base.x || right.x <= base.x {
-		t.Error("fork children must be to the right of the parent")
+	if left.y <= base.y {
+		t.Error("fork children must be below the parent (left.y > base.y)")
 	}
-	if n := distinctRows(g); n != 3 {
-		t.Errorf("rows: got %d, want 3 (base, left, right)", n)
+	if n := distinctCols(g); n != 3 {
+		t.Errorf("columns: got %d, want 3 (base, left, right)", n)
 	}
 }
 
-// TestNewGraphLayoutNestedFork: a fork inside a fork keeps the rows tidy —
-// every node centers on its children.
+// TestNewGraphLayoutNestedFork: a fork inside a fork keeps the columns
+// tidy — every node centers on its children's x.
 func TestNewGraphLayoutNestedFork(t *testing.T) {
 	g := newGraphLayout([]pathNode{{Step: "a", Children: []pathNode{{Step: "b", Children: []pathNode{{Step: "c"}, {Step: "d"}}}, {Step: "e"}}}})
 	a, ok := findNode(g, "a")
@@ -121,11 +121,11 @@ func TestNewGraphLayoutNestedFork(t *testing.T) {
 	if !ok {
 		t.Fatal("layout missing the e node")
 	}
-	if b.y != (c.y+d.y)/2 {
-		t.Errorf("b not centered on c/d: y=%v want %v", b.y, (c.y+d.y)/2)
+	if b.x != (c.x+d.x)/2 {
+		t.Errorf("b not centered on c/d: x=%v want %v", b.x, (c.x+d.x)/2)
 	}
-	if a.y != (b.y+e.y)/2 {
-		t.Errorf("a not centered on b/e: y=%v want %v", a.y, (b.y+e.y)/2)
+	if a.x != (b.x+e.x)/2 {
+		t.Errorf("a not centered on b/e: x=%v want %v", a.x, (b.x+e.x)/2)
 	}
 }
 
@@ -217,10 +217,10 @@ func findNode(g *graphLayout, step string) (graphNode, bool) {
 	return graphNode{}, false
 }
 
-func distinctRows(g *graphLayout) int {
-	ys := map[float64]bool{}
+func distinctCols(g *graphLayout) int {
+	xs := map[float64]bool{}
 	for _, n := range g.nodes {
-		ys[n.y] = true
+		xs[n.x] = true
 	}
-	return len(ys)
+	return len(xs)
 }

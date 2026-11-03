@@ -195,7 +195,7 @@ a.name { color: inherit; text-decoration: none; }
 .g-node.cancelled { stroke: var(--cancelled); stroke-opacity: 0.8; }
 .g-text {
   font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 14px;
+  font-size: 16px;
   fill: var(--ink);
 }
 .g-arrow { fill: var(--soft); fill-opacity: 0.55; }
