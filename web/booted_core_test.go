@@ -1,4 +1,4 @@
-package executions
+package web
 
 import (
 	"net/http"
@@ -9,11 +9,10 @@ import (
 	"flowdeck/web/internal/webtest"
 )
 
-// The booted-core tests (no stubs): the core is up from the environment
-// (core.init + the workflow files' init, see .env.test), this package's
-// TestMain started the executor and built the paths graph from the
-// workflows tree. NewPort wraps the live core: the listing comes from the
-// registry and the graph from the parsed source.
+// The booted-core tests of the workflow pages (no stubs): the core is up
+// from the environment (core.init + the workflow files' init, see
+// .env.test), and this package's bootedTestServer is the full-stack server
+// (web.New: the catalog + the executions routes, the healthz, the static).
 
 // The workflow pages of a booted core (phase 1 + 4, STEP 2): the registry
 // listing, the paths graph per workflow, and a dispatch that the executor
@@ -149,46 +148,5 @@ func TestPausePageHasNoFormAndDispatches(t *testing.T) {
 	ack := webtest.ReadAll(t, resp)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(ack, `class="badge queued"`) {
 		t.Fatalf("dispatch pause: %d, %s", resp.StatusCode, ack)
-	}
-}
-
-// Phase 5, DETAIL: the execution detail shows the stored input values —
-// the values the run used (one line per input of the struct input).
-func TestExecutionDetailShowsInputValues(t *testing.T) {
-	srv := bootedTestServer(t)
-	defer srv.Close()
-
-	resp, err := webtest.PostForm(t, srv.URL+"/run/schedule", map[string][]string{
-		"Name":      {"Ada"},
-		"StartDate": {"2026-02-01"},
-	})
-	if err != nil {
-		t.Fatalf("dispatch schedule: %v", err)
-	}
-	ack := webtest.ReadAll(t, resp)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch schedule: %d", resp.StatusCode)
-	}
-	id := webtest.ExecutionID(t, ack)
-
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
-		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("no success badge: %d, %s", code, row)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	code, detail := webtest.Get(t, srv.URL+"/executions/"+id)
-	if code != http.StatusOK {
-		t.Fatalf("detail: %d", code)
-	}
-	for _, want := range []string{"Name", "Ada", "StartDate", "2026-02-01"} {
-		if !strings.Contains(detail, want) {
-			t.Fatalf("detail does not contain %q", want)
-		}
 	}
 }

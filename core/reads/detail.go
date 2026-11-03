@@ -16,9 +16,10 @@ import (
 
 // ExecutionDetail is the read model of a single execution (phase 3,
 // DETAIL): the badge state, the first execution date (created_at), the
-// attempts, the stored input values (phase 5 — the input is written once
-// at enqueue, immutable per workflow_id), and — on failure — the error
-// and the step that failed.
+// attempts (total: recovery_attempts + 1 — a run on its first attempt is
+// 1; the display renders attempts − 1 recovered failures), the stored
+// input values (phase 5 — the input is written once at enqueue, immutable
+// per workflow_id), and — on failure — the error and the step that failed.
 type ExecutionDetail struct {
 	ID         string
 	Name       string
@@ -74,7 +75,7 @@ func Detail(workflowID string) (DetailPath, error) {
 	if err != nil {
 		return DetailPath{}, err
 	}
-	d := DetailPath{ExecutionDetail: ExecutionDetail{ID: s.ID, Name: s.Name, State: st, CreatedAt: s.CreatedAt, Attempts: s.Attempts}}
+	d := DetailPath{ExecutionDetail: ExecutionDetail{ID: s.ID, Name: s.Name, State: st, CreatedAt: s.CreatedAt, Attempts: s.Attempts + 1}}
 	d.Inputs = inputValues(s.Input, s.Name)
 	if s.Error != nil {
 		d.Error = s.Error.Error()

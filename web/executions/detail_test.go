@@ -166,3 +166,44 @@ func TestExecutionDetailCoreDownIs503(t *testing.T) {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
 	}
 }
+
+// Phase 5, DETAIL: the execution detail shows the stored input values —
+// the values the run used (one line per input of the struct input).
+func TestExecutionDetailShowsInputValues(t *testing.T) {
+	srv := bootedTestServer(t)
+	defer srv.Close()
+
+	resp, err := webtest.PostForm(t, srv.URL+"/run/schedule", map[string][]string{
+		"Name":      {"Ada"},
+		"StartDate": {"2026-02-01"},
+	})
+	if err != nil {
+		t.Fatalf("dispatch schedule: %v", err)
+	}
+	ack := webtest.ReadAll(t, resp)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dispatch schedule: %d", resp.StatusCode)
+	}
+	id := webtest.ExecutionID(t, ack)
+
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no success badge: %d, %s", code, row)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	code, detail := webtest.Get(t, srv.URL+"/executions/"+id)
+	if code != http.StatusOK {
+		t.Fatalf("detail: %d", code)
+	}
+	for _, want := range []string{"Name", "Ada", "StartDate", "2026-02-01"} {
+		if !strings.Contains(detail, want) {
+			t.Fatalf("detail does not contain %q", want)
+		}
+	}
+}

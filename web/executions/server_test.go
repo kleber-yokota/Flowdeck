@@ -9,6 +9,11 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
+
+	// The workflow files register themselves in the env-driven DBOS
+	// context (their init) — the booted tests dispatch through
+	// handleRunDispatch and need the registry populated.
+	_ "flowdeck/workflows"
 )
 
 // testServer builds the httptest server from the given Port: this

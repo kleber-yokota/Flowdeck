@@ -30,7 +30,7 @@ func needCore(t *testing.T) {
 
 func TestRegistrationMatchesSource(t *testing.T) {
 	needCore(t)
-	g, err := graph.New(os.DirFS("../workflows"))
+	g, err := graph.New(os.DirFS("../../workflows"))
 	if err != nil {
 		t.Fatalf("build graph from source: %v", err)
 	}

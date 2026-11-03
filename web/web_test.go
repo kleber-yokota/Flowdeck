@@ -8,6 +8,11 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
+
+	// The workflow files register themselves in the env-driven DBOS
+	// context (their init) — the booted tests dispatch through the
+	// catalog and need the registry populated.
+	_ "flowdeck/workflows"
 )
 
 // okReady is the ready stub: the core is up.
