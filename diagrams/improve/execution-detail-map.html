@@ -33,10 +33,10 @@
         <!-- transitions -->
         <line x1="62" y1="260" x2="104" y2="260" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#em-arrow)"/>
         <line x1="270" y1="260" x2="344" y2="260" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#em-arrow)"/>
-        <path d="M 510 240 V 156 H 624" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#em-arrow)"/>
-        <path d="M 510 280 V 356 H 624" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#em-arrow)"/>
+        <path d="M 430 220 V 156 H 624" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#em-arrow)"/>
+        <path d="M 490 300 V 356 H 624" fill="none" stroke="#b8bcc4" stroke-width="1.2" marker-end="url(#em-arrow)"/>
         <path d="M 190 300 V 400 H 412 V 464" fill="none" stroke="#8f96a3" stroke-width="1.2" marker-end="url(#em-arrow-steel)"/>
-        <line x1="430" y1="300" x2="430" y2="464" stroke="#8f96a3" stroke-width="1.2" marker-end="url(#em-arrow-steel)"/>
+        <line x1="450" y1="300" x2="450" y2="464" stroke="#8f96a3" stroke-width="1.2" marker-end="url(#em-arrow-steel)"/>
         <path d="M 710 392 V 580 H 118 V 306" fill="none" stroke="#ff9142" stroke-width="1.2" marker-end="url(#em-arrow-accent)"/>
         <path d="M 350 506 H 130 V 306" fill="none" stroke="#ff9142" stroke-width="1.2" marker-end="url(#em-arrow-accent)"/>
 
@@ -56,7 +56,7 @@
         <rect x="263" y="407" width="74" height="12" rx="2" fill="#0b0c0e"/>
         <text x="300" y="416" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CANCEL [live]</text>
 
-        <text x="438" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">CANCEL [live]</text>
+        <text x="458" y="384" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">CANCEL [live]</text>
 
         <rect x="300" y="572" width="180" height="12" rx="2" fill="#0b0c0e"/>
         <text x="390" y="581" fill="#ff9142" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">RESUME · RewindWorkflow (cut) [error]</text>
@@ -106,21 +106,21 @@
         <text x="548" y="530" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">polling stops · dot</text>
 
         <!-- ui surface strip -->
-        <text x="24" y="604" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">UI SURFACE (execution-detail.html)</text>
+        <text x="24" y="604" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">UI SURFACE (web/render/templates/execution-detail.html)</text>
         <text x="24" y="622" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">live (queued · running): Cancel button [DONE] · failed: error + failed step · Resume [now works] · cancelled: Resume [NEW]</text>
         <text x="24" y="636" fill="#8f96a3" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace">all states: input · retries · child list (NEW: id → /executions/{id}) · executed path (top-down · groups · child name + badge)</text>
 
         <!-- where applied ledger -->
         <text x="24" y="664" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.12em">WHERE APPLIED (file · function)</text>
-        <text x="24" y="682" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">cancelled badge (5th state) — core/status/state.go (Cancelled · #8f96a3) · web/models.go (badgeFor) · style.css .badge.cancelled</tspan><tspan fill="#46d19a"> — DONE</tspan></text>
-        <text x="24" y="697" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">resume · cancelled — core/resume.go (guard: error | cancelled · CANCELLED → dbos.ResumeWorkflow) · execution-detail.html (button)</tspan><tspan fill="#ff9142"> — NEW</tspan></text>
-        <text x="24" y="712" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">resume · failed (bug.md) — core/resume.go (ERROR → dbos.RewindWorkflow(cut = first failed row)) · web/render.go (NonExistent → 404 · race → 500)</tspan><tspan fill="#7cc0ff"> — CHANGED</tspan></text>
+        <text x="24" y="682" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">cancelled badge (5th state) — core/status/state.go (Cancelled · #8f96a3) · web/executions/badge.go (BadgeFor) · web/static/style.css .badge.cancelled</tspan><tspan fill="#46d19a"> — DONE</tspan></text>
+        <text x="24" y="697" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">resume · cancelled — core/actions/resume.go (guard: error | cancelled · CANCELLED → dbos.ResumeWorkflow) · web/render/templates/execution-detail.html (button)</tspan><tspan fill="#ff9142"> — NEW</tspan></text>
+        <text x="24" y="712" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">resume · failed (bug.md) — core/actions/resume.go (ERROR → dbos.RewindWorkflow(cut = first failed row)) · web/render/render.go (Fail: unknown → 404 · unexpected → 500)</tspan><tspan fill="#7cc0ff"> — CHANGED</tspan></text>
         <text x="24" y="727" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">top-down — web/graph/graph.go (graphLayout: depth → y · leaves → columns · arrows down)</tspan><tspan fill="#7cc0ff"> — CHANGED</tspan></text>
         <text x="24" y="742" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">larger boxes — web/graph/graph.go (graphNodeH 36 → 48 · font 14 → 16 · graphCharW 8.4 → 11 · scale 1.25)</tspan><tspan fill="#7cc0ff"> — CHANGED</tspan></text>
-        <text x="24" y="757" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">child name + id list — core/executions.go (Detail +Children: name · state) · graph box (child name + live badge) · execution-detail.html (id → /executions/{id})</tspan><tspan fill="#ff9142"> — NEW</tspan></text>
+        <text x="24" y="757" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">child name + id list — core/reads/detail.go (Detail +Children: name · state) · graph box (child name + live badge) · web/render/templates/execution-detail.html (id → /executions/{id})</tspan><tspan fill="#ff9142"> — NEW</tspan></text>
         <text x="24" y="772" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">parallel · loop (runtime) — web/graph/graph.go (groupPath: overlap → ∥ · repeated name → ×N · &gt;4 → one box ×N + &lt;title&gt;)</tspan><tspan fill="#ff9142"> — NEW</tspan></text>
         <text x="24" y="787" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">app-version safe — workflow_status.application_version (fact: the AST map never draws executed steps)</tspan><tspan fill="#8f96a3"> — FACT</tspan></text>
-        <text x="24" y="802" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">discovered states — core/mapState (ENQUEUED · DELAYED → queued · MAX_RECOVERY_ATTEMPTS_EXCEEDED → failed · CANCELLED → cancelled)</tspan><tspan fill="#8f96a3"> — FACT</tspan></text>
+        <text x="24" y="802" font-size="7.5" font-family="'Geist Mono', ui-monospace, monospace"><tspan fill="#8f96a3">discovered states — core/reads/status.go (MapState: ENQUEUED · DELAYED → queued · MAX_RECOVERY_ATTEMPTS_EXCEEDED → failed · CANCELLED → cancelled)</tspan><tspan fill="#8f96a3"> — FACT</tspan></text>
 
         <!-- legend strip -->
         <line x1="30" y1="832" x2="930" y2="832" stroke="rgba(232,230,225,0.10)" stroke-width="0.8"/>
@@ -142,7 +142,7 @@
       </svg>
     </div>
 
-    <footer>FlowDeck · diagram-design · improve · 2026-10-31</footer>
+    <footer>FlowDeck · diagram-design · improve · 2026-11-03</footer>
   </div>
 </body>
 </html>

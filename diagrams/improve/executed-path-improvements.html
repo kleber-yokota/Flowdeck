@@ -15,7 +15,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 960 546" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ep-title ep-desc">
         <title id="ep-title">Improve — Executed path (runtime groups · top-down · child name + id)</title>
-        <desc id="ep-desc">The improved executed path for /executions/{id}: the Postgres rows (workflow_status, operation_outputs, child rows by the parent filter) feed core.Steps and core.Detail; a grouping pass in web/graph turns row times and names into runtime parallel groups (overlap of [started_at, completed_at]) and loop groups (repeated step name); the layout is transposed top-down with larger boxes (36 to 48 pixels, font 14 to 16 pixels, scale 1.25); groups render with a parallel outline, a loop arc and count, members beyond four collapse into one annotated box (full list in the title); and in the graph itself a child step renders as a box labeled with the child workflow NAME (read from the child's own workflow_status.name row) plus a live badge — not just "child"; the detail page additionally lists the child workflow ids (link to /executions/{id}). Facts: the seven DBOS statuses map to the five UI states, step rows are written on completion (no step-level running state), and the AST map is valid only when it matches the execution's application_version — the executed path is Postgres-only.</desc>
+        <desc id="ep-desc">The improved executed path for /executions/{id}: the Postgres rows (workflow_status, operation_outputs, child rows by the parent filter) feed core/reads (Steps · Detail); a grouping pass in web/graph turns row times and names into runtime parallel groups (overlap of [started_at, completed_at]) and loop groups (repeated step name); the layout is transposed top-down with larger boxes (36 to 48 pixels, font 14 to 16 pixels, scale 1.25); groups render with a parallel outline, a loop arc and count, members beyond four collapse into one annotated box (full list in the title); and in the graph itself a child step renders as a box labeled with the child workflow NAME (read from the child's own workflow_status.name row) plus a live badge — not just "child"; the detail page additionally lists the child workflow ids (link to /executions/{id}). Facts: the seven DBOS statuses map to the five UI states, step rows are written on completion (no step-level running state), and the AST map is valid only when it matches the execution's application_version — the executed path is Postgres-only.</desc>
         <defs>
           <marker id="ep-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
@@ -181,7 +181,7 @@
       </svg>
     </div>
 
-    <footer>FlowDeck · diagram-design · improve · 2026-10-31</footer>
+    <footer>FlowDeck · diagram-design · improve · 2026-11-03</footer>
   </div>
 </body>
 </html>

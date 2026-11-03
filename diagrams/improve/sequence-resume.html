@@ -134,7 +134,7 @@
         <rect x="36" y="700" width="2.5" height="44" fill="#ff9142"/>
         <text x="48" y="708" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">bug.md — dbos.ResumeWorkflow (v1.7.0) is a silent no-op on ERROR rows: the resume SQL excludes SUCCESS and ERROR</text>
         <text x="48" y="722" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">→ the row stays ERROR → today's ACK reads error → 400 (ErrNotResumable) · the ERROR path moves to dbos.RewindWorkflow</text>
-        <text x="48" y="736" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">(terminal-only · an active row is rejected · success stays guarded · web: NonExistentWorkflowError → 404 · race → 500)</text>
+        <text x="48" y="736" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.02em">(terminal-only · an active row is rejected · success stays guarded · web: unknown id → 404 · unexpected → 500)</text>
 
         <!-- actors -->
         <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
@@ -183,7 +183,7 @@
       </svg>
     </div>
 
-    <footer>FlowDeck · diagram-design · improve · 2026-10-31</footer>
+    <footer>FlowDeck · diagram-design · improve · 2026-11-03</footer>
   </div>
 </body>
 </html>
