@@ -70,6 +70,18 @@
       <p class="path-label">Executed path</p>
       {{template "steps.html" .Steps}}
     </section>
+    {{if .Children}}
+    <!-- The children of the run (task 03): one row per child — the
+         child's name and its id as a link to /executions/{child-id}. -->
+    <section class="children-section">
+      <p class="path-label">Children</p>
+      <ul class="children-list">
+{{range .Children}}
+        <li><a href="/executions/{{ .ID }}">{{ .Name }}</a></li>
+{{end}}
+      </ul>
+    </section>
+    {{end}}
   </main>
 </body>
 </html>

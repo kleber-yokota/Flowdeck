@@ -19,7 +19,9 @@ import (
 // attempts (total: recovery_attempts + 1 — a run on its first attempt is
 // 1; the display renders attempts − 1 recovered failures), the stored
 // input values (phase 5 — the input is written once at enqueue, immutable
-// per workflow_id), and — on failure — the error and the step that failed.
+// per workflow_id), the children (task 03 — one entry per child workflow
+// of the run, sorted by id), and — on failure — the error and the step
+// that failed.
 type ExecutionDetail struct {
 	ID         string
 	Name       string
@@ -27,8 +29,18 @@ type ExecutionDetail struct {
 	CreatedAt  time.Time
 	Attempts   int
 	Inputs     []InputValue
+	Children   []ChildRef
 	Error      string
 	FailedStep string
+}
+
+// ChildRef is one child workflow of the run (task 03): the child id, the
+// child's name, and the child's badge state (the child rows read by the
+// child ids — the same read the step rows use).
+type ChildRef struct {
+	ID    string
+	Name  string
+	State status.State
 }
 
 // InputValue is one stored input value of an execution (the detail shows
@@ -90,7 +102,31 @@ func Detail(workflowID string) (DetailPath, error) {
 		return DetailPath{}, err
 	}
 	d.RunPath = RunPath{State: st, Steps: steps}
+	d.Children, err = childrenOf(c, rows)
+	if err != nil {
+		return DetailPath{}, err
+	}
 	return d, nil
+}
+
+// childrenOf lists the children of the run (task 03): one entry per child
+// workflow, sorted by id (deterministic) — the child rows are the batched
+// query by the child ids (the same read the step rows use).
+func childrenOf(c dbos.Context, rows []dbos.StepInfo) ([]ChildRef, error) {
+	ids := childIDsOf(rows)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	ch, err := childRows(c, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ChildRef, 0, len(ch))
+	for id, child := range ch {
+		out = append(out, ChildRef{ID: id, Name: child.Name, State: child.State})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
 }
 
 // failedStepOf returns the name of the last step that errored ("" when

@@ -207,3 +207,69 @@ func TestExecutionDetailShowsInputValues(t *testing.T) {
 		}
 	}
 }
+
+// The child list (task 03): one row per child — the child's name and its
+// id as a link to /executions/{child-id}.
+func TestExecutionDetailShowsChildList(t *testing.T) {
+	detailer := func(id string) (reads.DetailPath, error) {
+		return reads.DetailPath{
+			ExecutionDetail: reads.ExecutionDetail{
+				ID:        id,
+				Name:      "kitchen",
+				State:     status.Success,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+				Children: []reads.ChildRef{
+					{ID: "child-1", Name: "pipeline", State: status.Success},
+				},
+			},
+			RunPath: reads.RunPath{State: status.Success},
+		}, nil
+	}
+	d := webtest.TestPort()
+	d.Detail = detailer
+	srv := testServer(t, d)
+	defer srv.Close()
+
+	status, body := webtest.Get(t, srv.URL+"/executions/run-children")
+	if status != http.StatusOK {
+		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	}
+	for _, want := range []string{
+		"pipeline",
+		`<a href="/executions/child-1">`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page does not contain %q", want)
+		}
+	}
+}
+
+// A run without children: the child list does not render at all (no
+// child id row).
+func TestExecutionDetailNoChildListWithoutChildren(t *testing.T) {
+	detailer := func(id string) (reads.DetailPath, error) {
+		return reads.DetailPath{
+			ExecutionDetail: reads.ExecutionDetail{
+				ID:        id,
+				Name:      "wf-alpha",
+				State:     status.Success,
+				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
+				Attempts:  1,
+			},
+			RunPath: reads.RunPath{State: status.Success},
+		}, nil
+	}
+	d := webtest.TestPort()
+	d.Detail = detailer
+	srv := testServer(t, d)
+	defer srv.Close()
+
+	status, body := webtest.Get(t, srv.URL+"/executions/run-no-children")
+	if status != http.StatusOK {
+		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	}
+	if strings.Contains(body, `<a href="/executions/`) {
+		t.Errorf("page without children must have no child id row: %q", body)
+	}
+}

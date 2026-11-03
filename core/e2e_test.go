@@ -115,3 +115,28 @@ func TestE2EStepsOfBranchedRun(t *testing.T) {
 		t.Fatalf("decide left steps: got %v", got)
 	}
 }
+
+// The children of a kitchen run on Postgres (the Postgres twin of
+// TestDetailChildrenOfChildDispatchingRun): the detail lists the child
+// pipeline with its id and badge state.
+func TestE2EDetailChildrenOfKitchenRun(t *testing.T) {
+	testcore.NeedCore(t)
+	ex, err := actions.Enqueue("kitchen", "FlowDeck")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+	d, err := reads.Detail(ex.ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if len(d.Children) != 1 {
+		t.Fatalf("children: got %v, want exactly one", d.Children)
+	}
+	c := d.Children[0]
+	if c.ID == "" || c.Name != "pipeline" || c.State != status.Success {
+		t.Fatalf("child: got %+v, want pipeline (success)", c)
+	}
+}

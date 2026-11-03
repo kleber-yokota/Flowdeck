@@ -10,13 +10,36 @@ import (
 
 // executionDetail is the data for the execution detail full page: the
 // badge (polling while live), the first execution date, the stored input
-// values, the attempts, and — on failure — the error and the failed step.
+// values, the attempts, the children (task 03 — one row per child, the
+// child list shadows the core field with the template view), and — on
+// failure — the error and the failed step.
 type executionDetail struct {
 	reads.ExecutionDetail
-	Badge   Badge
-	Retries []retry
-	Steps   stepsView
-	Title   string
+	Badge    Badge
+	Retries  []retry
+	Steps    stepsView
+	Children []childView
+	Title    string
+}
+
+// childView is the template view of one child workflow of the run
+// (task 03): the id, the child's name, the badge state as a string.
+type childView struct {
+	ID    string
+	Name  string
+	State string
+}
+
+// childViews maps the core child refs onto the template view.
+func childViews(refs []reads.ChildRef) []childView {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]childView, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, childView{ID: ref.ID, Name: ref.Name, State: string(ref.State)})
+	}
+	return out
 }
 
 // retry is one row of the attempts list (attempts − 1: the recovered
@@ -53,6 +76,7 @@ func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) 
 		Badge:           BadgeFor(id, d.ExecutionDetail.State),
 		Retries:         retriesFor(d.Attempts),
 		Steps:           newStepsView(id, d.RunPath),
+		Children:        childViews(d.ExecutionDetail.Children),
 		Title:           "Execution " + id,
 	})
 }

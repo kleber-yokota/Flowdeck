@@ -82,6 +82,34 @@ func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 	}
 }
 
+// The children of a child-dispatching run (task 03): Detail lists one
+// entry per child workflow (the child id, the child's name, the child's
+// badge state) — the read model the detail page's child list renders.
+func TestDetailChildrenOfChildDispatchingRun(t *testing.T) {
+	testcore.NeedCore(t)
+	ex, err := actions.Enqueue("kitchen", "FlowDeck")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
+	}
+	d, err := reads.Detail(ex.ID)
+	if err != nil {
+		t.Fatalf("Detail: %v", err)
+	}
+	if len(d.Children) != 1 {
+		t.Fatalf("children: got %v, want exactly one", d.Children)
+	}
+	c := d.Children[0]
+	if c.ID == "" {
+		t.Fatal("child without an id")
+	}
+	if c.Name != "pipeline" || c.State != status.Success {
+		t.Fatalf("child: got %s (%s), want pipeline (success)", c.Name, c.State)
+	}
+}
+
 // A run the core does not know errors with ErrUnknownExecution (the web
 // maps it to a 404).
 func TestDetailOfUnknownExecution(t *testing.T) {
