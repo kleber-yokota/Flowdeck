@@ -33,6 +33,7 @@ func TestPort() core.Port {
 		Detail:     okDetail,
 		Resume:     okResumer,
 		Cancel:     okCanceller,
+		Live:       okLive,
 	}
 }
 
@@ -79,6 +80,12 @@ func okResumer(id string) (reads.Execution, error) {
 
 func okCanceller(id string) (reads.Execution, error) {
 	return reads.Execution{ID: id, State: status.Cancelled}, nil
+}
+
+// okLive is the live stub: three non-zero counts (a test that asserts
+// the partial overrides Live with its own counts).
+func okLive() (reads.Live, error) {
+	return reads.Live{Running: 1, Queued: 2, Failed: 3}, nil
 }
 
 // Get issues a GET and returns the status code and the body as a string.
