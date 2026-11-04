@@ -1,25 +1,36 @@
 /*
- * FlowDeck — single stylesheet for all full pages.
+ * FlowDeck — the single stylesheet: the v6.3 console (the index).
  *
- * The design tokens follow the diagrams palette (AGENTS.md); the five badge
- * states (queued/running/success/failed/cancelled) must stay in sync with
- * diagrams/.
- * Partials (badge, workflows, execution rows) need no styles of their own:
- * they are always swapped into a full page that loads this file.
+ * Petrol chrome (pinned); the status palette is fixed (the badge contract —
+ * the v6.3 mockup hexes are overridden). Root 20px (1.25×). The old pages
+ * (workflow · executions · status) keep their classes unstyled until each
+ * page is re-implanted (the ledger row: "classes antigas ficam
+ * indefinidas até re-implantação").
  */
 
 :root {
-  --paper:  #0b0c0e;
-  --ink:    #e8e6e1;
-  --steel:  #b8bcc4;
-  --soft:   #8f96a3;
-  --accent: #ff9142;
+  /* Petrol chrome (pinned) */
+  --paper:   #060d0c;
+  --panel:   #0b1514;
+  --panel-2: #101d1b;
+  --line:    #172725;
+  --line-2:  #223835;
+  --ink:     #ddebe9;
+  --steel:   #93b8b4;
+  --soft:    #5d817d;
+  --accent:  #45d6b5;
+  --maxw:    1188px;
+  --r-soft:  12px;
+
+  /* Status palette (fixed — the badge contract, same hexes as the diagrams) */
   --queued:    #7cc0ff;
   --running:   #ff9142;
   --success:   #46d19a;
   --error:     #ff5450;
   --cancelled: #8f96a3;
 }
+
+html { font-size: 20px; }
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -28,313 +39,117 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: "Geist", system-ui, sans-serif;
+  line-height: 1.5;
 }
 
-.frame { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+/* The console (the index) */
+.frame {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
 
-/* The workflow page is wider: the executions column and the paths graph
-   sit side by side */
-.wide { max-width: 1200px; }
-
-.eyebrow {
+/* The console line (the title string, reused) */
+.cmd {
   font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--soft);
-  margin: 0 0 0.5rem;
-}
-
-.back { color: var(--soft); text-decoration: none; }
-
-h1 {
-  font-size: 1.6rem;
-  font-weight: 500;
   margin: 0 0 1.5rem;
-  color: var(--ink);
 }
 
-/* Badge — the five states of the workflow (same colors as the diagrams);
-   terminal states (success/failed/cancelled) show a dot */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  color: var(--queued);
-  background: rgba(124, 192, 255, 0.08);
-  border: 1px solid var(--queued);
-  border-radius: 999px;
-  padding: 0.25rem 0.6rem;
-  white-space: nowrap;
-}
-
-/* The five states of the badge — same colors as the diagrams */
-.badge.running { color: var(--running); background: rgba(255, 145, 66, 0.08); border-color: var(--running); }
-.badge.success { color: var(--success); background: rgba(70, 209, 154, 0.08); border-color: var(--success); }
-.badge.error { color: var(--error); background: rgba(255, 84, 80, 0.08); border-color: var(--error); }
-.badge.cancelled { color: var(--cancelled); background: rgba(143, 150, 163, 0.08); border-color: var(--cancelled); }
-
-/* Terminal states (success/failed/cancelled) show a dot */
-.badge.terminal::before {
-  content: "";
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-/* Index page — the workflows registered in the core (phase 1) */
-.list { list-style: none; margin: 0; padding: 0; }
-
-.item {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.5rem;
-  background: #101114;
-  border: 1px solid rgba(184, 188, 196, 0.35);
-  border-radius: 6px;
-}
-
-.name { font-weight: 600; }
-
-a.name { color: inherit; text-decoration: none; }
-
-.empty { color: var(--soft); }
-
-/* Workflow page — the dispatch button and the runs of the workflow
-   (phase 3, LIST) */
-.run {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-  background: rgba(255, 145, 66, 0.08);
-  border: 1px solid rgba(255, 145, 66, 0.55);
-  border-radius: 4px;
-  padding: 0.35rem 0.7rem;
-  cursor: pointer;
-}
-
-.run:hover { background: rgba(255, 145, 66, 0.18); }
-
-/* The parameter form on top of the workflow page (phase 5, DISPLAY) —
-   the workflow's input (editable) and the Run submit */
-.params {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0 0 0.5rem;
-}
-
-/* Phase 5, DISPLAY: one form item per input, as key: value — the input
-   name is the key (its own case, no uppercase), the prefilled default
-   value is the value. */
-.params label {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.7rem;
-  color: var(--soft);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.params input {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.8rem;
-  color: var(--ink);
-  background: rgba(255, 145, 66, 0.08);
-  border: 1px solid rgba(255, 145, 66, 0.55);
-  border-radius: 4px;
-  padding: 0.35rem 0.55rem;
-  width: 14rem;
-}
-
-/* Workflow page — two columns: executions (left) and the generated graph
-   (right, phase 4, STEP 2) */
-.columns {
+/* The live boxes (the partial: the three counts, polled every 5s) */
+#live {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  align-items: start;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.col-label {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--soft);
-  margin: 0 0 0.5rem;
-}
-
-@media (max-width: 600px) {
-  .columns { grid-template-columns: 1fr; }
-}
-
-/* The generated graph (phase 4, STEP 2, overview): steps are nodes, each
-   continuation is an arrow and the if forks the branches — the common
-   prefix is drawn once */
-.graph svg { display: block; max-width: 100%; height: auto; }
-
-.g-edge { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
-.g-node { fill: #101114; stroke: var(--steel); stroke-opacity: 0.35; }
-/* Executed path (phase 4, STEP 3): the same graph, with the single row of
-   the steps that ran — the nodes are colored by the step's state
-   (success/failed; every executed step is terminal) */
-.g-node.queued { stroke: var(--queued); stroke-opacity: 0.8; }
-.g-node.running { stroke: var(--running); stroke-opacity: 0.8; }
-.g-node.success { stroke: var(--success); stroke-opacity: 0.8; }
-.g-node.error { stroke: var(--error); stroke-opacity: 0.8; }
-.g-node.cancelled { stroke: var(--cancelled); stroke-opacity: 0.8; }
-.g-text {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 16px;
-  fill: var(--ink);
-}
-.g-arrow { fill: var(--soft); fill-opacity: 0.55; }
-
-/* The block-DAG (the possible-paths model): the blocks are level outlines
-   (the violet ramp L0·L1·L2), the nodes are boxes with a per-type
-   representation (the loop · child · wait symbols) */
-.g-block { fill: none; stroke-width: 1.5; stroke-opacity: 0.7; }
-.g-block.l0 { stroke: #ddd6fe; }
-.g-block.l1 { stroke: #a78bfa; }
-.g-block.l2 { stroke: #7c3aed; }
-.loop-symbol path { stroke: var(--steel); stroke-opacity: 0.55; fill: none; }
-.loop-symbol polygon { fill: var(--steel); fill-opacity: 0.55; }
-.child-ring { fill: none; stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
-.child-dot { fill: var(--soft); fill-opacity: 0.55; }
-.wait-symbol circle { fill: var(--soft); fill-opacity: 0.55; }
-.async-symbol path { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 2; }
-
-.executions { list-style: none; margin: 0; padding: 0; }
-
-.execution {
+.box {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap; /* the row wraps before the page stacks (narrow screens) */
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.5rem;
-  background: #101114;
-  border: 1px solid rgba(184, 188, 196, 0.35);
-  border-radius: 6px;
-}
-
-.wf-id {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.7rem;
-  color: var(--steel);
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-soft);
+  color: var(--ink);
   text-decoration: none;
 }
 
-.wf-id:hover { color: var(--ink); text-decoration: underline; }
+.box:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
 
-.exec-date {
+.count {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.label {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
+/* The wall (the partial: the registered names, 20 per page) */
+.wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tile {
+  display: block;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.tile:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+
+/* The pager ("{start}–{end} de {total}" + prev/next) */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   font-family: ui-monospace, "Geist Mono", monospace;
   font-size: 0.7rem;
+}
+
+.pager a {
   color: var(--soft);
-  margin-left: auto;
-  white-space: nowrap;
+  text-decoration: none;
 }
 
-/* Execution detail page (phase 3, DETAIL) */
-.execution-id {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 1.05rem;
-  word-break: break-all;
-}
+.pager a:hover { color: var(--ink); }
 
-.first-run, .attempts-count {
+.info { color: var(--soft); }
+
+/* The empty state (no workflows registered) */
+.empty {
+  color: var(--soft);
   font-family: ui-monospace, "Geist Mono", monospace;
   font-size: 0.75rem;
-  color: var(--soft);
-  margin: 0 0 0.5rem;
 }
 
-.first-run { margin-top: 1.5rem; }
-
-/* Phase 5, DETAIL: the stored input values (the values the run used). */
-.input-values {
-  list-style: none;
-  margin: 0 0 1rem;
-  padding: 0;
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.75rem;
-  color: var(--soft);
-}
-
-.input-values li { padding: 0.25rem 0; }
-
-.input-values code { color: var(--ink); }
-
-.attempts { list-style: none; margin: 0 0 1.5rem; padding: 0; }
-
-.attempt {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.75rem;
-  padding: 0.4rem 0.75rem;
-  background: #101114;
-  border: 1px solid rgba(184, 188, 196, 0.35);
-  border-radius: 6px;
-  margin-bottom: 0.5rem;
-}
-
-.attempt.queued { color: var(--queued); }
-.attempt.running { color: var(--running); }
-.attempt.success { color: var(--success); }
-.attempt.error { color: var(--error); }
-
-/* Failure: error + the step that failed (diagram sequence-phase-3) */
-.failure {
-  background: rgba(255, 84, 80, 0.08);
-  border: 1px solid rgba(255, 84, 80, 0.55);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-}
-
-.failure-title {
+/* The hint (the poll and the page size) */
+.hint {
   font-family: ui-monospace, "Geist Mono", monospace;
   font-size: 0.65rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--error);
-  margin: 0 0 0.5rem;
-}
-
-.error {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.75rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 0 0 0.5rem;
-}
-
-.failed-step { margin: 0; }
-
-.failed-step code {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.75rem;
-  color: var(--error);
-}
-
-/* Executed path (phase 4, STEP 3) — the section on the detail page */
-.executed-path-section { margin-top: 1.5rem; }
-
-.path-label {
-  font-family: ui-monospace, "Geist Mono", monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
   color: var(--soft);
-  margin: 0 0 0.5rem;
+  margin-top: 1.5rem;
 }
-
-.executed-path svg { display: block; max-width: 100%; height: auto; }
