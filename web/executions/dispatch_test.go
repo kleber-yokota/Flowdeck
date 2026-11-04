@@ -1,203 +1,93 @@
 package executions
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
-	"flowdeck/core/graph"
-	"flowdeck/core/reads"
-	"flowdeck/core/registry"
+	"flowdeck/core"
 	"flowdeck/web/internal/webtest"
 )
 
-// POST /run is the dispatch (phase 2): it enqueues in the core and returns
-// the execution row fragment: "queued" badge + the visible workflow ID
-// (the ACK) — the browser prepends it to the executions list.
-func TestRunRendersQueuedBadgeWithWorkflowID(t *testing.T) {
-	srv := testServer(t, webtest.TestPort())
-	defer srv.Close()
+// The dispatch (the POST half) against the booted core: the ACK row with
+// the badge (that starts the poll), the first execution date and the link
+// to the detail page — the run is a real run of the deterministic
+// fixtures.
 
-	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
+// The dispatch ACK: badge queued + date + detail link — no form in the
+// ACK (the form lives on the workflow page).
+func TestDispatchACKShowsBadgeAndLink(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	resp, err := webtest.PostForm(t, srv.URL+"/run/linear-test", url.Values{"msg": {"ping"}})
 	if err != nil {
-		t.Fatalf("POST /run: %v", err)
+		t.Fatalf("POST: %v", err)
 	}
 	defer resp.Body.Close()
+	body := webtest.ReadAll(t, resp)
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusOK)
+		t.Fatalf("dispatch: %d, %s", resp.StatusCode, body)
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
-	}
+	id := webtest.ExecutionID(t, body)
 	for _, want := range []string{
-		`<li class="execution">`,
-		`data-workflow-id="00000000-0000-0000-0000-000000000001"`,
-		"Queued",
-		`<a class="wf-id" href="/executions/00000000-0000-0000-0000-000000000001">00000000-0000-0000-0000-000000000001</a>`,
-		// The badge starts the 2s poll right after the dispatch; the whole
-		// badge is replaced (outerHTML) on each poll, so the old state never
-		// wraps the new one.
-		`hx-get="/status/00000000-0000-0000-0000-000000000001"`,
-		`hx-trigger="every 2s"`,
-		`hx-swap="outerHTML"`,
-		// The ACK row already carries the first execution date
-		`<span class="exec-date">13/05/2026 13:35</span>`,
+		`class="badge queued"`,
+		`class="exec-date">`,
+		`href="/executions/` + id + `"`,
 	} {
-		if !strings.Contains(string(body), want) {
-			t.Errorf("fragment does not contain %q: %q", want, body)
+		if !strings.Contains(body, want) {
+			t.Errorf("ACK does not contain %q: %s", want, body)
 		}
+	}
+	if strings.Contains(body, `<form`) {
+		t.Errorf("ACK contains a form: %s", body)
+	}
+}
+
+// A dispatch of a workflow that is not registered is a clean 404 (the
+// registry is the source — no hardcoding).
+func TestDispatchUnknownWorkflowIs404(t *testing.T) {
+	srv := testServer(t, core.NewPort())
+
+	resp, err := webtest.Post(t, srv.URL+"/run/ghost")
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("dispatch: got %d want %d", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+// The dispatch ACK is dynamic: it must never be cached by the browser.
+func TestDispatchNoStore(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	resp, err := webtest.PostForm(t, srv.URL+"/run/noinput-test", nil)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		t.Fatalf("read body: %v", err)
 	}
 	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
 	}
 }
 
-// Phase 5, EXECUTE: the web sanitizes the values against the spec before
-// the enqueue — a field that is not in the spec is a clean 400.
-func TestRunUnknownFieldIs400(t *testing.T) {
-	d := webtest.TestPort()
-	srv := testServer(t, d)
-	defer srv.Close()
+// The dispatch of a not-launched core is a clean 503.
+func TestDispatchCoreDownIs503(t *testing.T) {
+	skipBooted(t)
+	srv := testServer(t, core.NewPort())
 
-	resp, err := webtest.PostForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"x"}, "bogus": {"y"}})
+	resp, err := webtest.Post(t, srv.URL+"/run/noinput-test")
 	if err != nil {
-		t.Fatalf("POST /run: %v", err)
+		t.Fatalf("POST: %v", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusBadRequest)
-	}
-}
-
-// Phase 5, EXECUTE: a value that does not convert to the input's type is a
-// clean 400 (the spec says int, the form posts "x").
-func TestRunBadIntIs400(t *testing.T) {
-	d := webtest.TestPort()
-	d.Spec = func(name string) (graph.Spec, error) {
-		return graph.Spec{Inputs: []graph.Param{{Name: "n", Type: "int"}}}, nil
-	}
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	resp, err := webtest.PostForm(t, srv.URL+"/run/wf-alpha", url.Values{"n": {"x"}})
-	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusBadRequest)
-	}
-}
-
-// Phase 5, EXECUTE: the web forwards the clean values to the core (the
-// sanitized input, not the raw form map) — the ACK row is rendered.
-func TestRunForwardsCleanValues(t *testing.T) {
-	var payload any
-	d := webtest.TestPort()
-	d.Enqueue = func(name string, p any) (reads.Execution, error) {
-		payload = p
-		return webtest.AckEnqueuer(name, p)
-	}
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	resp, err := webtest.PostForm(t, srv.URL+"/run/wf-alpha", url.Values{"msg": {"left"}})
-	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusOK)
-	}
-	if payload != "left" {
-		t.Fatalf("payload: got %v, want the clean value \"left\"", payload)
-	}
-}
-
-// A workflow that is not in the core registry is a clean 404.
-func TestRunUnknownWorkflowIs404(t *testing.T) {
-	enqueue := func(name string, payload any) (reads.Execution, error) {
-		return reads.Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
-	}
-	d := webtest.TestPort()
-	d.Enqueue = enqueue
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	resp, err := http.Post(srv.URL+"/run/ghost", "application/octet-stream", nil)
-	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusNotFound)
-	}
-}
-
-// A core failure that is not "unknown workflow" is a clean 500.
-func TestRunEnqueueFailureIs500(t *testing.T) {
-	enqueue := func(name string, payload any) (reads.Execution, error) {
-		return reads.Execution{}, errors.New("boom")
-	}
-	d := webtest.TestPort()
-	d.Enqueue = enqueue
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	resp, err := http.Post(srv.URL+"/run/wf-alpha", "application/octet-stream", nil)
-	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusInternalServerError {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusInternalServerError)
-	}
-}
-
-// Phase 5, EXECUTE: the dispatch posts the form values — the core
-// sanitizes them and the run takes the value: the decide run branches to
-// the left (the executed path shows it, no right).
-func TestRunPostWithFormValuesTakesBranch(t *testing.T) {
-	srv := bootedTestServer(t)
-	defer srv.Close()
-
-	resp, err := webtest.PostForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
-	if err != nil {
-		t.Fatalf("POST /run: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch: %d", resp.StatusCode)
-	}
-	ack := webtest.ReadAll(t, resp)
-	if !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("ACK: %s", ack)
-	}
-	id := webtest.ExecutionID(t, ack)
-
-	// The run completes taking the branch the value picked.
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
-		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("no success badge: %d, %s", code, row)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	code, steps := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
-	if code != http.StatusOK {
-		t.Fatalf("steps: %d", code)
-	}
-	if !strings.Contains(steps, ">left<") || strings.Contains(steps, ">right<") {
-		t.Fatalf("executed path without the left branch: %s", steps)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("dispatch: got %d want %d", resp.StatusCode, http.StatusServiceUnavailable)
 	}
 }

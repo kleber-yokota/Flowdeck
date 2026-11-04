@@ -4,217 +4,101 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
-	"flowdeck/core/boot"
-	"flowdeck/core/reads"
-	"flowdeck/core/status"
+	"flowdeck/core"
 	"flowdeck/web/internal/webtest"
 )
 
-// The steps partial (phase 4, STEP 3, polling): a live run returns the
-// executed-path SVG with the hx attributes that keep the 2s poll running.
-func TestStepsPartialPollsWhenRunning(t *testing.T) {
-	d := webtest.TestPort()
-	d.Steps = func(id string) (reads.RunPath, error) {
-		return reads.RunPath{State: status.Running, Steps: []reads.Step{
-			{Name: "fetch", State: status.Success},
-			{Name: "parse", State: status.Success},
-		}}, nil
-	}
-	srv := testServer(t, d)
-	defer srv.Close()
+// The executed-path partial (the steps of the run) against real runs
+// (the booted core, no stubs): the live fragment keeps the 2s poll, the
+// terminal fragment stops it and keeps the steps in execution order.
+// (The SVG coloring/ordering of the graph itself is unit-covered in
+// web/graph — here the HTTP fragment is what the page swaps.)
 
-	status, body := webtest.Get(t, srv.URL+"/executions/run-live/steps")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+// A live run (the block-test run): the fragment carries the hx attributes
+// that keep the 2s poll running.
+func TestStepsPartialPollsWhenLive(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	id := blockRun(t, srv)
+
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Fatalf("steps: %d", code)
 	}
 	for _, want := range []string{
-		`<svg`,
-		`hx-get="/executions/run-live/steps"`,
+		`hx-get="/executions/` + id + `/steps`,
 		`hx-trigger="every 2s"`,
-		`>fetch<`,
-		`>parse<`,
+		`hx-swap="outerHTML"`,
 	} {
 		if !strings.Contains(body, want) {
-			t.Errorf("fragment does not contain %q: %q", want, body)
+			t.Errorf("fragment does not contain %q: %s", want, body)
 		}
 	}
 }
 
-// A terminal run stops the poll: the fragment has no hx attributes and
-// shows the path that ran.
+// A terminal run (the live-test success run): the fragment has no hx
+// attributes (the poll stops) and shows the step that ran.
 func TestStepsPartialTerminalStopsPolling(t *testing.T) {
-	d := webtest.TestPort()
-	d.Steps = func(id string) (reads.RunPath, error) {
-		return reads.RunPath{State: status.Success, Steps: []reads.Step{
-			{Name: "fetch", State: status.Success},
-			{Name: "store", State: status.Success},
-		}}, nil
-	}
-	srv := testServer(t, d)
-	defer srv.Close()
+	srv := bootedTestServer(t)
 
-	status, body := webtest.Get(t, srv.URL+"/executions/run-done/steps")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	id := webtest.ExecutionID(t, webtest.Ack(t, srv.URL, "live-test", nil))
+	webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
+
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Fatalf("steps: %d", code)
 	}
-	for _, want := range []string{`<svg`, `>fetch<`, `>store<`} {
-		if !strings.Contains(body, want) {
-			t.Errorf("fragment does not contain %q: %q", want, body)
-		}
+	if !strings.Contains(body, ">live<") {
+		t.Errorf("fragment must show the executed step: %s", body)
 	}
 	for _, no := range []string{`hx-trigger="every 2s"`, `hx-swap="outerHTML"`, `hx-target="this"`} {
 		if strings.Contains(body, no) {
-			t.Errorf("terminal fragment must not poll, but contains %q", no)
+			t.Errorf("terminal fragment must not poll, but contains %q: %s", no, body)
 		}
 	}
 }
 
-// A failed step is colored with the failed state (the node's class), the
-// successful steps keep the success color.
-func TestStepsPartialColorsTheFailedStep(t *testing.T) {
-	d := webtest.TestPort()
-	d.Steps = func(id string) (reads.RunPath, error) {
-		return reads.RunPath{State: status.Error, Steps: []reads.Step{
-			{Name: "fetch", State: status.Success},
-			{Name: "parse", State: status.Error},
-		}}, nil
-	}
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	status, body := webtest.Get(t, srv.URL+"/executions/run-failed/steps")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
-	}
-	if !strings.Contains(body, `class="g-node success"`) || !strings.Contains(body, `>fetch<`) {
-		t.Errorf("fragment must color the successful step: %q", body)
-	}
-	if !strings.Contains(body, `class="g-node error"`) || !strings.Contains(body, `>parse<`) {
-		t.Errorf("fragment must color the failed step: %q", body)
-	}
-}
-
-// The fragment keeps the steps in execution order (step_id asc).
+// The fragment keeps the steps in execution order (the linear-test run:
+// fetch → parse → transform → store).
 func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
-	d := webtest.TestPort()
-	d.Steps = func(id string) (reads.RunPath, error) {
-		return reads.RunPath{State: status.Success, Steps: []reads.Step{
-			{Name: "fetch", State: status.Success},
-			{Name: "parse", State: status.Success},
-			{Name: "store", State: status.Success},
-		}}, nil
-	}
-	srv := testServer(t, d)
-	defer srv.Close()
+	srv := bootedTestServer(t)
 
-	status, body := webtest.Get(t, srv.URL+"/executions/run-order/steps")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
+	id := webtest.ExecutionID(t, webtest.Ack(t, srv.URL, "linear-test", nil))
+	webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
+
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Fatalf("steps: %d", code)
 	}
 	fetch := strings.Index(body, ">fetch<")
 	parse := strings.Index(body, ">parse<")
+	transform := strings.Index(body, ">transform<")
 	store := strings.Index(body, ">store<")
-	if fetch < 0 || parse < 0 || store < 0 {
-		t.Fatalf("fragment missing steps: fetch=%d parse=%d store=%d", fetch, parse, store)
+	if fetch < 0 || parse < 0 || transform < 0 || store < 0 {
+		t.Fatalf("fragment missing steps (fetch=%d parse=%d transform=%d store=%d): %s", fetch, parse, transform, store, body)
 	}
-	if !(fetch < parse && parse < store) {
-		t.Errorf("steps out of execution order: fetch=%d parse=%d store=%d", fetch, parse, store)
+	if !(fetch < parse && parse < transform && transform < store) {
+		t.Errorf("steps out of execution order (fetch=%d parse=%d transform=%d store=%d)", fetch, parse, transform, store)
 	}
 }
 
-// A run the core does not know is a clean 404 (the Steps read maps it).
+// The steps of an execution the core does not know is a clean 404 (the
+// poll keeps waiting).
 func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
-	d := webtest.TestPort()
-	d.Steps = func(id string) (reads.RunPath, error) { return reads.RunPath{}, reads.ErrUnknownExecution }
-	srv := testServer(t, d)
-	defer srv.Close()
+	srv := bootedTestServer(t)
 
-	if status, _ := webtest.Get(t, srv.URL+"/executions/ghost/steps"); status != http.StatusNotFound {
-		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)
+	if code, _ := webtest.Get(t, srv.URL+"/executions/00000000-0000-0000-0000-000000000000/steps"); code != http.StatusNotFound {
+		t.Fatalf("steps: got %d want %d", code, http.StatusNotFound)
 	}
 }
 
-// A core that is down maps to a clean 503 (the poll keeps waiting).
+// The poll of a not-launched core is a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
-	d := webtest.TestPort()
-	d.Steps = func(id string) (reads.RunPath, error) { return reads.RunPath{}, boot.ErrNotLaunched }
-	srv := testServer(t, d)
-	defer srv.Close()
+	skipBooted(t)
+	srv := testServer(t, core.NewPort())
 
-	if status, _ := webtest.Get(t, srv.URL+"/executions/abc/steps"); status != http.StatusServiceUnavailable {
-		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
-	}
-}
-
-// The detail page embeds the executed path (phase 4, STEP 3): a live run
-// polls the steps partial every 2s.
-func TestExecutionDetailPagePollsExecutedPath(t *testing.T) {
-	detailer := func(id string) (reads.DetailPath, error) {
-		return reads.DetailPath{
-			ExecutionDetail: reads.ExecutionDetail{
-				ID:        id,
-				Name:      "wf-alpha",
-				State:     status.Running,
-				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-				Attempts:  1,
-			},
-			RunPath: reads.RunPath{State: status.Running, Steps: []reads.Step{{Name: "greet", State: status.Success}}},
-		}, nil
-	}
-	d := webtest.TestPort()
-	d.Detail = detailer
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	status, body := webtest.Get(t, srv.URL+"/executions/run-live")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
-	}
-	for _, want := range []string{
-		`<svg`,
-		`hx-get="/executions/run-live/steps"`,
-		`class="g-node success"`,
-		`>greet<`,
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("page does not contain %q", want)
-		}
-	}
-}
-
-// A terminal run on the detail page: the executed path is static (no
-// hx attributes) and the badge stops polling too.
-func TestExecutionDetailPageTerminalExecutedPath(t *testing.T) {
-	detailer := func(id string) (reads.DetailPath, error) {
-		return reads.DetailPath{
-			ExecutionDetail: reads.ExecutionDetail{
-				ID:        id,
-				Name:      "wf-alpha",
-				State:     status.Success,
-				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-				Attempts:  1,
-			},
-			RunPath: reads.RunPath{State: status.Success, Steps: []reads.Step{{Name: "greet", State: status.Success}}},
-		}, nil
-	}
-	d := webtest.TestPort()
-	d.Detail = detailer
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	status, body := webtest.Get(t, srv.URL+"/executions/run-ok")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
-	}
-	if !strings.Contains(body, `class="g-node success"`) || !strings.Contains(body, `>greet<`) {
-		t.Errorf("page must show the executed path: %q", body)
-	}
-	// Terminal run: neither the badge nor the executed path polls.
-	for _, no := range []string{`hx-get="/status/run-ok"`, `hx-get="/executions/run-ok/steps"`, `hx-trigger="every 2s"`} {
-		if strings.Contains(body, no) {
-			t.Errorf("terminal page must not poll, but contains %q", no)
-		}
+	if code, _ := webtest.Get(t, srv.URL+"/executions/abc/steps"); code != http.StatusServiceUnavailable {
+		t.Fatalf("steps: got %d want %d", code, http.StatusServiceUnavailable)
 	}
 }

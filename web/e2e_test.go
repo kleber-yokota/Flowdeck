@@ -15,17 +15,16 @@ import (
 	"flowdeck/web/internal/webtest"
 )
 
-// E2E (against the real Postgres 18 of the e2e job): the full stack on the
-// production database engine — the env-driven core, the web rendering, and
-// a dispatch that the DBOS executor picks off the queue and runs to
-// success. Packages run with -p 1 so only one executor polls the queue at a
-// time.
+// E2E (against the real database of the e2e job: a SQLite file — the
+// booted core, the web rendering, and a dispatch that the DBOS executor
+// picks off the queue and runs to success). Packages run with -p 1 so only
+// one executor polls the queue at a time.
 func TestE2EDispatchRunsToSuccess(t *testing.T) {
 	needCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := webtest.Post(t, srv.URL+"/run/hello-world")
+	resp, err := webtest.Post(t, srv.URL+"/run/live-test")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
@@ -48,15 +47,15 @@ func TestE2EDispatchRunsToSuccess(t *testing.T) {
 	}
 }
 
-// Phase 5, E2E: the dispatch posts the form values — the web sanitizes
-// them and the run takes the value on Postgres (the decide run branches to
-// the left, the executed path shows it).
+// The dispatch posts the form values — the web sanitizes them and the run
+// takes the value (the fork-test run branches to the left, the executed
+// path shows it).
 func TestE2EFormDispatchTakesBranch(t *testing.T) {
 	needCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := webtest.PostForm(t, srv.URL+"/run/decide", url.Values{"msg": {"left"}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/fork-test", url.Values{"msg": {"left"}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -86,8 +85,7 @@ func TestE2EFormDispatchTakesBranch(t *testing.T) {
 	}
 }
 
-// Phase 5, RESUME, E2E: the resume of an id that is not known by the core
-// is a clean 404 on Postgres.
+// The resume of an id that is not known by the core is a clean 404.
 func TestE2EResumeUnknownIs404(t *testing.T) {
 	needCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
@@ -103,15 +101,15 @@ func TestE2EResumeUnknownIs404(t *testing.T) {
 	}
 }
 
-// The executed path of a run, as the execution page polls it (phase 4,
-// STEP 3, E2E): the steps appear as they execute, the poll reaches the
-// terminal state, and the detail page shows the badge of the finished run.
+// The executed path of a run, as the execution page polls it: the steps
+// appear as they execute, the poll reaches the terminal state, and the
+// detail page shows the badge of the finished run.
 func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 	needCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := webtest.Post(t, srv.URL+"/run/pipeline")
+	resp, err := webtest.Post(t, srv.URL+"/run/linear-test")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
@@ -146,15 +144,15 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 	}
 }
 
-// Phase 5, E2E, EXECUTE: the dispatch trims the form values before the
-// enqueue (the web sanitizes) — the spaces-only value reaches the workflow
-// as the zero value: the decide run branches to the right.
+// The dispatch trims the form values before the enqueue (the web
+// sanitizes) — the spaces-only value reaches the workflow as the zero
+// value: the fork-test run branches to the right.
 func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 	needCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	resp, err := webtest.PostForm(t, srv.URL+"/run/decide", url.Values{"msg": {"   "}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/fork-test", url.Values{"msg": {"   "}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -184,8 +182,8 @@ func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 	}
 }
 
-// Phase 5, E2E: a value carrying HTML dispatches cleanly and the rendered
-// pages never carry the raw markup — the template layer escapes everything
+// A value carrying HTML dispatches cleanly and the rendered pages never
+// carry the raw markup — the template layer escapes everything
 // it renders.
 func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	needCore(t)
@@ -193,7 +191,7 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	defer srv.Close()
 
 	const raw = `<script>alert('xss')</script>`
-	resp, err := webtest.PostForm(t, srv.URL+"/run/hello-world", url.Values{"msg": {raw}})
+	resp, err := webtest.PostForm(t, srv.URL+"/run/live-test", url.Values{"mode": {raw}})
 	if err != nil {
 		t.Fatalf("POST /run: %v", err)
 	}
@@ -216,7 +214,7 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	}
 	// The rendered pages (the execution detail and the workflow list) never
 	// carry the raw markup.
-	for _, page := range []string{"/executions/" + id, "/workflows/hello-world"} {
+	for _, page := range []string{"/executions/" + id, "/workflows/live-test"} {
 		code, body := webtest.Get(t, srv.URL+page)
 		if code != http.StatusOK {
 			t.Fatalf("GET %s: %d", page, code)
@@ -227,27 +225,27 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 	}
 }
 
-// Phase 5, E2E (Postgres 18): the struct input — one form item per input
-// (the parsed spec), the web sanitizes the values into the map input, and
-// the execution detail shows the stored input values the run used.
-func TestE2EScheduleDispatchShowsInputValues(t *testing.T) {
+// The struct input — one form item per input (the parsed spec), the web
+// sanitizes the values into the map input, and the execution detail shows
+// the stored input values the run used.
+func TestE2EStructDispatchShowsInputValues(t *testing.T) {
 	needCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
-	// The form of the schedule workflow: one item per input, prefilled
+	// The form of the struct-test workflow: one item per input, prefilled
 	// with the defaults of the source.
-	code, page := webtest.Get(t, srv.URL+"/workflows/schedule")
+	code, page := webtest.Get(t, srv.URL+"/workflows/struct-test")
 	if code != http.StatusOK {
-		t.Fatalf("schedule page: %d", code)
+		t.Fatalf("struct-test page: %d", code)
 	}
 	for _, want := range []string{`name="Name"`, `name="StartDate"`, `value="FlowDeck"`, `value="2026-01-01"`} {
 		if !strings.Contains(page, want) {
-			t.Fatalf("schedule page does not contain %q", want)
+			t.Fatalf("struct-test page does not contain %q", want)
 		}
 	}
 
-	resp, err := webtest.PostForm(t, srv.URL+"/run/schedule", url.Values{
+	resp, err := webtest.PostForm(t, srv.URL+"/run/struct-test", url.Values{
 		"Name":      {"Ada"},
 		"StartDate": {"2026-02-01"},
 	})

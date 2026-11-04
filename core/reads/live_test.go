@@ -118,7 +118,7 @@ func TestLiveErrorRunCountedUntilLatestSuccess(t *testing.T) {
 func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 	testcore.NeedCore(t)
 	s0 := quiescedLive(t)
-	ex, err := actions.Enqueue("live-test", "sleep")
+	ex, err := actions.Enqueue("live-test", "block")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -149,11 +149,11 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
 	s0 := quiescedLive(t)
-	sleep, err := actions.Enqueue("live-test", "sleep")
+	block, err := actions.Enqueue("live-test", "block")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
-	if _, err := testcore.PollState(t, sleep.ID, status.Running); err != nil {
+	if _, err := testcore.PollState(t, block.ID, status.Running); err != nil {
 		t.Fatalf("poll to running: %v", err)
 	}
 	frozen, err := boot.Ctx().Enqueue(boot.Ctx(), "live-frozen", "live-test", "ok")
@@ -167,7 +167,7 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 	if _, err := actions.Cancel(frozen.GetWorkflowID()); err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
-	if _, err := actions.Cancel(sleep.ID); err != nil {
+	if _, err := actions.Cancel(block.ID); err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
 	// The two cancelled runs: one workflow in the failed box (the latest
@@ -184,17 +184,17 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 }
 
 // Firing the same workflow several times counts every run running at
-// the same time (no deduplication by workflow): three sleep fires on the
+// the same time (no deduplication by workflow): three block fires on the
 // main queue (no worker limit — the executor claims them all) are three
-// running runs. The three cancels are one failed workflow (the failed
-// box keeps the latest run per name) and the latest success is the
-// baseline again.
+// running runs (the block steps unblock at the cancels). The three cancels
+// are one failed workflow (the failed box keeps the latest run per name)
+// and the latest success is the baseline again.
 func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 	testcore.NeedCore(t)
 	s0 := quiescedLive(t)
 	ids := make([]string, 3)
 	for i := range ids {
-		ex, err := actions.Enqueue("live-test", "sleep")
+		ex, err := actions.Enqueue("live-test", "block")
 		if err != nil {
 			t.Fatalf("Enqueue: %v", err)
 		}

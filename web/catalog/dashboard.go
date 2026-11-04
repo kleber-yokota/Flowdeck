@@ -36,6 +36,32 @@ type workflowsPage struct {
 	Next  int
 }
 
+// wallPage computes the wall's page from the raw ?page parameter: the page
+// number clamped into [1..last] (an invalid or missing parameter is page
+// 1), the slice bounds and the pager links (0 on the edge pages).
+func wallPage(total int, raw string) (start, end, prev, next int) {
+	page := 1
+	if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+		page = n
+	}
+	last := (total + pageSize - 1) / pageSize
+	if page > last {
+		page = last
+	}
+	start = (page - 1) * pageSize
+	end = start + pageSize
+	if end > total {
+		end = total
+	}
+	if page > 1 {
+		prev = page - 1
+	}
+	if page < last {
+		next = page + 1
+	}
+	return
+}
+
 // handleWorkflowsList renders the wall partial (the paginated dashboard
 // list — from the core registry, no hardcoding; the empty state when the
 // registry is empty or the core is not booted).
@@ -45,30 +71,7 @@ func handleWorkflowsList(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Partial(w, "workflows.html", workflowsPage{})
 		return
 	}
-	page := 1
-	if raw := r.URL.Query().Get("page"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil || n <= 0 {
-			page = 1
-		} else {
-			page = n
-		}
-	}
-	last := (len(items) + pageSize - 1) / pageSize
-	if page > last {
-		page = last
-	}
-	start, end := (page-1)*pageSize, (page-1)*pageSize+pageSize
-	if end > len(items) {
-		end = len(items)
-	}
-	prev, next := 0, 0
-	if page > 1 {
-		prev = page - 1
-	}
-	if page < last {
-		next = page + 1
-	}
+	start, end, prev, next := wallPage(len(items), r.URL.Query().Get("page"))
 	render.Partial(w, "workflows.html", workflowsPage{
 		Items: items[start:end],
 		Start: start + 1,

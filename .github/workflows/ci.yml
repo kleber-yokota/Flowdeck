@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  test:
+  unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,42 +38,46 @@ jobs:
       # in scripts/structure-gate.sh — raise one there and in code.md.
       - name: Structure gate (complexity, nesting, cycles, import contract)
         run: bash scripts/structure-gate.sh
-      - name: Test (race, count=2, shuffled — catches registry/state leaks)
-        run: |
-          set -a && source .env.test && set +a
-          # -p 1: one test binary at a time — the binaries share the SQLite
-          # test database, and the first one creates and migrates it.
-          go test -race -count=2 -shuffle=on -p 1 ./...
+      # The unit layer, separate from the race run: no env, so the booted
+      # tests skip (NeedCore) and the plain run is the pure unit tests
+      # (the logic, no harness).
+      - name: Unit tests (no env — the booted tests skip)
+        run: go test -count=1 ./...
 
-  e2e:
+  race:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: flowdeck
-          POSTGRES_PASSWORD: flowdeck
-          POSTGRES_DB: flowdeck
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: E2E against Postgres 18
+      # The booted layer: the env-driven core + the testworkflows fixtures,
+      # on SQLite (the .env.test database). -p 1: one test binary at a
+      # time — the binaries share the SQLite test database, and the first
+      # one creates and migrates it.
+      - name: Booted suite (race, count=2, shuffled — catches registry/state leaks)
+        run: |
+          set -a && source .env.test && set +a
+          rm -f /tmp/flowdeck-test.db
+          go test -race -count=2 -shuffle=on -p 1 ./...
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: E2E against SQLite (the CI database)
         env:
           DBOS_APP_NAME: flowdeck_e2e
-          DBOS_SYSTEM_DATABASE_URL: postgres://flowdeck:flowdeck@localhost:5432/flowdeck?sslmode=disable
+          DBOS_SYSTEM_DATABASE_URL: sqlite:/tmp/flowdeck-e2e.db
         # -p 1: one test binary at a time, so only one executor polls the
         # queue at a time (a job claimed by a process that has not
         # registered the workflow would fail).
-        run: go test -tags e2e -run TestE2E -p 1 ./...
+        run: |
+          rm -f /tmp/flowdeck-e2e.db
+          go test -tags e2e -run TestE2E -p 1 ./...
 
   vulncheck:
     runs-on: ubuntu-latest

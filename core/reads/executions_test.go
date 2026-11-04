@@ -8,33 +8,29 @@ import (
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
-
-	// The workflow files register themselves in the env-driven DBOS
-	// context (their init) — the reads observe the runs they enqueue.
-	_ "flowdeck/workflows"
 )
 
 // TestMain brings the env-driven core up for the tests: the paths graph
-// from the workflows tree on disk, and the executor when the env context
-// exists (the mock tests run without it).
+// from the testcore source (the parser fixture) and the executor when the
+// env context exists (the unit tests run without it).
 func TestMain(m *testing.M) {
-	testcore.Setup("../../workflows")
+	testcore.Setup("../testworkflows")
 	os.Exit(m.Run())
 }
 
-// Executions lists the runs of a workflow (phase 3, LIST), newest first:
+// Executions lists the runs of a workflow, newest first:
 // the run I enqueued is in the list, with its final state (the assertions
 // filter by id — the test database may hold runs from other tests).
 func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("hello-world", "one")
+	ex, err := actions.Enqueue("live-test", "one")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	list, err := reads.Executions("hello-world")
+	list, err := reads.Executions("live-test")
 	if err != nil {
 		t.Fatalf("Executions: %v", err)
 	}
@@ -49,7 +45,7 @@ func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("run %s not in Executions(hello-world)", ex.ID)
+		t.Fatalf("run %s not in Executions(live-test)", ex.ID)
 	}
 }
 

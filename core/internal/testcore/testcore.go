@@ -14,13 +14,14 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testworkflows"
 )
 
-// Setup brings the env-driven core up for the test binary: the paths
-// graph from the workflows tree on disk (workflowsDir, relative to the
-// test binary's directory), and — when the env context exists — the test
-// workflows (failing-test · resume-test) and the executor. The env-var
-// absence is not an error: the NeedCore skip handles it (the mock tests
+// Setup brings the env-driven core up for the test binary: the paths graph
+// from the testworkflows source (workflowsDir, relative to the test
+// binary's directory), and — when the env context exists — the test
+// workflows registered on the env context and the executor. The env-var
+// absence is not an error: the NeedCore skip handles it (the unit tests
 // run without it).
 func Setup(workflowsDir string) {
 	if err := boot.SetWorkflowsSource(os.DirFS(workflowsDir)); err != nil {
@@ -31,7 +32,7 @@ func Setup(workflowsDir string) {
 	if c == nil {
 		return
 	}
-	RegisterTestWorkflows(c)
+	testworkflows.RegisterTestWorkflows(c)
 	if err := boot.Launch(); err != nil {
 		fmt.Fprintln(os.Stderr, "testcore: launch:", err)
 		os.Exit(1)

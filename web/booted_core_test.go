@@ -10,13 +10,13 @@ import (
 )
 
 // The booted-core tests of the workflow pages (no stubs): the core is up
-// from the environment (core.init + the workflow files' init, see
-// .env.test), and this package's bootedTestServer is the full-stack server
-// (web.New: the catalog + the executions routes, the healthz, the static).
+// from the environment (core.init + RegisterTestWorkflows, see .env.test),
+// and this package's bootedTestServer is the full-stack server (web.New:
+// the catalog + the executions routes, the healthz, the static).
 
-// The workflow pages of a booted core (phase 1 + 4, STEP 2): the registry
-// listing, the paths graph per workflow, and a dispatch that the executor
-// runs to success (phase 2: the 2s poll swaps the badge).
+// The workflow pages of a booted core: the registry listing, the paths
+// graph per workflow, and a dispatch that the executor runs to success
+// (the 2s poll swaps the badge).
 func TestWorkflowPageWithBootedCore(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
@@ -29,66 +29,66 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	// The listing has every registered workflow — from the registry, no
 	// hardcoding in the web.
 	code, body := webtest.Get(t, srv.URL+"/workflows")
-	if code != http.StatusOK || !webtest.ContainsAll(body, ">decide<", ">hello-world<", ">pipeline<", ">buy<", ">pause<") {
+	if code != http.StatusOK || !webtest.ContainsAll(body, ">fork-test<", ">live-test<", ">linear-test<", ">struct-test<", ">noinput-test<") {
 		t.Fatalf("listing: %d, body: %s", code, body)
 	}
 
 	// The paths graph of each workflow (parsed source, map lookup). The
 	// branched workflow draws the common prefix once and forks.
-	code, decide := webtest.Get(t, srv.URL+"/workflows/decide")
+	code, fork := webtest.Get(t, srv.URL+"/workflows/fork-test")
 	if code != http.StatusOK {
-		t.Fatalf("decide page: %d", code)
+		t.Fatalf("fork-test page: %d", code)
 	}
-	if !strings.Contains(decide, `<svg`) {
-		t.Fatalf("decide page without the generated graph")
+	if !strings.Contains(fork, `<svg`) {
+		t.Fatalf("fork-test page without the generated graph")
 	}
 	// The graph column only (the executions list above is out of scope).
-	graphStart := strings.Index(decide, `<div class="graph">`)
+	graphStart := strings.Index(fork, `<div class="graph">`)
 	if graphStart < 0 {
-		t.Fatalf("decide page without the graph column")
+		t.Fatalf("fork-test page without the graph column")
 	}
-	graph := decide[graphStart:]
+	graph := fork[graphStart:]
 	if n := strings.Count(graph, ">base<"); n != 1 {
 		t.Fatalf("prefix drawn %d times, want 1", n)
 	}
 	for _, want := range []string{">left<", ">right<"} {
 		if !strings.Contains(graph, want) {
-			t.Fatalf("decide graph missing %q", want)
+			t.Fatalf("fork-test graph missing %q", want)
 		}
 	}
-	code, pipeline := webtest.Get(t, srv.URL+"/workflows/pipeline")
-	if code != http.StatusOK || !webtest.ContainsAll(pipeline, ">fetch<", ">store<") {
-		t.Fatalf("pipeline graph: %d", code)
+	code, linear := webtest.Get(t, srv.URL+"/workflows/linear-test")
+	if code != http.StatusOK || !webtest.ContainsAll(linear, ">fetch<", ">store<") {
+		t.Fatalf("linear-test graph: %d", code)
 	}
 
-	// The schedule workflow (phase 5, DISPLAY): the form has one item per
-	// input — the fields of the struct input (parsed at boot), each
-	// prefilled with the default value of the source.
-	code, schedule := webtest.Get(t, srv.URL+"/workflows/schedule")
+	// The struct-test workflow: the form has one item per input — the
+	// fields of the struct input (parsed at boot), each prefilled with the
+	// default value of the source.
+	code, structPage := webtest.Get(t, srv.URL+"/workflows/struct-test")
 	if code != http.StatusOK {
-		t.Fatalf("schedule page: %d", code)
+		t.Fatalf("struct-test page: %d", code)
 	}
 	for _, want := range []string{
 		`name="Name"`, `name="StartDate"`,
 		`Name:`, `StartDate:`,
 		`value="FlowDeck"`, `value="2026-01-01"`,
 	} {
-		if !strings.Contains(schedule, want) {
-			t.Fatalf("schedule page does not contain %q", want)
+		if !strings.Contains(structPage, want) {
+			t.Fatalf("struct-test page does not contain %q", want)
 		}
 	}
 	// Dispatch: the struct input reaches the run (the detail shows the
-	// stored input values, phase 5 DETAIL).
-	resp, err := webtest.PostForm(t, srv.URL+"/run/schedule", map[string][]string{
+	// stored input values).
+	resp, err := webtest.PostForm(t, srv.URL+"/run/struct-test", map[string][]string{
 		"Name":      {"Ada"},
 		"StartDate": {"2026-02-01"},
 	})
 	if err != nil {
-		t.Fatalf("dispatch schedule: %v", err)
+		t.Fatalf("dispatch struct-test: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch schedule: %d", resp.StatusCode)
+		t.Fatalf("dispatch struct-test: %d", resp.StatusCode)
 	}
 
 	// An unknown workflow is a clean 404 (the registry is the source).
@@ -97,7 +97,7 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	}
 
 	// Dispatch: the ACK row is queued.
-	resp, err = webtest.Post(t, srv.URL+"/run/pipeline")
+	resp, err = webtest.Post(t, srv.URL+"/run/linear-test")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
@@ -122,31 +122,31 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 	}
 }
 
-// Phase 5, DISPLAY: the no-input workflow (pause — the blank parameter of
-// the Go SDK) has no form: the page has the plain Run button, and the
-// dispatch (an empty POST) enqueues with the zero payload.
-func TestPausePageHasNoFormAndDispatches(t *testing.T) {
+// The no-input workflow (noinput-test — the blank parameter of the Go SDK)
+// has no form: the page has the plain Run button, and the dispatch (an
+// empty POST) enqueues with the zero payload.
+func TestNoinputPageHasNoFormAndDispatches(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	code, body := webtest.Get(t, srv.URL+"/workflows/pause")
+	code, body := webtest.Get(t, srv.URL+"/workflows/noinput-test")
 	if code != http.StatusOK {
-		t.Fatalf("pause page: %d", code)
+		t.Fatalf("noinput-test page: %d", code)
 	}
 	if strings.Contains(body, `<form`) {
-		t.Fatalf("pause page has a form (it has no input)")
+		t.Fatalf("noinput-test page has a form (it has no input)")
 	}
-	if !strings.Contains(body, `hx-post="/run/pause"`) {
-		t.Fatalf("pause page without the Run button")
+	if !strings.Contains(body, `hx-post="/run/noinput-test"`) {
+		t.Fatalf("noinput-test page without the Run button")
 	}
 
-	resp, err := webtest.Post(t, srv.URL+"/run/pause")
+	resp, err := webtest.Post(t, srv.URL+"/run/noinput-test")
 	if err != nil {
-		t.Fatalf("dispatch pause: %v", err)
+		t.Fatalf("dispatch noinput-test: %v", err)
 	}
 	defer resp.Body.Close()
 	ack := webtest.ReadAll(t, resp)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("dispatch pause: %d, %s", resp.StatusCode, ack)
+		t.Fatalf("dispatch noinput-test: %d, %s", resp.StatusCode, ack)
 	}
 }

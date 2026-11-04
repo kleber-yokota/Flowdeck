@@ -6,109 +6,44 @@ import (
 	"testing"
 	"time"
 
-	"flowdeck/core/reads"
+	"flowdeck/core/boot"
 	"flowdeck/core/status"
 	"flowdeck/web/internal/webtest"
 )
 
-// Phase 5, RESUME: a failed run shows the Resume button — the re-enqueue
-// by id (the same stored input), the ACK badge replaces the badge (2s
-// poll). A run that is not failed shows no button.
+// A failed run shows the Resume button — the re-enqueue by id (the same
+// stored input), the ACK badge replaces the badge (2s poll). A run that is
+// not failed shows no button. Real runs (the booted core, no stubs).
 
-func TestExecutionDetailShowsResumeOnFailed(t *testing.T) {
-	detailer := func(id string) (reads.DetailPath, error) {
-		return reads.DetailPath{
-			ExecutionDetail: reads.ExecutionDetail{
-				ID:         id,
-				Name:       "wf-alpha",
-				State:      status.Error,
-				CreatedAt:  time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-				Attempts:   1,
-				Error:      "boom: step failed",
-				FailedStep: "boom-step",
-			},
-			RunPath: reads.RunPath{State: status.Error},
-		}, nil
-	}
-	d := webtest.TestPort()
-	d.Detail = detailer
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	code, body := webtest.Get(t, srv.URL+"/executions/run-failed")
-	if code != http.StatusOK {
-		t.Fatalf("status: got %d want %d", code, http.StatusOK)
-	}
-	for _, want := range []string{
-		`hx-post="/resume/run-failed"`,
-		`hx-target="#badge"`,
-		"Resume",
+// The detail page offers the Resume button (hx-post + hx-target=#badge)
+// on the failed and the cancelled runs — the guard accepts the cancelled
+// row too (the SDK resume re-enqueues it) — and no button on the success
+// run.
+func TestExecutionDetailResumeButton(t *testing.T) {
+	for _, tc := range []struct {
+		st   status.State
+		want bool
+	}{
+		{status.Error, true},
+		{status.Cancelled, true},
+		{status.Success, false},
 	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("page does not contain %q", want)
-		}
-	}
-}
+		t.Run(string(tc.st), func(t *testing.T) {
+			srv := bootedTestServer(t)
 
-// The detail page offers the Resume button on the cancelled page too —
-// the guard accepts the cancelled row (the SDK resume re-enqueues it).
-func TestExecutionDetailShowsResumeOnCancelled(t *testing.T) {
-	detailer := func(id string) (reads.DetailPath, error) {
-		return reads.DetailPath{
-			ExecutionDetail: reads.ExecutionDetail{
-				ID:        id,
-				Name:      "wf-alpha",
-				State:     status.Cancelled,
-				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-				Attempts:  1,
-			},
-			RunPath: reads.RunPath{State: status.Cancelled},
-		}, nil
-	}
-	d := webtest.TestPort()
-	d.Detail = detailer
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	code, body := webtest.Get(t, srv.URL+"/executions/run-cancelled")
-	if code != http.StatusOK {
-		t.Fatalf("status: got %d want %d", code, http.StatusOK)
-	}
-	for _, want := range []string{
-		`hx-post="/resume/run-cancelled"`,
-		`hx-target="#badge"`,
-		"Resume",
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("page does not contain %q", want)
-		}
-	}
-}
-
-func TestExecutionDetailNoResumeOnSuccess(t *testing.T) {
-	detailer := func(id string) (reads.DetailPath, error) {
-		return reads.DetailPath{
-			ExecutionDetail: reads.ExecutionDetail{
-				ID:        id,
-				Name:      "wf-alpha",
-				State:     status.Success,
-				CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-				Attempts:  1,
-			},
-			RunPath: reads.RunPath{State: status.Success},
-		}, nil
-	}
-	d := webtest.TestPort()
-	d.Detail = detailer
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	code, body := webtest.Get(t, srv.URL+"/executions/run-ok")
-	if code != http.StatusOK {
-		t.Fatalf("status: got %d want %d", code, http.StatusOK)
-	}
-	if strings.Contains(body, "/resume/") {
-		t.Fatalf("success page must not offer a resume: %s", body)
+			id := runInState(t, srv, tc.st)
+			code, body := webtest.Get(t, srv.URL+"/executions/"+id)
+			if code != http.StatusOK {
+				t.Fatalf("detail: %d", code)
+			}
+			has := strings.Contains(body, `hx-post="/resume/`+id+`"`) && strings.Contains(body, `hx-target="#badge"`)
+			if has != tc.want {
+				t.Errorf("resume button: got %v want %v: %s", has, tc.want, body)
+			}
+			if tc.want && !strings.Contains(body, "Resume") {
+				t.Errorf("page without the Resume label: %s", body)
+			}
+		})
 	}
 }
 
@@ -116,34 +51,53 @@ func TestExecutionDetailNoResumeOnSuccess(t *testing.T) {
 // core maps it to ErrUnknownExecution).
 func TestResumeUnknownIs404(t *testing.T) {
 	srv := bootedTestServer(t)
-	defer srv.Close()
 
 	resp, err := webtest.Post(t, srv.URL+"/resume/00000000-0000-0000-0000-000000000000")
 	if err != nil {
 		t.Fatalf("POST /resume: %v", err)
 	}
-	defer resp.Body.Close()
+	resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("resume unknown: got %d, want 404", resp.StatusCode)
 	}
 }
 
 // The resume of a cancelled run (booted): the dispatch, the cancel, and
-// the resume — the ACK badge is queued with the same id (the 2s poll
-// takes over from the badge).
+// the resume — the ACK badge is queued with the same id (the 2s poll takes
+// over from the badge). The block-test run blocks until the cancel, and
+// the resumed run blocks again (the block step has no recorded result at
+// the cancel) — the final cancel unblocks it.
 func TestResumeBootedRunRendersQueuedBadge(t *testing.T) {
 	srv := bootedTestServer(t)
-	defer srv.Close()
 
-	resp, err := webtest.Post(t, srv.URL+"/run/pause")
+	resp, err := webtest.Post(t, srv.URL+"/run/block-test")
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
 	ack := webtest.ReadAll(t, resp)
-	if !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("dispatch ACK: %s", ack)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(ack, `class="badge queued"`) {
+		t.Fatalf("dispatch ACK: %d, %s", resp.StatusCode, ack)
 	}
 	id := webtest.ExecutionID(t, ack)
+	t.Cleanup(func() {
+		if c := boot.Ctx(); c != nil {
+			_ = c.CancelWorkflow(c, id)
+		}
+	})
+
+	// The run is live (running): poll the detail badge until the running
+	// badge (the deterministic Running state — no timing window).
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		code, body := webtest.Get(t, srv.URL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(body, `class="badge running"`) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no running badge: %d, %s", code, body)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	cancel, err := webtest.Post(t, srv.URL+"/cancel/"+id)
 	if err != nil {
@@ -165,42 +119,34 @@ func TestResumeBootedRunRendersQueuedBadge(t *testing.T) {
 	if !strings.Contains(rack, `data-workflow-id="`+id+`"`) {
 		t.Fatalf("resume ACK without the same id: %s", rack)
 	}
+
+	// The resumed block run blocks again — the cancel unblocks the step
+	// (the suite settles).
+	cleanup, err := webtest.Post(t, srv.URL+"/cancel/"+id)
+	if err != nil {
+		t.Fatalf("cleanup cancel: %v", err)
+	}
+	cleanup.Body.Close()
+	if cleanup.StatusCode != http.StatusOK {
+		t.Fatalf("cleanup cancel: %d", cleanup.StatusCode)
+	}
 }
 
 // The resume of a run that is not failed (here: success) is a clean 400
 // (the core maps it to ErrNotResumable).
 func TestResumeOfSuccessIs400(t *testing.T) {
 	srv := bootedTestServer(t)
-	defer srv.Close()
 
-	resp, err := webtest.Post(t, srv.URL+"/run/hello-world")
-	if err != nil {
-		t.Fatalf("dispatch: %v", err)
-	}
-	ack := webtest.ReadAll(t, resp)
-	if !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("ACK: %s", ack)
-	}
+	ack := webtest.Ack(t, srv.URL, "live-test", nil)
 	id := webtest.ExecutionID(t, ack)
+	webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
 
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		code, row := webtest.Get(t, srv.URL+"/executions/"+id)
-		if code == http.StatusOK && strings.Contains(row, `class="badge success terminal"`) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("no success badge: %d, %s", code, row)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	resume, err := webtest.Post(t, srv.URL+"/resume/"+id)
+	resp, err := webtest.Post(t, srv.URL+"/resume/"+id)
 	if err != nil {
 		t.Fatalf("POST /resume: %v", err)
 	}
-	resume.Body.Close()
-	if resume.StatusCode != http.StatusBadRequest {
-		t.Fatalf("resume of success: got %d, want 400", resume.StatusCode)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("resume of success: got %d, want 400", resp.StatusCode)
 	}
 }
