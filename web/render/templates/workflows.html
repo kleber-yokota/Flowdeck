@@ -1,9 +1,14 @@
-<ul class="list">
-  {{- range . }}
-  <li class="item">
-    <a class="name" href="/workflows/{{ .Name | urlquery }}">{{ .Name }}</a>
-  </li>
-  {{- else }}
-  <li class="item empty">No workflows registered</li>
+{{if .Total}}
+<div class="wall">
+  {{- range .Items }}
+  <a class="tile" href="/workflows/{{ .Name | urlquery }}">{{ .Name }}</a>
   {{- end }}
-</ul>
+</div>
+<div class="pager">
+  {{- if .Prev }}<a href="/workflows?page={{ .Prev }}" hx-get="/workflows?page={{ .Prev }}" hx-target="#catalog">prev</a>{{ end }}
+  <span class="info">{{ .Start }}–{{ .End }} de {{ .Total }}</span>
+  {{- if .Next }}<a href="/workflows?page={{ .Next }}" hx-get="/workflows?page={{ .Next }}" hx-target="#catalog">next</a>{{ end }}
+</div>
+{{else}}
+<p class="empty">No workflows registered</p>
+{{end}}

@@ -63,6 +63,13 @@ type Port struct {
 	// terminal run is not cancellable) and returns the ACK (the same id,
 	// now cancelled).
 	Cancel func(workflowID string) (reads.Execution, error)
+
+	// Live returns the three live buckets of the dashboard (the live
+	// read): the runs running right now · the runs in the queue right now
+	// (firing the same workflow several times counts each run) · the
+	// workflows whose latest run is failed (error or cancelled) — a
+	// latest success with no live run is in no box.
+	Live func() (reads.Live, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -84,5 +91,6 @@ func NewPort() Port {
 		Detail:     reads.Detail,
 		Resume:     actions.Resume,
 		Cancel:     actions.Cancel,
+		Live:       reads.LiveCounts,
 	}
 }

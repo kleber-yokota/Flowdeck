@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   {{template "head.html" .}}
 </head>
 <body>
   <main class="frame">
-    <p class="eyebrow">FlowDeck</p>
-    <h1>Workflows</h1>
-    <!-- Phase 1: HTMX GET → core lists the registry → partial rendered -->
-    <div id="workflows" hx-get="/workflows" hx-trigger="load" hx-target="#workflows"></div>
+    <p class="cmd">flowdeck · v6</p>
+    <div id="live" hx-get="/live" hx-trigger="load, every 5s"></div>
+    <div id="catalog" hx-get="/workflows" hx-trigger="load"></div>
+    <p class="hint">atualização a cada 5s · 20 por página</p>
   </main>
 </body>
 </html>

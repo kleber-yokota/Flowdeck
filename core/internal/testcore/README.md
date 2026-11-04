@@ -5,7 +5,8 @@ The shared setup of the core test binaries: the env-driven lifecycle (the paths 
 ## Rules (decisions · pinned values)
 
 - `Setup` = the paths graph from the workflows tree on disk (`os.DirFS`, relative to the test binary's directory) + — when the env context exists — `RegisterTestWorkflows` + `Launch`. The env-var absence is not an error: `NeedCore` skips the test (the mock tests run without env). *(evidence: `testcore.go · Setup` · `NeedCore`)*
-- The test-only workflows (`failing-test` · `resume-test`, with `WithMaxRecoveryAttempts(3)`) are registered in testcore, never in the workflows package — so they do not appear in the production registry. *(evidence: `testworkflows.go · RegisterTestWorkflows` · `boot/lifecycle.go · warnUnregistered`)*
+- The test-only workflows (`failing-test` · `resume-test` · `live-test`, with `WithMaxRecoveryAttempts(3)`) are registered in testcore, never in the workflows package — so they do not appear in the production registry. *(evidence: `testworkflows.go · RegisterTestWorkflows` · `boot/lifecycle.go · warnUnregistered`)*
+- `live-test`'s payload picks the run outcome: `ok` → success · `err` → error · `sleep` → PENDING window (a fixed 10s sleep) — the live tests own it and end with its latest run in SUCCESS. *(evidence: `testworkflows.go · liveTestWorkflow`)*
 - `PollState` polls the badge state until the wanted one — a `success` stops the poll too (the run finished, just not with the wanted state). 20s deadline, 200ms tick. *(evidence: `testcore.go · PollState`)*
 
 ## Facts (validated runtime)
@@ -13,3 +14,4 @@ The shared setup of the core test binaries: the env-driven lifecycle (the paths 
 | Fact | Evidence | Validated |
 |---|---|---|
 | The test env: `.env.test` sets `DBOS_APP_NAME=flowdeck_test` and `DBOS_SYSTEM_DATABASE_URL` = sqlite on disk (the env suite: the map's `#suites`). | `.env.test` · the suites table in `diagrams/package-map.html#suites` | 2026-11-03 |
+| The `live-test` run in mode `sleep` stays PENDING across its fixed sleep — a deterministic Running window for the live tests. | `testworkflows.go · liveTestWorkflow` | author · 2026-11-04 |

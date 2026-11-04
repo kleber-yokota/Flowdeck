@@ -3,13 +3,15 @@ package testcore
 import (
 	"context"
 	"errors"
+	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
 
 // RegisterTestWorkflows registers the test-only workflows (failing-test ·
-// resume-test) on the env context: registered here, never part of the
-// workflows package, so they do not appear in the production registry.
+// resume-test · live-test) on the env context: registered here, never part
+// of the workflows package, so they do not appear in the production
+// registry.
 func RegisterTestWorkflows(c dbos.Context) {
 	dbos.RegisterWorkflow(c, failingTestWorkflow,
 		dbos.WithWorkflowName("failing-test"),
@@ -17,6 +19,10 @@ func RegisterTestWorkflows(c dbos.Context) {
 	)
 	dbos.RegisterWorkflow(c, flakyTestWorkflow,
 		dbos.WithWorkflowName("resume-test"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
+	dbos.RegisterWorkflow(c, liveTestWorkflow,
+		dbos.WithWorkflowName("live-test"),
 		dbos.WithMaxRecoveryAttempts(3),
 	)
 }
@@ -55,5 +61,33 @@ func flakyStep(msg string) dbos.Step[string] {
 			return "", errors.New("flaky: step failed")
 		}
 		return msg, nil
+	}
+}
+
+// liveSleepDuration is the fixed sleep of the live-test step — the same
+// window as the pause: long enough that a test can cancel the run
+// mid-step (the deterministic Running state).
+const liveSleepDuration = 10 * time.Second
+
+// liveTestWorkflow is the live-read seam: the payload picks the run
+// outcome — "err" fails in the "live" step (retries run out: the row is
+// ERROR), "sleep" sleeps the fixed window (the PENDING window the tests
+// cancel), any other payload succeeds.
+func liveTestWorkflow(ctx dbos.Context, mode string) (string, error) {
+	return dbos.RunAsStep(ctx, liveStep(mode), dbos.WithStepName("live"))
+}
+
+// liveStep is the step that picks its outcome by the stored payload.
+func liveStep(mode string) dbos.Step[string] {
+	return func(_ context.Context) (string, error) {
+		switch mode {
+		case "err":
+			return "", errors.New("live: step failed")
+		case "sleep":
+			time.Sleep(liveSleepDuration)
+			return "slept", nil
+		default:
+			return "ok", nil
+		}
 	}
 }

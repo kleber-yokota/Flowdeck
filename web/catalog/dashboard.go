@@ -2,8 +2,10 @@ package catalog
 
 import (
 	"net/http"
+	"strconv"
 
 	"flowdeck/core"
+	"flowdeck/core/registry"
 	"flowdeck/web/render"
 )
 
@@ -13,14 +15,77 @@ type indexPage struct {
 	Title string
 }
 
-// handleDashboard renders the dashboard full page (the HTMX shell).
+// handleDashboard renders the dashboard full page (the v6.3 console: the
+// HTMX shell that loads the wall and polls the live boxes).
 func handleDashboard(w http.ResponseWriter) {
-	render.Page(w, "index.html", indexPage{Title: "FlowDeck"})
+	render.Page(w, "index.html", indexPage{Title: "flowdeck · v6"})
 }
 
-// handleWorkflowsList renders the workflows partial (the dashboard list —
-// from the core registry, no hardcoding; the empty state when the registry
-// is empty or the core is not booted).
-func handleWorkflowsList(w http.ResponseWriter, p core.Port) {
-	render.Partial(w, "workflows.html", p.List())
+// pageSize is the wall's page size (the spec).
+const pageSize = 20
+
+// workflowsPage is the data for the wall partial: the page of names and
+// the pager (the info "start–end de total" and the prev/next links, 0 on
+// the edge pages).
+type workflowsPage struct {
+	Items []registry.Workflow
+	Start int
+	End   int
+	Total int
+	Prev  int
+	Next  int
+}
+
+// handleWorkflowsList renders the wall partial (the paginated dashboard
+// list — from the core registry, no hardcoding; the empty state when the
+// registry is empty or the core is not booted).
+func handleWorkflowsList(w http.ResponseWriter, r *http.Request, p core.Port) {
+	items := p.List()
+	if len(items) == 0 {
+		render.Partial(w, "workflows.html", workflowsPage{})
+		return
+	}
+	page := 1
+	if raw := r.URL.Query().Get("page"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			page = 1
+		} else {
+			page = n
+		}
+	}
+	last := (len(items) + pageSize - 1) / pageSize
+	if page > last {
+		page = last
+	}
+	start, end := (page-1)*pageSize, (page-1)*pageSize+pageSize
+	if end > len(items) {
+		end = len(items)
+	}
+	prev, next := 0, 0
+	if page > 1 {
+		prev = page - 1
+	}
+	if page < last {
+		next = page + 1
+	}
+	render.Partial(w, "workflows.html", workflowsPage{
+		Items: items[start:end],
+		Start: start + 1,
+		End:   end,
+		Total: len(items),
+		Prev:  prev,
+		Next:  next,
+	})
+}
+
+// handleLive renders the live partial (the three boxes: the Port.Live
+// counts) with no-store (the 5s poll).
+func handleLive(w http.ResponseWriter, p core.Port) {
+	live, err := p.Live()
+	if err != nil {
+		render.Fail(w, "live", err)
+		return
+	}
+	render.Partial(w, "live.html", live)
 }
