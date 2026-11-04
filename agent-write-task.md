@@ -134,8 +134,15 @@ map's `#groups` + `index.md` name them) + the spec HTMLs + the SDK.
   its consumer. The earlier steps keep the old type and say so: "Of still
   returns `[][]string` until STEP 05".
 - **Tests are declared, not discovered.** The task names every test that
-  dies, changes shape or moves: "rewrite `TestPaths*` (the flat assertions
-  become tree assertions)" · "delete `TestX` — re-specified in STEP N".
+  dies, changes shape, moves or is added — a new test file names the
+  intention it asserts (one file, one intention, like the code files):
+  "rewrite `TestPaths*` (the flat assertions become tree assertions)" ·
+  "delete `TestX` — re-specified in STEP N" · "add `core/reads/attempts_test.go`
+  (`displayAttempts` · the minimum 1)".
+- **The test is real-stack.** The tests of a step run on the booted core
+  (SQLite · the `testworkflows` fixtures): the state a test needs is a run
+  the step names (an enqueue, a cancel, the `err` mode). A task that writes
+  a stub or a fake is a wrong step.
 - **The author's check (per step):** for each symbol whose signature
   changes, every call site is either in the step's `Files`, or unchanged
   (the type is still the old one), or a declared "keep" that compiles with
@@ -172,7 +179,7 @@ process starts over (a new WANT to `agent-diagram.md`). The title is
 **Files (the whole commit):**
 - Add `core/graph/block.go` (`BlockType` · `Block` · `Child`).
 - Change `core/graph/graph.go` (`PathGraph` · `Of`).
-- Adapt `web/web_test.go` (`fakeGraph` takes a `Block`).
+- Add `core/reads/attempts_test.go` (`displayAttempts` · the minimum 1).
 
 ## Purpose
 
@@ -186,7 +193,8 @@ N. Make the tests pass (green).
 
 ## Green (definition of done)
 
-- `go build ./...` + the unit suite green (the env of `.env.test`).
+- `go build ./...` + the booted suite green (the env of `.env.test`) · the
+  e2e when the step touched the loop.
 - <The specific assertions that prove the step.>
 
 ## Out of scope (owned by other steps)
@@ -249,6 +257,6 @@ The README holds, once for the whole set:
 
 - It does not leave the impact analysis to the executor: the author names
   the surface, the executor verifies it (agent-task.md, rule 5).
-- It does not put two steps in one file, or one step in two files.
-- It does not cite a diagram part it did not open.
+- One step, one file.
+- The `Source` cites only the diagram parts the author opened.
 - It does not read `code.md`: the map and the code carry the layout.
