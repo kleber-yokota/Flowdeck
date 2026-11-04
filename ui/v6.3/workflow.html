@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>flowdeck · v6.3 · workflows process</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd"><a class="back" href="index.html">← workflows</a></div>
+    <div class="cmd">$ flowdeck workflows process</div>
+    <!-- onde mora o arquivo do workflow (mapeado no boot, não escaneado) -->
+    <div class="filepath"><span class="dir">workflows/pipeline</span><span class="file">/process.go</span></div>
+
+    <!-- dividida em 2: esquerda = dispatch + execuções · direita = grafo top-down -->
+    <div class="split">
+      <div class="split-left">
+        <!-- dispatch: form vira linha de comando -->
+        <form class="runline" method="post" action="/run/process" hx-disabled="true">
+          <span class="prompt">➜</span>
+          <span class="param">source</span>
+          <input name="source" value="s3://raw/orders" required>
+          <button type="submit" class="run">run</button>
+        </form>
+
+        <div class="table-head">executions · 1–20 de 37</div>
+        <div class="executions">
+          <a class="exec-row" href="execution.html">
+            <span class="ts">14:02:11</span>
+            <span class="wf-id">wf_8f3k2</span>
+            <span class="status running">running</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">13:47:03</span>
+            <span class="wf-id">wf_1m9qz</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">13:12:40</span>
+            <span class="wf-id">wf_7d2xa</span>
+            <span class="status cancelled">cancelled</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">12:55:09</span>
+            <span class="wf-id">wf_4p8bc</span>
+            <span class="status queued">queued</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">11:20:33</span>
+            <span class="wf-id">wf_9r5dt</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">10:44:18</span>
+            <span class="wf-id">wf_3h7mn</span>
+            <span class="status error">error</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">09:31:52</span>
+            <span class="wf-id">wf_6k2pw</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">08:15:27</span>
+            <span class="wf-id">wf_2n4gv</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">07:02:14</span>
+            <span class="wf-id">wf_5s9jl</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">06:40:05</span>
+            <span class="wf-id">wf_8t6rq</span>
+            <span class="status error">error</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">05:22:41</span>
+            <span class="wf-id">wf_b3c7f</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">04:10:33</span>
+            <span class="wf-id">wf_d1e8h</span>
+            <span class="status cancelled">cancelled</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">03:48:20</span>
+            <span class="wf-id">wf_f5g2k</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">02:35:11</span>
+            <span class="wf-id">wf_h7j4m</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">01:19:47</span>
+            <span class="wf-id">wf_n2p9s</span>
+            <span class="status error">error</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">00:55:08</span>
+            <span class="wf-id">wf_q8r5t</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">23:41:56</span>
+            <span class="wf-id">wf_u1v3x</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">22:30:19</span>
+            <span class="wf-id">wf_w6y8z</span>
+            <span class="status success">success</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">21:14:44</span>
+            <span class="wf-id">wf_z0a2c</span>
+            <span class="status queued">queued</span>
+          </a>
+          <a class="exec-row" href="execution.html">
+            <span class="ts">20:03:31</span>
+            <span class="wf-id">wf_e4f6h</span>
+            <span class="status success">success</span>
+          </a>
+        </div>
+        <div class="pager">
+          <span class="pager-info">1–20 de 37</span>
+          <span>
+            <a class="pager-link" href="workflow.html" hx-disabled="true" hidden>‹ prev</a>
+            <a class="pager-link" href="workflow.html" hx-disabled="true">next ›</a>
+          </span>
+        </div>
+      </div>
+
+      <!-- grafo do workflow, top-down, fiel ao emissor do app (web/graph):
+           box = bloco (root L0 · join/loop L1) · ◉ child · ∥ async ·
+           ⋯ wait · ↻ loop · setas nas edges.
+           Métricas: texto 12px mono ≈ 7.2px/char · box h 36 ·
+           largura = texto + padding · gaps 20/32 · outline pad 10/14. -->
+      <aside class="graph-side">
+        <div class="cmd">$ graph</div>
+        <svg class="block-graph" viewBox="0 0 212 344" role="img"
+             aria-label="top-down graph: fetch, compute, skip, store, cache, select, notify">
+          <defs>
+            <marker id="flowdeck-arrow" markerWidth="8" markerHeight="8"
+                    refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+              <path class="g-arrow" d="M0,0 L8,4 L0,8 Z"/>
+            </marker>
+          </defs>
+          <!-- root (L0) -->
+          <rect class="g-block l0" x="0" y="0" width="208" height="342" rx="4"/>
+          <!-- fetch -->
+          <g>
+            <rect class="g-node" x="74" y="14" width="60" height="36" rx="5"/>
+            <text class="g-text" x="104" y="36" text-anchor="middle">fetch</text>
+          </g>
+          <!-- join (L1): compute ∥ skip -->
+          <rect class="g-block l1" x="18" y="126" width="172" height="112" rx="4"/>
+          <g>
+            <rect class="g-node" x="14" y="70" width="74" height="36" rx="5"/>
+            <text class="g-text" x="51" y="92" text-anchor="middle">compute</text>
+          </g>
+          <g>
+            <rect class="g-node" x="130.5" y="70" width="53" height="36" rx="5"/>
+            <text class="g-text" x="157" y="92" text-anchor="middle">skip</text>
+          </g>
+          <line class="g-edge" x1="104" y1="50" x2="51" y2="70" marker-end="url(#flowdeck-arrow)"/>
+          <line class="g-edge" x1="104" y1="50" x2="157" y2="70" marker-end="url(#flowdeck-arrow)"/>
+          <line class="g-edge" x1="51" y1="106" x2="58" y2="136" marker-end="url(#flowdeck-arrow)"/>
+          <line class="g-edge" x1="157" y1="106" x2="150" y2="136" marker-end="url(#flowdeck-arrow)"/>
+          <!-- store ∥ cache -->
+          <g>
+            <rect class="g-node" x="28" y="136" width="60" height="36" rx="5"/>
+            <text class="g-text" x="58" y="158" text-anchor="middle">store</text>
+          </g>
+          <g>
+            <rect class="g-node" x="120" y="136" width="60" height="36" rx="5"/>
+            <text class="g-text" x="150" y="158" text-anchor="middle">cache</text>
+          </g>
+          <g class="async-symbol" transform="translate(104,154) scale(0.75)">
+            <path d="M-5,-5 V5 M5,-5 V5"/>
+          </g>
+          <!-- select (⋯ wait) -->
+          <g>
+            <rect class="g-node" x="62.5" y="192" width="83" height="36" rx="5"/>
+            <text class="g-text" x="96" y="214" text-anchor="middle">select</text>
+            <g class="wait-symbol">
+              <circle cx="119.5" cy="210" r="1.5"/>
+              <circle cx="125.5" cy="210" r="1.5"/>
+              <circle cx="131.5" cy="210" r="1.5"/>
+            </g>
+          </g>
+          <line class="g-edge" x1="58" y1="172" x2="104" y2="192" marker-end="url(#flowdeck-arrow)"/>
+          <line class="g-edge" x1="150" y1="172" x2="104" y2="192" marker-end="url(#flowdeck-arrow)"/>
+          <!-- loop (L1) -->
+          <rect class="g-block l1" x="52.5" y="258" width="103" height="56" rx="4"/>
+          <g class="loop-symbol" transform="translate(148.5,265) scale(0.75)">
+            <path d="M -8,0 A 8,8 0 1 1 -8,0.01 M 1.5,-6.5 L 8,0 L 1.5,6.5 Z"/>
+            <polygon points="8,0 1.5,6.5 1.5,-6.5"/>
+          </g>
+          <!-- notify (◉ child) -->
+          <g>
+            <rect class="g-node" x="62.5" y="268" width="83" height="36" rx="5"/>
+            <text class="g-text" x="96" y="290" text-anchor="middle">notify</text>
+            <g class="child-symbol">
+              <circle class="child-ring" cx="125.5" cy="286" r="4.5"/>
+              <circle class="child-dot" cx="125.5" cy="286" r="1.8"/>
+            </g>
+          </g>
+          <line class="g-edge" x1="104" y1="228" x2="104" y2="268" marker-end="url(#flowdeck-arrow)"/>
+        </svg>
+        <div class="graph-legend">◉ child · ∥ async · ⋯ wait · ↻ loop · box = bloco</div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

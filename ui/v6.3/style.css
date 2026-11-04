@@ -1,0 +1,358 @@
+/* v6.3 · "Petróleo" (FINAL) — standalone.
+   Estrutura de terminal (sem cards, mono, comandos) + pele de petróleo
+   (teal #45d6b5, fósforo nos estados, cantos arredondados, glow).
+   Escala global 1.3× (root 20.8px) + constantes px escaladas.
+   Paleta e tamanhos passam por variáveis — um :root só. */
+:root {
+  font-size: 20.8px; /* escala global 1.3× (16px × 1.3) */
+  /* paleta petróleo (cancelled em violeta, nunca cinza) */
+  --paper:   #060d0c;
+  --panel:   #0b1514;
+  --panel-2: #101d1b;
+  --line:    #172725;
+  --line-2:  #223835;
+  --ink:     #ddebe9;
+  --steel:   #93b8b4;
+  --soft:    #5d817d;
+  --accent:  #45d6b5;
+  --queued:    #38bdf8;
+  --running:   #fbbf24;
+  --success:   #4ade80;
+  --error:     #f87171;
+  --cancelled: #c084fc;
+  /* type + tamanhos */
+  --mono: ui-monospace, "Geist Mono", "SF Mono", monospace;
+  --fs: 0.82rem;       /* base */
+  --fs-num: 1.7rem;    /* live count */
+  --fs-small: 0.72rem; /* meta · pager · output */
+  --fs-head: 0.6rem;   /* table head */
+  --fs-badge: 0.85rem; /* status da run */
+  --row-pad: 0.5rem;   /* densidade das linhas */
+  --gap: 1rem;
+  --r-soft: 13px;      /* 10 × 1.3 */
+  --maxw: 1235px;      /* 950 × 1.3 */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: var(--fs);
+}
+
+.console { max-width: var(--maxw); margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+.console::before {
+  content: "flowdeck";
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--soft);
+  margin-bottom: 0.75rem;
+}
+
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--accent); }
+.back { color: var(--soft); }
+.back:hover { color: var(--steel); }
+
+.cmd {
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.02em;
+}
+.cmd .back { margin-right: 0.5rem; }
+.table-head {
+  color: var(--soft);
+  text-transform: uppercase;
+  font-size: var(--fs-head);
+  letter-spacing: 0.12em;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* catálogo: só nome (sem status das últimas runs) */
+.wf-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  padding: var(--row-pad) 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.wf-name { color: var(--ink); }
+.wf-name:hover { color: var(--accent); }
+
+.hint { color: var(--soft); margin-top: 1.5rem; font-size: var(--fs-small); }
+.kbd { color: var(--steel); }
+
+/* paginação (20 por página · ?page=N → limit=20, offset) */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--soft);
+  font-size: var(--fs-small);
+}
+.pager-link {
+  color: var(--steel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-soft);
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.25rem;
+}
+.pager-link:hover { color: var(--accent); border-color: var(--accent); }
+.pager-link[hidden] { display: none; }
+
+/* linha de dispatch (form → comando) */
+.runline { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.25rem; }
+.prompt { color: var(--accent); }
+.param { color: var(--soft); }
+.param input {
+  font-family: var(--mono);
+  font-size: var(--fs);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-soft);
+  padding: 0.25rem 0.5rem;
+  width: 10rem;
+}
+.run {
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-soft);
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+}
+.run:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* breadcrumb: onde mora o arquivo do workflow */
+.filepath { padding: 0.25rem 0.25rem 0.75rem; font-size: var(--fs-small); color: var(--soft); }
+.filepath .dir { color: var(--soft); }
+.filepath .file { color: var(--steel); }
+
+/* execuções: linhas de log */
+.exec-row {
+  display: grid;
+  grid-template-columns: 143px 1fr auto; /* 110 × 1.3 */
+  gap: var(--gap);
+  padding: var(--row-pad) 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.ts { color: var(--soft); }
+.wf-id { color: var(--steel); }
+.wf-id:hover { color: var(--accent); }
+.status { letter-spacing: 0.05em; }
+.status.queued { color: var(--queued); }
+.status.running { color: var(--running); }
+.status.success { color: var(--success); }
+.status.error { color: var(--error); }
+.status.cancelled { color: var(--cancelled); }
+
+/* listas de status (runnings · queued · failed): 5 colunas */
+#running-list .exec-row,
+#queued-list .exec-row {
+  grid-template-columns: auto 1fr auto auto auto;
+}
+#failed-list .exec-row {
+  grid-template-columns: auto 1fr auto auto minmax(0, 1fr);
+}
+.message {
+  color: var(--soft);
+  font-size: var(--fs-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#running-list .elapsed { color: var(--running); }
+#queued-list .elapsed { color: var(--queued); }
+
+/* header da run */
+.status-line { padding: 0.3rem 0.25rem; font-size: var(--fs-badge); }
+.meta { color: var(--soft); padding: 0 0.25rem 0.75rem; font-size: var(--fs-small); }
+.elapsed { color: var(--running); }
+.elapsed b { font-weight: 500; }
+
+/* step log */
+.steps .cmd { color: var(--steel); }
+.logline {
+  display: grid;
+  grid-template-columns: 91px 1fr auto; /* 70 × 1.3 */
+  gap: var(--gap);
+  padding: var(--row-pad) 0.25rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+.logline:hover { background: var(--panel); }
+.logline .t { color: var(--soft); }
+.logline .name { color: var(--ink); }
+.logline .state { color: var(--success); }
+.detail { display: none; }
+.step.open .detail { display: block; }
+.output {
+  color: var(--steel);
+  background: var(--panel);
+  border-left: 3px solid var(--line-2); /* 2 × 1.3 */
+  border-radius: var(--r-soft);
+  margin: 0 0.25rem 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--fs-small);
+  overflow-x: auto;
+}
+
+/* child workflow (StepInfo.ChildWorkflowID) */
+.child-mark { color: var(--accent); }
+.child-run {
+  margin: 0 0 0.5rem 0.75rem;
+  border-left: 1px solid var(--line-2);
+  padding-left: 0.75rem;
+}
+.child-head {
+  display: grid;
+  grid-template-columns: 91px 1fr auto;
+  gap: var(--gap);
+  padding: var(--row-pad) 0.25rem;
+  border-bottom: 1px solid var(--line);
+  align-items: baseline;
+}
+.child-head .t { color: var(--soft); }
+.child-line {
+  display: grid;
+  grid-template-columns: 91px 1fr auto;
+  gap: var(--gap);
+  padding: var(--row-pad) 0.25rem 0.35rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.child-line .t { color: var(--soft); }
+.child-line .name { color: var(--ink); }
+.child-line .state { color: var(--success); }
+
+/* a cauda "ainda rodando": cursor piscando */
+.tail-line {
+  display: grid;
+  grid-template-columns: 91px 1fr auto;
+  gap: var(--gap);
+  padding: var(--row-pad) 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.tail-line .state.running {
+  color: var(--running);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--running) 45%, transparent);
+}
+.cursor { animation: blink 0.9s infinite; }
+@keyframes blink { 50% { opacity: 0.35; } }
+
+/* cancel/resume: ações no TOPO da página da execução */
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+/* live boxes: running · queued · cancelled·error → página da lista */
+.boxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap);
+  margin: 0.75rem 0 1.5rem;
+}
+.box {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-soft);
+  padding: 0.75rem 0.75rem 0.6rem;
+}
+.box:hover { border-color: var(--line-2); }
+.box-label {
+  display: block;
+  color: var(--soft);
+  font-size: var(--fs-small);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+.box-num {
+  display: block;
+  font-size: var(--fs-num);
+  line-height: 1;
+}
+.box.running .box-num {
+  color: var(--running);
+  text-shadow: 0 0 13px color-mix(in srgb, var(--running) 45%, transparent);
+}
+.box.queued .box-num { color: var(--queued); }
+.box.failed .box-num { color: var(--error); }
+
+/* página dividida em 2: esquerda = conteúdo · direita = grafo (sticky) */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 416px; /* 320 × 1.3 */
+  gap: 1.5rem;
+  align-items: start;
+}
+.split-left { min-width: 0; }
+.graph-side {
+  position: sticky;
+  top: 1rem;
+  border-left: 1px solid var(--line);
+  padding-left: 1.5rem;
+}
+@media (max-width: 990px) { /* 760 × 1.3 */
+  .split { grid-template-columns: 1fr; }
+  .graph-side {
+    position: static;
+    border-left: 0;
+    padding-left: 0;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+  }
+}
+
+/* block-DAG (fiel ao emissor do app · web/graph): boxes = outlines dos
+   blocos (root L0 · join/loop L1) · symbols ◉ child · ∥ async ·
+   ⋯ wait · ↻ loop · setas nas edges.
+   Métricas proporcionais ao texto (12px mono): box h=36,
+   largura = texto + padding, gaps 20/32, outline pad 10/14. */
+.block-graph { display: block; width: 100%; height: auto; }
+.g-block { fill: none; stroke-width: 1.5; stroke-opacity: 0.7; }
+.g-block.l0 { stroke: color-mix(in srgb, var(--accent) 45%, transparent); }
+.g-block.l1 { stroke: var(--line-2); }
+.g-block.l2 { stroke: var(--steel); }
+.g-edge { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
+.g-arrow { fill: var(--soft); fill-opacity: 0.55; }
+.g-node { fill: var(--panel); stroke: var(--steel); stroke-opacity: 0.35; }
+.g-text { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
+.loop-symbol path { stroke: var(--steel); stroke-opacity: 0.55; fill: none; }
+.loop-symbol polygon { fill: var(--steel); fill-opacity: 0.55; }
+.child-ring { fill: none; stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
+.child-dot { fill: var(--soft); fill-opacity: 0.55; }
+.wait-symbol circle { fill: var(--soft); fill-opacity: 0.55; }
+.async-symbol path { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 2; }
+/* executed path: estado na stroke do box · cauda tracejada = desconhecida */
+.g-node.queued { stroke: var(--queued); stroke-opacity: 0.8; }
+.g-node.running { stroke: var(--running); stroke-opacity: 0.8; }
+.g-node.success { stroke: var(--success); stroke-opacity: 0.8; }
+.g-node.error { stroke: var(--error); stroke-opacity: 0.8; }
+.g-node.cancelled { stroke: var(--cancelled); stroke-opacity: 0.8; }
+.g-node.tail {
+  stroke: var(--soft);
+  stroke-opacity: 0.55;
+  stroke-dasharray: 4 3;
+  fill: none;
+}
+.g-text.tail { fill: var(--soft); }
+.graph-legend { color: var(--soft); font-size: var(--fs-small); margin-top: 0.75rem; }
+
+.note { color: var(--soft); font-size: var(--fs-small); margin-top: 0.5rem; }

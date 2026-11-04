@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>flowdeck · v6 · queued</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd"><a class="back" href="index.html">← /</a></div>
+    <div class="cmd">$ flowdeck queued</div>
+    <div class="table-head">workflow · id · queued since · wait</div>
+    <!-- Produção: GET /live (ou ListWorkflows status=Enqueued), poll leve —
+         a caixa "queued" no índice aponta aqui. -->
+    <div id="queued-list" class="executions">
+      <div class="exec-row">
+        <span class="wf-name">audit</span>
+        <a class="wf-id" href="execution.html">wf_7p1m9</a>
+        <span class="ts">19:05</span>
+        <span class="status queued">queued</span>
+        <span class="elapsed">7m</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">sync</span>
+        <a class="wf-id" href="execution.html">wf_4k8s2</a>
+        <span class="ts">18:59</span>
+        <span class="status queued">queued</span>
+        <span class="elapsed">13m</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">export</span>
+        <a class="wf-id" href="execution.html">wf_3j6u1</a>
+        <span class="ts">18:51</span>
+        <span class="status queued">queued</span>
+        <span class="elapsed">21m</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">process</span>
+        <a class="wf-id" href="execution.html">wf_2e5v7</a>
+        <span class="ts">18:47</span>
+        <span class="status queued">queued</span>
+        <span class="elapsed">25m</span>
+      </div>
+    </div>
+    <div class="note">cada linha → a página da execução (log de steps a partir do 1º step)</div>
+  </main>
+</body>
+</html>

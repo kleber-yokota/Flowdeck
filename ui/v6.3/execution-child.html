@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>flowdeck · v6.3 · run com child</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd"><a class="back" href="workflow.html">← /workflows</a></div>
+    <div class="cmd">$ flowdeck execution wf_c0ld1</div>
+
+  <!-- dividida em 2: esquerda = actions + step log (com child) ·
+       direita = executed path (o que já rodou), top-down, sticky -->
+  <div class="split">
+    <div class="split-left">
+
+    <!-- badge (existente): poll 2s no GET /status/{id}, para em terminal -->
+    <div class="status-line"><span class="status running" id="badge">running</span></div>
+    <div class="meta">created 03/11 19:12 · <span class="elapsed">elapsed <b id="elapsed">0.0</b>s</span> · input={"demo":true} · retries 0</div>
+
+    <!-- cancel/resume: ações no TOPO da página da execução
+         (POST /cancel/{id}, POST /resume/{id} — existentes) -->
+    <div class="actions">
+      <button class="run" id="cancel-btn" hx-disabled="true"
+              hx-post="/cancel/wf_c0ld1" hx-confirm="cancel wf_c0ld1?"
+              hx-target="#badge">cancel</button>
+      <button class="run" id="resume-btn" hx-disabled="true" hidden
+              hx-post="/resume/wf_c0ld1"
+              hx-target="#badge">resume</button>
+    </div>
+
+    <!-- STEP LOG (existente): 1 linha por step completo (poll 2s).
+         Child workflow: quando o StepInfo traz ChildWorkflowID, um bloco
+         filho entra sob o step que o lançou:
+           · status da child (poll GET /status/{childId} — existente)
+           · id da child é deep-link (GET /executions/{childId} — existente)
+           · steps da child quando revelados (GET /executions/{childId}/steps — existente)
+         Não inventa nada: child só aparece quando existe ChildWorkflowID,
+         e só aparece o que o DBOS expõe. -->
+    <div class="cmd" style="margin-top:1rem">$ steps</div>
+    <div id="steps" class="steps" hx-disabled="true"
+         hx-get="/executions/wf_c0ld1/steps" hx-trigger="load, every 2s" hx-target="this" hx-swap="outerHTML">
+      <div class="step">
+        <div class="logline" hx-disabled="true" hx-get="/executions/wf_c0ld1/steps/fetch" hx-target="this" hx-swap="outerHTML">
+          <span class="t">t+0.0s</span>
+          <span class="name">fetch</span>
+          <span class="state">done · 0.5s</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="logline" hx-disabled="true" hx-get="/executions/wf_c0ld1/steps/compute" hx-target="this" hx-swap="outerHTML">
+          <span class="t">t+0.5s</span>
+          <span class="name">compute <span class="child-mark">└─ child</span></span>
+          <span class="state" data-step="compute">done · 8.5s</span>
+        </div>
+        <!-- child: aparece quando compute completa (StepInfo.ChildWorkflowID) -->
+        <div class="child-run" id="child" hidden>
+          <div class="child-head">
+            <span class="t">t+0.5s</span>
+            <a class="wf-id" href="execution.html">wf_9k2m4</a>
+            <span class="status running" id="child-badge">running</span>
+          </div>
+          <div class="child-line" id="child-validate">
+            <span class="t">t+0.0</span>
+            <span class="name">validate</span>
+            <span class="state">done · 0.3s</span>
+          </div>
+          <div class="child-line" id="child-store" hidden>
+            <span class="t">t+0.3</span>
+            <span class="name">store</span>
+            <span class="state">done · 8.2s</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="logline" hx-disabled="true" hx-get="/executions/wf_c0ld1/steps/store" hx-target="this" hx-swap="outerHTML">
+          <span class="t">t+9.0s</span>
+          <span class="name">store</span>
+          <span class="state">done · 3.0s</span>
+        </div>
+      </div>
+      <!-- cauda "ainda rodando" (poll 2s): cursor piscando -->
+      <div class="tail-line">
+        <span class="t">t+12.0s</span>
+        <span class="name">…</span>
+        <span class="state running">running <span class="cursor">▌</span></span>
+      </div>
+    </div>
+    </div>
+
+    <!-- executed path: fetch → child (◉ pipeline) → store ·
+         a child vira box quando completa (StepInfo.ChildWorkflowID) ·
+         cauda tracejada = em execução -->
+    <aside class="graph-side">
+      <div class="cmd">$ executed path</div>
+      <svg class="block-graph" viewBox="0 0 212 172" role="img"
+           aria-label="executed path: fetch, child pipeline, store">
+        <defs>
+          <marker id="flowdeck-arrow" markerWidth="8" markerHeight="8"
+                  refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <path class="g-arrow" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+        </defs>
+        <g>
+          <rect class="g-node success" x="76" y="12" width="60" height="36" rx="5"/>
+          <text class="g-text" x="106" y="34" text-anchor="middle">fetch</text>
+        </g>
+        <g class="js-g" data-end="9.0" style="display:none">
+          <line class="g-edge" x1="106" y1="48" x2="106" y2="68" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node success" x="57" y="68" width="98" height="36" rx="5"/>
+          <text class="g-text" x="98" y="90" text-anchor="middle">pipeline</text>
+          <g class="child-symbol">
+            <circle class="child-ring" cx="135" cy="86" r="4.5"/>
+            <circle class="child-dot" cx="135" cy="86" r="1.8"/>
+          </g>
+        </g>
+        <g class="js-g js-glast" data-end="12.0" style="display:none">
+          <line class="g-edge" x1="106" y1="104" x2="106" y2="124" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node success" x="76" y="124" width="60" height="36" rx="5"/>
+          <text class="g-text" x="106" y="146" text-anchor="middle">store</text>
+        </g>
+        <g class="js-gtail">
+          <line class="g-edge" x1="106" y1="48" x2="106" y2="68" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node tail" x="76" y="68" width="60" height="36" rx="5"/>
+          <text class="g-text tail" x="106" y="90" text-anchor="middle">…</text>
+        </g>
+      </svg>
+      <div class="graph-legend">box por step completo (poll) · cauda tracejada = em execução</div>
+    </aside>
+  </div>
+  </main>
+
+  <!-- DEMO-ONLY: tempo relativo · child aparece em t+0.5 · steps da child
+       em t+0.8/t+9.0 · child completa em t+9.0 · run completa em t+12 -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const t0 = Date.now();
+      const child = document.getElementById("child");
+      const childBadge = document.getElementById("child-badge");
+      const childStore = document.getElementById("child-store");
+      const computeState = document.querySelector('[data-step="compute"]');
+      let done = false;
+      const gSteps = Array.from(document.querySelectorAll(".js-g"));
+      const gtail = document.querySelector(".js-gtail");
+      let gShift = 0;
+      setInterval(() => {
+        const t = (Date.now() - t0) / 1000;
+        const el = document.getElementById("elapsed");
+        if (el) el.textContent = Math.min(t, 12.0).toFixed(1);
+        if (t >= 0.5) child.hidden = false;
+        if (t >= 0.8) childStore.hidden = false;
+        if (t >= 9.0) {
+          childBadge.textContent = "success · 8.5s";
+          childBadge.className = "status success";
+        }
+        gSteps.forEach(g => {
+          if (t >= parseFloat(g.dataset.end) && g.style.display === "none") {
+            g.style.display = "";
+            if (g.classList.contains("js-glast")) gtail.style.display = "none";
+            else gShift += 56;
+            gtail.setAttribute("transform", `translate(0,${gShift})`);
+          }
+        });
+        if (!done && t >= 12.0) {
+          done = true;
+          const badge = document.getElementById("badge");
+          badge.textContent = "success · 12.0s";
+          badge.className = "status success";
+          document.querySelector(".tail-line").remove();
+        }
+      }, 200);
+    });
+  </script>
+</body>
+</html>
