@@ -6,12 +6,17 @@ import (
 	"strings"
 	"testing"
 
+	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/web/internal/webtest"
 )
 
+// The routing layer (no core state involved): the static assets, the 404
+// and the 405 — the real port, the real ready check.
+
 // The vendored assets are served from the embedded FS — no CDN at runtime.
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	status, body := webtest.Get(t, srv.URL+"/static/htmx.min.js")
@@ -25,7 +30,7 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 }
 
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
@@ -39,7 +44,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(webtest.TestPort(), okReady))
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)

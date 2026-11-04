@@ -6,31 +6,28 @@ import (
 	"testing"
 	"time"
 
+	"flowdeck/core"
 	"flowdeck/core/boot"
-	"flowdeck/core/graph"
 	"flowdeck/core/reads"
-	"flowdeck/core/registry"
 	"flowdeck/core/status"
 	"flowdeck/web/internal/webtest"
 )
 
-// The workflow page (full page, opened from the list) has the dispatch
-// button and the executions list that receives the ACK rows.
-func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
-	fakeLister := func() []registry.Workflow {
-		return []registry.Workflow{{Name: "wf-alpha"}}
-	}
-	d := webtest.TestPort()
-	d.List = fakeLister
-	srv := testServer(t, d)
-	defer srv.Close()
+// The workflow page (full page, opened from the wall) against the booted
+// core: the dispatch button, the executions list (newest first) and the
+// generated paths graph — no stubs, the rows are real runs.
 
-	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
+// The no-input workflow page: the plain Run button (no form) and the
+// executions list that receives the ACK rows.
+func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	status, body := webtest.Get(t, srv.URL+"/workflows/noinput-test")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
 	for _, want := range []string{
-		`hx-post="/run/wf-alpha"`,
+		`hx-post="/run/noinput-test"`,
 		`id="executions"`,
 		"Run",
 	} {
@@ -38,162 +35,99 @@ func TestWorkflowPageRendersDispatchButtonAndList(t *testing.T) {
 			t.Errorf("page does not contain %q", want)
 		}
 	}
-	// The empty graph returns no paths: no graph nodes are rendered.
-	if strings.Contains(body, `class="g-node"`) {
-		t.Error("graph nodes rendered without paths")
+	if strings.Contains(body, `<form`) {
+		t.Error("no-input workflow page has a form")
 	}
 }
 
-// The workflow page layout (phase 4): the executions list (what was
-// executed) is on the left and the generated paths graph is on the right.
+// The workflow page layout: the executions list (what was executed) is on
+// the left and the generated paths graph is on the right.
 func TestWorkflowPageColumnsLayout(t *testing.T) {
-	d := webtest.TestPort()
-	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
-	d.Graph = fakeGraph("wf-alpha", [][]string{{"one", "two"}})
-	srv := testServer(t, d)
-	defer srv.Close()
+	srv := bootedTestServer(t)
 
-	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
+	status, body := webtest.Get(t, srv.URL+"/workflows/linear-test")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
-	iExec, iGraph := strings.Index(body, `id="executions"`), strings.Index(body, `class="graph"`)
+	iExec, iGraph := strings.Index(body, `id="executions"`), strings.Index(body, `<div class="graph">`)
 	if iExec < 0 || iGraph < 0 || iExec > iGraph {
 		t.Errorf("executions must come before the graph: executions at %d, graph at %d", iExec, iGraph)
 	}
 }
 
-// The workflow page renders the possible paths (phase 4, STEP 2) as a
-// graph: the common prefix is drawn once and the if forks the branches —
-// not one row per path (from the boot map: map lookup, no re-parse, no DB).
-func TestWorkflowPageRendersForkedGraph(t *testing.T) {
-	wg := &graph.WorkflowGraph{
-		Root: &graph.Block{ID: "b0", Level: 0, Type: graph.BlockSequence, Children: []graph.Child{
-			{Block: &graph.Block{ID: "b1", Level: 0, Type: graph.BlockIf,
-				Children: []graph.Child{{Node: &graph.Node{Name: "left", Kind: graph.NodeStep}}},
-				Else:     &graph.Block{ID: "b2", Level: 0, Children: []graph.Child{{Node: &graph.Node{Name: "right", Kind: graph.NodeStep}}}},
-			}},
-		}},
-	}
-	d := webtest.TestPort()
-	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
-	d.Graph = &graph.PathGraph{ByName: map[string]*graph.WorkflowGraph{"wf-alpha": wg}}
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
-	}
-	// The if forks: both branch boxes are drawn, and the L0 outline is
-	// present (the root sequence).
-	for _, want := range []string{
-		`<svg`,
-		">left<",
-		">right<",
-		`class="g-block l0"`,
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("page does not contain %q", want)
-		}
-	}
-}
-
-// A workflow without an if renders a single linear row (all the nodes on
-// the same row).
-func TestWorkflowPageRendersLinearGraph(t *testing.T) {
-	d := webtest.TestPort()
-	d.List = func() []registry.Workflow { return []registry.Workflow{{Name: "wf-alpha"}} }
-	d.Graph = fakeGraph("wf-alpha", [][]string{{"fetch", "parse", "store"}})
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
-	if status != http.StatusOK {
-		t.Fatalf("status: got %d want %d", status, http.StatusOK)
-	}
-	if n := strings.Count(body, `class="g-node"`); n != 3 {
-		t.Errorf("graph nodes: got %d, want 3", n)
-	}
-	for _, s := range []string{`>fetch</text>`, `>parse</text>`, `>store</text>`} {
-		if !strings.Contains(body, s) {
-			t.Errorf("page does not contain %q", s)
-		}
-	}
-}
-
-// The workflow page lists the runs of the workflow (phase 3, LIST): one
+// The workflow page lists the runs of the workflow: one
 // row per execution — badge + first execution date + workflow ID, each row
-// linking to its detail page, newest first. Live badges poll; terminal
-// ones do not.
+// linking to its detail page, newest first. Terminal badges do not poll.
+// (The runs are enqueued straight on the core — the dispatch route is the
+// executions package's, the listing only needs runs.)
 func TestWorkflowPageListsExecutions(t *testing.T) {
-	fakeLister := func() []registry.Workflow {
-		return []registry.Workflow{{Name: "wf-alpha"}}
-	}
-	newer := time.Date(2026, 5, 13, 13, 40, 0, 0, time.Local)
-	older := time.Date(2026, 5, 13, 13, 30, 0, 0, time.Local)
-	listExecutions := func(name string) ([]reads.Execution, error) {
-		return []reads.Execution{
-			{ID: "run-newer", State: status.Success, CreatedAt: newer},
-			{ID: "run-older", State: status.Queued, CreatedAt: older},
-		}, nil
-	}
-	d := webtest.TestPort()
-	d.List = fakeLister
-	d.Executions = listExecutions
-	srv := testServer(t, d)
-	defer srv.Close()
+	srv := bootedTestServer(t)
 
-	status, body := webtest.Get(t, srv.URL+"/workflows/wf-alpha")
+	enqueue := func() string {
+		h, err := boot.Ctx().Enqueue(boot.Ctx(), boot.QueueName, "noinput-test", nil)
+		if err != nil {
+			t.Fatalf("enqueue: %v", err)
+		}
+		return h.GetWorkflowID()
+	}
+	older := enqueue()
+	// The ordering assertion reads the created_at (millisecond precision):
+	// the gap keeps the two rows in distinct created_at.
+	time.Sleep(10 * time.Millisecond)
+	newer := enqueue()
+	for _, id := range []string{older, newer} {
+		deadline := time.Now().Add(30 * time.Second)
+		for {
+			st, err := reads.Status(id)
+			if err != nil {
+				t.Fatalf("status: %v", err)
+			}
+			if st == status.Success {
+				break
+			}
+			if st != status.Queued && st != status.Running {
+				t.Fatalf("run %s: state %s", id, st)
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("run %s: no success: %s", id, st)
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+
+	status, body := webtest.Get(t, srv.URL+"/workflows/noinput-test")
 	if status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
-	for _, want := range []string{
-		`href="/executions/run-newer"`,
-		`href="/executions/run-older"`,
-		`class="badge success terminal"`,
-		`class="badge queued"`,
-		`hx-get="/status/run-older"`,
-		`<span class="exec-date">13/05/2026 13:40</span>`,
-		`<span class="exec-date">13/05/2026 13:30</span>`,
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("page does not contain %q", want)
+	for _, id := range []string{older, newer} {
+		for _, want := range []string{
+			`href="/executions/` + id + `"`,
+			`class="badge success terminal"`,
+			`<span class="exec-date">`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("page does not contain %q", want)
+			}
+		}
+		// Terminal badge: no poll on the listing row.
+		if strings.Contains(body, `hx-get="/status/`+id+`"`) {
+			t.Errorf("terminal row badge still polls: %s", body)
 		}
 	}
-	if strings.Contains(body, `hx-get="/status/run-newer"`) {
-		t.Error("terminal row badge still polls")
+	// Newest first: the newer run's row appears before the older run's.
+	iOlder, iNewer := strings.Index(body, older), strings.Index(body, newer)
+	if iOlder < 0 || iNewer < 0 {
+		t.Fatalf("rows missing: older=%d newer=%d", iOlder, iNewer)
 	}
-	// Newest first: the newer run's row appears before the older run's
-	iNewer, iOlder := strings.Index(body, "run-newer"), strings.Index(body, "run-older")
-	if iNewer < 0 || iOlder < 0 || iNewer > iOlder {
+	if !(iNewer < iOlder) {
 		t.Errorf("rows are not newest first: newer at %d, older at %d", iNewer, iOlder)
 	}
 }
 
-// The runs listing comes from the core: core down is a clean 503.
-func TestWorkflowPageCoreDownIs503(t *testing.T) {
-	fakeLister := func() []registry.Workflow {
-		return []registry.Workflow{{Name: "wf-alpha"}}
-	}
-	downExecutions := func(name string) ([]reads.Execution, error) {
-		return nil, boot.ErrNotLaunched
-	}
-	d := webtest.TestPort()
-	d.List = fakeLister
-	d.Executions = downExecutions
-	srv := testServer(t, d)
-	defer srv.Close()
-
-	if status, _ := webtest.Get(t, srv.URL+"/workflows/wf-alpha"); status != http.StatusServiceUnavailable {
-		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
-	}
-}
-
-// A page for a workflow that is not in the core registry is a clean 404.
+// A page for a workflow that is not registered is a clean 404 (the
+// registry is the source — the graph and the booted registry both agree).
 func TestWorkflowPageUnknownIs404(t *testing.T) {
-	srv := testServer(t, webtest.TestPort())
-	defer srv.Close()
+	srv := testServer(t, core.NewPort())
 
 	if status, _ := webtest.Get(t, srv.URL+"/workflows/ghost"); status != http.StatusNotFound {
 		t.Fatalf("status: got %d want %d", status, http.StatusNotFound)

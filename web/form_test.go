@@ -8,21 +8,20 @@ import (
 	"flowdeck/web/internal/webtest"
 )
 
-// Phase 5, DISPLAY: the top of the workflow page is the parameter form —
-// one item per input, as key: value (the input name is the key, the
-// default value of the source is the prefilled value), from the spec the
-// core parsed at boot.
+// The top of the workflow page is the parameter form — one item per input,
+// as key: value (the input name is the key, the default value of the
+// source is the prefilled value), from the spec the core parsed at boot.
 func TestWorkflowPageShowsParameters(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	code, body := webtest.Get(t, srv.URL+"/workflows/pipeline")
+	code, body := webtest.Get(t, srv.URL+"/workflows/linear-test")
 	if code != http.StatusOK {
-		t.Fatalf("pipeline page: %d", code)
+		t.Fatalf("linear-test page: %d", code)
 	}
 	for _, want := range []string{
 		`<form`,
-		`hx-post="/run/pipeline"`,
+		`hx-post="/run/linear-test"`,
 		`name="msg"`,
 		// key: value — the input name and the prefilled default
 		`msg:`,
@@ -40,14 +39,14 @@ func TestWorkflowPageShowsParameters(t *testing.T) {
 	}
 }
 
-// Phase 5, DISPLAY: the workflow page has no step-defaults list under the
-// form — the chips duplicated the step name and the literal (the same
-// word twice: "fetch fetch" on the pipeline page).
+// The workflow page has no step-defaults list under the form — the chips
+// duplicated the step name and the literal (the same word twice: "fetch
+// fetch" on the linear-test page).
 func TestWorkflowPageHasNoStepDefaultsList(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
-	for _, name := range []string{"pipeline", "decide"} {
+	for _, name := range []string{"linear-test", "fork-test"} {
 		code, body := webtest.Get(t, srv.URL+"/workflows/"+name)
 		if code != http.StatusOK {
 			t.Fatalf("%s page: %d", name, code)
