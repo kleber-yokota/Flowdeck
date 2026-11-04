@@ -142,10 +142,10 @@ a:hover { color: var(--accent); }
 .filepath .dir { color: var(--soft); }
 .filepath .file { color: var(--steel); }
 
-/* execuções: linhas de log */
+/* execuções: linhas de log (tracks fixos → colunas alinhadas entre linhas) */
 .exec-row {
   display: grid;
-  grid-template-columns: 138px 1fr auto; /* 110 × 1.25 */
+  grid-template-columns: 138px minmax(0, 1fr) 110px; /* 110 × 1.25 · status fixo */
   gap: var(--gap);
   padding: var(--row-pad) 0.25rem;
   border-bottom: 1px solid var(--line);
@@ -160,13 +160,13 @@ a:hover { color: var(--accent); }
 .status.error { color: var(--error); }
 .status.cancelled { color: var(--cancelled); }
 
-/* listas de status (runnings · queued · failed): 5 colunas */
+/* listas de status (runnings · queued · failed): 5 colunas, tracks fixos */
 #running-list .exec-row,
 #queued-list .exec-row {
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: 110px minmax(0, 1fr) 90px 100px 90px;
 }
 #failed-list .exec-row {
-  grid-template-columns: auto 1fr auto auto minmax(0, 1fr);
+  grid-template-columns: 110px minmax(0, 1fr) 130px 110px minmax(0, 1fr);
 }
 .message {
   color: var(--soft);
@@ -188,7 +188,7 @@ a:hover { color: var(--accent); }
 .steps .cmd { color: var(--steel); }
 .logline {
   display: grid;
-  grid-template-columns: 88px 1fr auto; /* 70 × 1.25 */
+  grid-template-columns: 88px minmax(0, 1fr) 150px; /* 70 × 1.25 · estado fixo */
   gap: var(--gap);
   padding: var(--row-pad) 0.25rem;
   cursor: pointer;
@@ -220,7 +220,7 @@ a:hover { color: var(--accent); }
 }
 .child-head {
   display: grid;
-  grid-template-columns: 88px 1fr auto;
+  grid-template-columns: 88px minmax(0, 1fr) 150px;
   gap: var(--gap);
   padding: var(--row-pad) 0.25rem;
   border-bottom: 1px solid var(--line);
@@ -229,7 +229,7 @@ a:hover { color: var(--accent); }
 .child-head .t { color: var(--soft); }
 .child-line {
   display: grid;
-  grid-template-columns: 88px 1fr auto;
+  grid-template-columns: 88px minmax(0, 1fr) 150px;
   gap: var(--gap);
   padding: var(--row-pad) 0.25rem 0.35rem 0.75rem;
   border-bottom: 1px solid var(--line);
@@ -241,7 +241,7 @@ a:hover { color: var(--accent); }
 /* a cauda "ainda rodando": cursor piscando */
 .tail-line {
   display: grid;
-  grid-template-columns: 88px 1fr auto;
+  grid-template-columns: 88px minmax(0, 1fr) 150px;
   gap: var(--gap);
   padding: var(--row-pad) 0.25rem;
   border-bottom: 1px solid var(--line);
