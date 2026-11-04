@@ -12,16 +12,17 @@ import (
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testworkflows"
 )
 
-// E2E against a real Postgres (the e2e job points DBOS_APP_NAME and
-// DBOS_SYSTEM_DATABASE_URL at the Postgres 18 service): the same
-// env-driven lifecycle as the unit suite, on the production database
-// engine. Packages run with -p 1 so only one executor polls the queue at a
-// time (a job claimed by a process that has not registered it would fail).
+// E2E against a real database (the e2e job points DBOS_APP_NAME and
+// DBOS_SYSTEM_DATABASE_URL at a SQLite file): the same env-driven
+// lifecycle as the unit suite, on the file database. Packages run with
+// -p 1 so only one executor polls the queue at a time (a job claimed by a
+// process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("live-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -30,8 +31,8 @@ func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 	}
 }
 
-// A failing run on Postgres: the retries run out, and Detail shows the error
-// and the failed step (phase 3, DETAIL).
+// A failing run on the e2e database: the retries run out, and Detail shows
+// the error and the failed step.
 func TestE2EDetailOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
 	ex, err := actions.Enqueue("failing-test", nil)
@@ -54,13 +55,13 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 	}
 }
 
-// Phase 5, RESUME, E2E: the resume of a failed (retries-exhausted) run on
-// Postgres — the rewind re-enqueues the same id and the run reaches
-// success (the Postgres twin of the unit test above).
+// The resume of a failed (retries-exhausted) run: the rewind re-enqueues
+// the same id and the run reaches success (the e2e twin of the unit test
+// above).
 func TestE2EResumeOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	t.Cleanup(func() { testcore.FlakyFail = false })
-	testcore.FlakyFail = true
+	t.Cleanup(func() { testworkflows.FlakyFail = false })
+	testworkflows.FlakyFail = true
 	ex, err := actions.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -68,7 +69,7 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
 		t.Fatalf("poll to failed: %v", err)
 	}
-	testcore.FlakyFail = false
+	testworkflows.FlakyFail = false
 	if _, err := actions.Resume(ex.ID); err != nil {
 		t.Fatalf("Resume of failed run: %v", err)
 	}
@@ -77,15 +78,15 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 	}
 }
 
-// The resume of a cancelled run on Postgres (the Postgres twin of the unit
-// test above): the SDK resume re-enqueues the CANCELLED row and the
-// executor runs it to success.
+// The resume of a cancelled run (the e2e twin of the unit test above): the
+// SDK resume re-enqueues the CANCELLED row and the executor runs it to
+// success (the noinput-test reaches success fast on the main queue).
 func TestE2EResumeOfCancelledRun(t *testing.T) {
 	testcore.NeedCore(t)
 	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -101,10 +102,10 @@ func TestE2EResumeOfCancelledRun(t *testing.T) {
 	}
 }
 
-// The executed path of a branched run on Postgres (phase 4, STEP 3).
+// The executed path of a branched run.
 func TestE2EStepsOfBranchedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("decide", "left")
+	ex, err := actions.Enqueue("fork-test", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -112,16 +113,16 @@ func TestE2EStepsOfBranchedRun(t *testing.T) {
 		t.Fatalf("poll to success: %v", err)
 	}
 	if got := testcore.MustStepNames(t, ex); len(got) != 2 || got[0] != "base" || got[1] != "left" {
-		t.Fatalf("decide left steps: got %v", got)
+		t.Fatalf("fork-test left steps: got %v", got)
 	}
 }
 
-// The children of a kitchen run on Postgres (the Postgres twin of
+// The children of a child-test run (the e2e twin of
 // TestDetailChildrenOfChildDispatchingRun): the detail lists the child
-// pipeline with its id and badge state.
-func TestE2EDetailChildrenOfKitchenRun(t *testing.T) {
+// inner-test with its id and badge state.
+func TestE2EDetailChildrenOfChildTestRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("kitchen", "FlowDeck")
+	ex, err := actions.Enqueue("child-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -136,7 +137,7 @@ func TestE2EDetailChildrenOfKitchenRun(t *testing.T) {
 		t.Fatalf("children: got %v, want exactly one", d.Children)
 	}
 	c := d.Children[0]
-	if c.ID == "" || c.Name != "pipeline" || c.State != status.Success {
-		t.Fatalf("child: got %+v, want pipeline (success)", c)
+	if c.ID == "" || c.Name != "inner-test" || c.State != status.Success {
+		t.Fatalf("child: got %+v, want inner-test (success)", c)
 	}
 }

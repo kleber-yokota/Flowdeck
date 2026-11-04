@@ -5,7 +5,7 @@ The read side of the core: `Executions` (list the runs of a workflow), `Status` 
 ## Rules (decisions · pinned values)
 
 - `MapState` is the total contract: `ENQUEUED/DELAYED → queued` · `PENDING → running` · `SUCCESS → success` · `CANCELLED → cancelled` · `ERROR | MAX_RECOVERY_ATTEMPTS_EXCEEDED → error`. Unknown DBOS states are rejected, not guessed. *(evidence: `status.go · MapState`)*
-- `Attempts = recovery_attempts + 1`: the SDK column is 0-based, so a run on its first attempt is 1; the display renders `attempts − 1` recovered rows (the final attempt is the badge, not a row). *(evidence: `detail.go · Detail` · `web/executions/detail.go · retriesFor`)*
+- The display attempts are the dispatches so far, minimum 1: the SDK column counts the current claim (0 until the first claim — a resume re-enqueues and starts the count again), so `displayAttempts` floors it at 1; the display renders `attempts − 1` recovered rows (the final attempt is the badge, not a row). *(evidence: `detail.go · displayAttempts` · `web/executions/detail.go · retriesFor`)*
 - The stored input is written once at enqueue — immutable per `workflow_id`; the detail page shows the stored values, never the form values. *(evidence: `detail.go · Detail` · `inputValues`)*
 - Step rows come back in `step_id` order (the branch the run took). Row kind: the wait names are checked **before** the child id — a `DBOS.getResult` row carries its child's id but is the wait, not the child. *(evidence: `steps.go · kindOf` · `stepRows`)*
 - The child rows are one batched query by the child ids, issued only when the run dispatched a child. *(evidence: `steps.go · stepRows` · `childRows`)*

@@ -7,27 +7,27 @@ import (
 	"flowdeck/core/registry"
 )
 
-// Phase 5, BOOT: the core exposes the spec of a registered workflow —
-// the input and the steps' default values, parsed from the source at boot
-// (the web renders them on top of the workflow page).
+// The core exposes the spec of a registered workflow — the input and the
+// steps' default values, parsed from the source at boot (the web renders
+// them on top of the workflow page).
 func TestSpecOfRegisteredWorkflow(t *testing.T) {
-	spec, err := registry.Spec("decide")
+	spec, err := registry.Spec("fork-test")
 	if err != nil {
-		t.Fatalf("registry.Spec(decide): %v", err)
+		t.Fatalf("registry.Spec(fork-test): %v", err)
 	}
 	if len(spec.Inputs) != 1 {
-		t.Fatalf("decide inputs: got %v, want 1", spec.Inputs)
+		t.Fatalf("fork-test inputs: got %v, want 1", spec.Inputs)
 	}
 	if in := spec.Inputs[0]; in.Name != "msg" || in.Type != "string" {
-		t.Fatalf("decide input: got %+v, want {msg string}", in)
+		t.Fatalf("fork-test input: got %+v, want {msg string}", in)
 	}
 	wantSteps := map[string]string{"base": "base", "left": "left", "right": "right"}
 	if len(spec.Steps) != len(wantSteps) {
-		t.Fatalf("decide steps: got %v, want %v", spec.Steps, wantSteps)
+		t.Fatalf("fork-test steps: got %v, want %v", spec.Steps, wantSteps)
 	}
 	for _, s := range spec.Steps {
 		if wantSteps[s.Name] != s.Default {
-			t.Fatalf("decide step %s: got default %q, want %q", s.Name, s.Default, wantSteps[s.Name])
+			t.Fatalf("fork-test step %s: got default %q, want %q", s.Name, s.Default, wantSteps[s.Name])
 		}
 	}
 }

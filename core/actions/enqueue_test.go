@@ -9,17 +9,13 @@ import (
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
-
-	// The workflow files register themselves in the env-driven DBOS
-	// context (their init) — the actions act on the runs they dispatch.
-	_ "flowdeck/workflows"
 )
 
 // TestMain brings the env-driven core up for the tests: the paths graph
-// from the workflows tree on disk, and the executor when the env context
-// exists (the mock tests run without it).
+// from the testcore source (the parser fixture) and the executor when the
+// env context exists (the unit tests run without it).
 func TestMain(m *testing.M) {
-	testcore.Setup("../../workflows")
+	testcore.Setup("../testworkflows")
 	os.Exit(m.Run())
 }
 
@@ -27,7 +23,7 @@ func TestMain(m *testing.M) {
 // created_at) — the dispatch ACK the web renders as the "queued" row.
 func TestEnqueueReturnsExecution(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("hello-world", nil)
+	ex, err := actions.Enqueue("live-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -51,12 +47,12 @@ func TestEnqueueUnknownWorkflow(t *testing.T) {
 	}
 }
 
-// Phase 5, EXECUTE: the dispatch enqueues the clean input (the web
-// sanitized the raw form values against the spec) — the run takes the
-// value (the decide workflow branches on it: base + left, no right).
+// The dispatch enqueues the clean input (the web sanitized the raw form
+// values against the spec) — the run takes the value (the fork-test
+// workflow branches on it: base + left, no right).
 func TestEnqueueWithValuesTakesBranch(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("decide", "left")
+	ex, err := actions.Enqueue("fork-test", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
