@@ -1,7 +1,7 @@
 # v6.3 "Petróleo" (FINAL)
 
 Soft Terminal com pele de petróleo (teal `#45d6b5`, fósforo nos estados).
-Escala global **1.3×** (root `20.8px`) + constantes px escaladas.
+Escala global **1.25×** (root `20px`) + constantes px escaladas.
 `style.css` standalone — sem `@import`.
 
 ## Páginas
