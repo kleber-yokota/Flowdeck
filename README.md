@@ -21,10 +21,11 @@ docker compose up --build
 
 Todos os testes com banco rodam em SQLite (o Postgres é só a produção do
 compose): unitários sem env, booted via `.env.test`, e o e2e (build tag
-`e2e`) — o CI roda os dois em SQLite.
+`e2e`) — o CI roda os dois em SQLite (o job `unit` roda a camada pura
+sem env; o job `race` roda a suíte booted com `-race`).
 
 ```bash
-# booted (race, count=2, shuffled — o job `test` do CI)
+# booted (race, count=2, shuffled — o job `race` do CI)
 set -a && source .env.test && set +a
 go test -race -count=2 -shuffle=on -p 1 ./...
 
