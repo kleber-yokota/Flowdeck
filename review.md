@@ -3,10 +3,9 @@
 `scripts/structure-gate.sh` prints the live numbers (the gates and the
 signals). This file holds what the numbers cannot say: what is **ignored**
 in the analysis, and how to **read** a number. It is guidance, not a
-snapshot — the numbers in it would go stale on the next refactor, so the
-numbers stay where they are printed. The agent runs the script, reads the
-live output against these readings, and decides whether a refactor is
-worth making. The signal points; the agent decides.
+snapshot: the numbers stay where they are printed. The agent runs the
+script, reads the live output against these readings — the signal points,
+the agent decides.
 
 ## Ignored (the signal does not apply)
 
@@ -26,5 +25,4 @@ worth making. The signal points; the agent decides.
 
 Every reading resolves in the same direction: the intention the number
 points at gets drawn out — as a subpackage of the folder, or as a
-package of its own. The signal points where to draw; the agent decides
-whether the draw is worth making.
+package of its own.

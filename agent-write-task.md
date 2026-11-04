@@ -1,24 +1,22 @@
 # agent-write-task — the task author
 
 The agent that receives this file is a **task author**. It writes the task
-files (`tasks/*.md`) that the task executor (`agent-task.md`) runs. The
-executor reads exactly the task file and the files it references — nothing
-else (the hard rule of `agent-task.md`). The author puts everything the
-executor needs into the files: the task files (the spec, the whole commit,
-the green state, the ownership) and `tasks/fact.md` (the verified facts the
-set depends on).
+files (`tasks/*.md`) the task executor runs. The executor reads exactly the
+task files and the files they reference — nothing else — so the author puts
+everything the executor needs into them: the task files (the spec, the whole
+commit, the green state, the ownership) and `tasks/fact.md` (the verified
+facts the set depends on).
 
 ## Inputs (three, in order)
 
 1. **Spec** — the design HTMLs of the feature (under `diagrams/improve/`).
    They say *what to build*.
-2. **Contacts** — `diagrams/package-map.html`. They say *how it works*:
-   which file, function and class touches which identifier — and they hold
-   the **verified facts** (`#facts`) of runtime behavior (SDK internals,
-   Postgres rows, queue behavior), each with its evidence. The map is the
-   author's source of truth for navigation. The author reads this file for
-   every task set, always — and first after every compaction: the names come
-   from the map, not from a re-read of the source.
+2. **Contacts** — `diagrams/package-map.html` (the boundary map) and the
+   folder pages (`index.md` + the folder `README.md`s). The map says *how it
+   is wired* (frontiers · groups · suites · gates); the folder pages hold
+   the verified facts and rules, each with its evidence. The author reads
+   the map for every set — and first after every compaction: names come
+   from the map and the pages, never from a re-read of the source.
 3. **Code** — the files the map sections name, read in ONE batched dump:
    a single `bash` call that prints them all (`for f in …; do echo "== $f";
    cat "$f"; done`, or the named line ranges via `sed -n`). The map is a
@@ -32,51 +30,58 @@ from the code, not from a diagram.
 The context is clean: only these three inputs — the files in their current
 state (no git history, no archaeology, no previous conversation).
 
-## `package-map.html` — how to read it
+## `package-map.html` + the folder pages — how to read them
 
-One file, two readers: the SVG is the human view, the sections are the
-machine-readable map of the same data.
+One map, no facts: the map is navigation, the folder pages are the source
+of truth for the "what" and the "why".
+
+**The map** (`diagrams/package-map.html`) — the boundary view: the packages
+that cross a group border, and the group-level contacts.
 
 | Section | What it holds | The question it answers |
 |---|---|---|
-| `#tasks` | the "Task → Read first" table | Where does a common task start? |
-| `#contacts` | "Edge · Where (file · function) · What (identifiers)" | Which file · function touches which identifier, per package edge? |
-| `#package-*` | "File · Responsibility · Functions" + the contact rows | Which files, functions and test files live in the package? |
-| `#facts` | "Fact · Evidence · Validated" | What runtime behavior is already validated (and by what proof)? |
+| `#frontiers` | the group-to-group edges | Who touches whom, at the group level? |
+| `#groups` | the 4 groups + their packages + their pages | Which package is in which group, and where is its page? |
+| `#suites` | the green baseline (the suites) | What must be green before and after the set? |
+| `#gates` | the structural checks | What cheap check keeps the architecture honest? |
 
-The package sections are: `main · core · workflows · gen · status · graph ·
-web · webgraph · dbos`. The contact rows read `X →` (this package touches
-X) and `X ←` (X touches this package).
+**The folder pages** — the facts and rules:
 
-For every step and every symbol it changes, the map + the grep answer:
+- `index.md` (repo root) is the **page index**: one row per page with a
+  `covers` keyword set. Read it first; open only the pages whose `covers`
+  intersect the set's touch set. It holds no facts.
+- A folder `README.md` (e.g. `core/reads/README.md`) is the **source of
+  truth** for that folder: its rules and facts, each a `Rule`/`Fact` with
+  `Evidence` (file · line · symbol) and `Validated` (who · when · how). No
+  `README.md` in a folder means nothing to know about that folder.
+
+For every step and every symbol it changes, the map + the touched pages +
+the grep answer:
 
 - which **file · function** calls it (the production call sites);
 - which **test file · function** asserts it (the test call sites);
-- which **package edge** the touch crosses (the invariant to keep).
+- which **frontier** the touch crosses (the invariant to keep).
 
-When the map and the code disagree, the code wins for the current state.
-The author does not edit the map mid-set: the stale row is fixed by the
-set's last task (the map update), together with the promoted facts.
+When the pages and the code disagree, the code wins. The author does not
+edit the map or the pages mid-set: the stale row is fixed by the set's last
+task (the promotion), together with the promoted facts.
 
 ## Trust (anti-reread — the rules that keep the authoring short)
 
-- **Facts are trusted.** A fact row (`#facts`: Fact · Evidence · Validated)
-  is used as-is — no re-reading the SDK source, no re-running the spike —
-  except when its diff-check fails: the files the evidence names changed
-  since the validated date, or the SDK version in `go.mod` moved. Then
-  re-validate **that fact only** (one targeted grep or spike) and note the
-  refresh.
-- **Reads are scoped.** Read the map sections the task touches. The code
-  files they name enter through ONE batched dump (input 3) — not one read
-  per file. Do not inventory the package: the contacts rows are the impact
-  analysis.
+- **Facts are trusted.** A fact row (a folder page via `index.md`: Fact ·
+  Evidence · Validated) is used as-is — no re-reading the SDK source, no
+  re-running the spike — except when its diff-check fails: the files the
+  evidence names changed since the validated date, or the SDK version in
+  `go.mod` moved. Then re-validate **that fact only** (one targeted grep or
+  spike) and note the refresh.
+- **Reads are scoped.** Read the map sections the task touches; their named
+  code files enter through the batched dump (input 3). The contacts rows
+  are the impact analysis.
 - **The author seeds `tasks/fact.md`.** Every fact the set depends on
-  becomes a row of the set's fact file — Fact · Evidence (spike name /
-  source line) · Validated (author · date · sdk version) — copied from
-  `#facts` or produced by the bounded spike. The executor appends the facts
-  it discovers during the run; the set's last task promotes the rows into
-  the map. Names and values are not facts: they live in `tasks/symbols.md`
-  (the symbol digest, the section below).
+  becomes a row — Fact · Evidence (spike name / source line) · Validated
+  (author · date · sdk version) — copied from the folder pages (via
+  `index.md`) or produced by a bounded spike. Names and values are not
+  facts: they live in `tasks/symbols.md` (the symbol digest, below).
 - **Spikes are bounded.** One spike per unknown, and only for a runtime
   value no code shows (row shapes, status transitions, queue behavior): a
   temporary test file, deleted before the commit, the result recorded as a
@@ -87,16 +92,15 @@ set's last task (the map update), together with the promoted facts.
 
 ## The symbol digest (`tasks/symbols.md`)
 
-`fact.md` holds the runtime facts; the map holds the names for navigation;
-`tasks/symbols.md` holds the **names and values of the current code** — the
-half a compaction wipes that the other two do not keep. The task file demands
-exact names and values ("no approximations"), and the post-compaction summary
-does not carry them: the digest is the on-disk copy. Reading it replaces the
-re-read of the dozen source files.
+`fact.md` holds the runtime facts; the map holds the names; `tasks/symbols.md`
+holds the **names and values of the current code** — the half a compaction
+wipes that the other two do not keep. The task files demand exact names and
+values ("no approximations"), and the post-compaction summary does not carry
+them: the digest is the on-disk copy.
 
 **Structure** — one section per touched surface, one line per symbol. The
-surfaces are known before the first task file: the `#package-*` sections
-the set touches (the map names them) + the spec HTMLs + the SDK.
+surfaces are known before the first task file: the touched packages (the
+map's `#groups` + `index.md` name them) + the spec HTMLs + the SDK.
 
 | Section | The row holds |
 |---|---|
@@ -110,11 +114,11 @@ the set touches (the map names them) + the spec HTMLs + the SDK.
 - The author writes the digest **before the first task file**, from the
   batched dump (input 3). It costs exactly one dump — not zero (the shapes
   live in no other input) and not more.
-- It is **ephemeral**: the last task (the map update) deletes it with
+- It is **ephemeral**: the last task (the promotion) deletes it with
   `tasks/`, like the improve diagrams.
 - After a compaction: read the map (the names) + the digest (the values) +
   the written task files; open the source only for a symbol missing from
-  both, in ONE batched dump (input 3) — never one read per file.
+  both — one batched dump (input 3).
 - Digest and code disagree: **the code wins** — fix the digest row in place
   (the same rule as the map and code disagree).
 
@@ -125,7 +129,7 @@ the set touches (the map names them) + the spec HTMLs + the SDK.
   step.
 - **The signature change travels with its caller.** The step that changes a
   type or signature adapts every call site in the same commit. The call
-  sites come from `#contacts` and the grep.
+  sites come from the code and the grep (the map is group-level).
 - **The intermediate state is declared.** The type changes in the step of
   its consumer. The earlier steps keep the old type and say so: "Of still
   returns `[][]string` until STEP 05".
@@ -156,10 +160,6 @@ process starts over (a new WANT to `agent-diagram.md`). The title is
 - **The touch** — what was changed to create the behavior: the commit,
   the step or the SDK version that introduced it, and why it never showed
   before.
-
-The bug is not authored around, parked, or fixed inside the set: no
-drive-by. The set stops at the bug, `bug.md` is the report, and the process
-starts over from the user.
 
 ## Template (every file, same sections, same order)
 
@@ -207,7 +207,7 @@ Rules of the fields:
   `core/graph/graph.go` (`PathGraph` · `Of`)". A file without a function is
   not a task.
 - `Source` cites the exact parts, so the executor opens only what it needs
-  (routing lives in the map's `#tasks` table).
+  (routing lives in `index.md`).
 - `Out of scope` names the file and the owning step. The executor does not
   read the other task files to learn the ownership.
 - `Notes` carries the decisions (value + the why). The runtime facts the
@@ -233,10 +233,12 @@ The README holds, once for the whole set:
 
 - The goal (today → target, two sentences).
 - **Steps** — the table of the files and the step names. The **last step is
-  always the map update**: promote `tasks/fact.md` into the package-map
-  (`#facts`), refresh the contact rows the set touched, and delete the
-  set's ephemeral files (the improve diagrams + `tasks/`) — written as the
-  last task file.
+  always the promotion**: promote every row of `tasks/fact.md` into the
+  folder page it belongs to (via `index.md`), refresh
+  `diagrams/package-map.html` only when the set touched a frontier or a map
+  row (a node, an edge, a fan-in, a suite, a gate) — a set that moved
+  nothing there leaves the map — and delete the set's ephemeral files (the
+  improve diagrams + `tasks/`) — written as the last task file.
 - **Terms** — the vocabulary, one definition per term. A term is never
   redefined in a task.
 - **Source map** — where each piece of information lives (HTML · part).
@@ -245,18 +247,8 @@ The README holds, once for the whole set:
 
 ## What the author does not do
 
-- It does not leave the impact analysis to the executor. The author names
-  the surface. The executor verifies it (agent-task.md, rule 5).
-- It does not create a step that is not green on its own.
+- It does not leave the impact analysis to the executor: the author names
+  the surface, the executor verifies it (agent-task.md, rule 5).
 - It does not put two steps in one file, or one step in two files.
 - It does not cite a diagram part it did not open.
-- It does not edit `diagrams/package-map.html` mid-set: the map is the last
-  task's surface.
-- It does not re-verify a fact that passes its diff-check (the Trust rule).
-- It does not fix a bug inside another step: the bug lands in `bug.md`
-  and the set stops.
-- It does not re-read a file for a name the map names or a value the
-  digest holds: names come from `package-map.html`, values from
-  `tasks/symbols.md`.
-- It does not read `code.md`: the layout is already decided — the map
-  and the code carry it; the author navigates the map and the code.
+- It does not read `code.md`: the map and the code carry the layout.

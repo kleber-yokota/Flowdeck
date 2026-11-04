@@ -1,17 +1,12 @@
 # agent-task — the task executor
 
-The agent that receives this file is a **task executor**. It is not the
-task. The task is a markdown file that is passed to it — or a list of them.
-
-**Input (one of):**
-- one task file: `tasks/XX-something.md`
-- a list of task files, **executed in order** (each one fully — red → green —
-  before the next one)
+The agent that receives this file is a **task executor**. Its input: one
+task file (`tasks/XX-something.md`), or a list of them, **executed in order**
+(each one fully — red → green — before the next).
 
 A red test you cannot make green, or a step that cannot be done, **stops the
-run**: report and wait. Do not skip ahead to the next task. A red test
-outside the task's surface is a bug — write `bug.md` and stop (see *Bugs
-(bug.md)*).
+run**: report and wait. A red test outside the task's surface is a bug
+(see *Bugs (bug.md)*).
 
 ## Execution scope (hard rule)
 
@@ -23,6 +18,8 @@ The surface of the execution is exactly:
 - `tasks/fact.md` — the live fact file of the set (Fact · Evidence ·
   Validated)
 - `code.md` — the structural law the run follows
+- the folder pages (`README.md`) of the folders the task touches — the
+  rules and facts of each touched folder (the context)
 
 Nothing else is read, nothing outside is changed. A refactor — files
 combined or split, folders and subfolders drawn or moved, boundaries
@@ -32,16 +29,16 @@ code · the intention the boundary now serves), and then it runs under
 `code.md` step 6: every draw, break, and move names the intention it
 serves, and every break point it causes (call sites, tests, the map) is
 repaired in the same green sequence.
-Otherwise: no refactors, no new abstractions, no drive-by fixes. The
-context is clean: every run starts from zero — the files are read in their
-**current state** (no git history, no archaeology, no previous
-conversation). The last task of the set references
-`diagrams/package-map.html` in its own Files — the map is touched there and
-only there.
+An undeclared refactor, a new abstraction, or a drive-by fix is out of
+scope. The context is clean: every run starts from zero — the files in
+their **current state** (no git history, no archaeology, no previous
+conversation). The last task of the set references the touched folder pages in its own
+Files — and `diagrams/package-map.html` when the set crossed a frontier or
+moved a map row — the map and the pages are touched there and only there.
 
 ## Structure (code.md binds the run)
 
-The run reads `code.md` once and follows it without being asked:
+The run reads `code.md` once and follows it:
 
 - **Files** — one file, one responsibility, named for the behavior it
   owns; a file over 300 lines splits, as its own green step.
@@ -60,22 +57,20 @@ The run reads `code.md` once and follows it without being asked:
   changed since the validated date, or the SDK version in `go.mod` moved.
   Then re-validate **that fact only** (one targeted grep/spike) and refresh
   the row.
-- **Current state is the source of truth.** The files as they are now — no
-  git history, no archaeology, no blame. What is true is what the code does
-  today.
+- **Current state is the source of truth** — what is true is what the code
+  does today.
 - **The map is the author's source of truth, not the run's.** The set's own
   commits already moved the code; `diagrams/package-map.html` is a snapshot
   for navigation. During the run the task files + `tasks/fact.md` are
   current — do not read the map for current state.
 - **Reads are scoped.** The task's Files and its cited contacts are the
-  impact analysis — do not inventory the package. Read the task, then the
-  files it names in ONE batched dump: a single `bash` call that prints them
-  all (`for f in …; do echo "== $f"; cat "$f"; done`, or the named line
-  ranges via `sed -n`) — never one read per file.
+  impact analysis (rule 5). Read the task, then the files it names in ONE
+  batched dump: a single `bash` call that prints them all (`for f in …; do
+  echo "== $f"; cat "$f"; done`, or the named line ranges via `sed -n`).
 - **Spikes are bounded.** One spike per unknown, and only for runtime values
   the code cannot show (row shapes, status transitions, queue behavior): a
-  temporary test file, deleted before the commit, the result recorded as a
-  new row in `tasks/fact.md` (fact · evidence · how verified).
+  temporary test file, deleted before the commit, the result recorded in
+  `tasks/fact.md` (the Green step).
 - **Decide once.** A value the task or the diagram does not pin: pick one,
   record it under "Notes" (value + one line of why), do not revisit it. A
   new *shape* (a route, a state, a badge the task does not name) is out of
@@ -85,7 +80,10 @@ The run reads `code.md` once and follows it without being asked:
 
 1. **Use the tdd skill** — read `~/.agents/skills/tdd/SKILL.md` (and the
    `tests.md` / `mocking.md` it references) and apply it for the whole task.
-2. Read the task, then read every file it references.
+2. Read the task, then read every file it references. For each folder a
+   touched file lives in, read that folder's `README.md` (the folder page) —
+   the rules and facts of that folder are the context for the change. No
+   `README.md` in a folder means nothing extra to know.
 3. Red → green: the failing test first, then the smallest code that makes it
    pass. Everything that is implemented must have a test and an e2e.
 4. **No hardcoding.** Hardcoding is simplistic, not simple — use the
@@ -131,9 +129,9 @@ is `# bug — <the wrong behavior in one line>`, with the three parts:
 - **The touch** — what was changed to create the behavior: the commit, the
   step or the SDK version that introduced it, and why it never showed before.
 
-A red test inside the task's surface (a test the task declares) is not a
-bug: it is the red of red → green. The bug is not fixed inside the run — no
-drive-by: the run stops at the bug, report and wait.
+A red test inside the task's surface (a test the task declares) is the red
+of red → green, not a bug. The bug is fixed only by a new cycle: the run
+stops at the bug, reports and waits.
 
 ## Green — record the facts (last step of every task)
 
@@ -144,11 +142,15 @@ After the step is green, before the report:
    name / the source line) · Validated (the task file · date · sdk version).
    A fact is a verified *runtime behavior* — not a code shape and not a
    decision (that is the task Notes).
-2. The **last task of the set** is the map update: promote every row of
-   `tasks/fact.md` into `diagrams/package-map.html` (`#facts`), refresh the
-   contact rows the set touched, and delete the set's ephemeral files (the
-   improve diagrams `diagrams/improve/*.html` + `tasks/`). The executor runs
-   it like any other task — its green state is "the map matches the code,
+2. The **last task of the set** is the promotion: promote every row of
+   `tasks/fact.md` into the folder page it belongs to (via `index.md`),
+   writing the pages per `AGENT.md` (the markdown rule).
+   Refresh `diagrams/package-map.html` only when the set crossed a frontier
+   or moved a map row (a node, an edge, a fan-in, a suite, a gate) — a set
+   that moved nothing there leaves the map untouched. Then delete the set's
+   ephemeral files (the improve diagrams `diagrams/improve/*.html` +
+   `tasks/`). The executor runs it like any other task — its green state is
+   "the pages match the code, the map (when touched) matches the code,
    `fact.md` is promoted, the ephemeral files are gone".
 
 ## Report (per task)

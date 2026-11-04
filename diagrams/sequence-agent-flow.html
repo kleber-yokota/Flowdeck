@@ -118,7 +118,7 @@
 
         <!-- notes: green cleanup -->
         <text x="460" y="560" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.04em">delete improve/*.html + tasks/ (ephemeral)</text>
-        <text x="460" y="572" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.04em">last task: the package-map map update (#facts)</text>
+        <text x="460" y="572" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.04em">last task: promote fact.md into the folder pages (the map refreshes only when a frontier moves)</text>
 
         <!-- actors -->
         <rect x="40" y="60" width="160" height="64" rx="6" fill="#0b0c0e"/>
@@ -240,7 +240,7 @@
             <td><code>tasks/fact.md</code></td>
             <td>agent-write-task (seed) · agent-task (appends)</td>
             <td>agent-task</td>
-            <td>promoted into <code>package-map.html</code> <code>#facts</code>, then deleted (the last step of the set)</td>
+            <td>promoted into the folder pages (<code>index.md</code>), then deleted (the last step of the set)</td>
             <td>per cycle</td>
           </tr>
           <tr>
@@ -252,14 +252,14 @@
           </tr>
           <tr>
             <td><code>diagrams/package-map.html</code></td>
-            <td>the last task of the set (the map update)</td>
+            <td>the last task of the set (the promotion)</td>
             <td>all the agents</td>
             <td>never (persistent)</td>
             <td>permanent</td>
           </tr>
         </tbody>
       </table>
-      <p class="role">The set's ephemeral files (<code>improve/*.html</code> + <code>tasks/</code>) are deleted by the last step of the last task of the set — after the map update, so <code>fact.md</code> is promoted first.</p>
+      <p class="role">The set's ephemeral files (<code>improve/*.html</code> + <code>tasks/</code>) are deleted by the last step of the last task of the set — after the promotion, so <code>fact.md</code> is promoted first.</p>
     </section>
 
     <!-- ============ rules ============ -->
@@ -311,8 +311,8 @@
             <td>TDD: the failing test first, then the smallest code that makes it pass.</td>
           </tr>
           <tr>
-            <td><code>Map update</code></td>
-            <td>the last task of the set: promote <code>tasks/fact.md</code> into <code>package-map.html</code> <code>#facts</code> and refresh the contact rows.</td>
+            <td><code>Promotion</code></td>
+            <td>the last task of the set: promote <code>tasks/fact.md</code> into the folder pages (via <code>index.md</code>); refresh the boundary map only when a frontier or a map row moved.</td>
           </tr>
         </tbody>
       </table>
