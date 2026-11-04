@@ -46,8 +46,10 @@ The run reads `code.md` once and follows it:
   green, and it is the shape that keeps the next change small.
 - **Packages** — the run adds none: a package edge is drawn or moved only
   in an explicit refactor task (`code.md` step 6).
-- **Tests** — one file, one intention, named for the intention; the kinds
-  follow the table (unit · contract · e2e · harness · spike · fact-pin).
+- **Tests** — one file, one intention, named for the intention, like the
+  code files: a step adds a test file for a new intention, and a test file
+  that outgrew its intention splits. The kinds follow the table
+  (unit · contract · e2e · harness · spike · fact-pin).
 
 ## Trust (anti-reread — the rules that keep the run short)
 
@@ -79,13 +81,15 @@ The run reads `code.md` once and follows it:
 ## Method — the simplest and easiest
 
 1. **Use the tdd skill** — read `~/.agents/skills/tdd/SKILL.md` (and the
-   `tests.md` / `mocking.md` it references) and apply it for the whole task.
+   `tests.md` it references) and apply it for the whole task.
 2. Read the task, then read every file it references. For each folder a
    touched file lives in, read that folder's `README.md` (the folder page) —
    the rules and facts of that folder are the context for the change. No
    `README.md` in a folder means nothing extra to know.
 3. Red → green: the failing test first, then the smallest code that makes it
-   pass. Everything that is implemented must have a test and an e2e.
+   pass. The tests follow the real-stack rule (`code.md` · the table): the
+   state a test needs is a real run. Everything that is implemented must
+   have a test and an e2e.
 4. **No hardcoding.** Hardcoding is simplistic, not simple — use the
    structures the project already has (the core registry, env, generated
    files).

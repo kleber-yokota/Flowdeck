@@ -10,15 +10,13 @@ import (
 	"testing"
 )
 
-// A run that fails in a step reaches the failed state, and Detail shows the
-// error and the failed step (phase 3, DETAIL: on failure: error + the failed
-// step).
-// Phase 5, DETAIL: the detail shows the stored input values — the values
-// the run used (the input is written once at enqueue, immutable per
-// workflow_id).
+// A run that fails in a step reaches the failed state, and Detail shows
+// the error and the failed step. The detail shows the stored input values
+// — the values the run used (the input is written once at enqueue,
+// immutable per workflow_id).
 func TestDetailShowsInputValues(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("live-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -26,8 +24,8 @@ func TestDetailShowsInputValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	if len(d.Inputs) != 1 || d.Inputs[0].Name != "msg" || d.Inputs[0].Value != "FlowDeck" {
-		t.Fatalf("inputs: got %+v, want [{msg FlowDeck}]", d.Inputs)
+	if len(d.Inputs) != 1 || d.Inputs[0].Name != "mode" || d.Inputs[0].Value != "FlowDeck" {
+		t.Fatalf("inputs: got %+v, want [{mode FlowDeck}]", d.Inputs)
 	}
 }
 
@@ -35,7 +33,7 @@ func TestDetailShowsInputValues(t *testing.T) {
 // stored by DBOS).
 func TestDetailShowsStructInputValues(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("schedule", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
+	ex, err := actions.Enqueue("struct-test", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -43,7 +41,9 @@ func TestDetailShowsStructInputValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Detail: %v", err)
 	}
-	want := []reads.InputValue{{Name: "Name", Value: "Ada"}, {Name: "StartDate", Value: "2026-01-01"}}
+	// Count was not posted: the run received the Go zero, and the detail
+	// shows it (every spec field, sorted by name).
+	want := []reads.InputValue{{Name: "Count", Value: "0"}, {Name: "Name", Value: "Ada"}, {Name: "StartDate", Value: "2026-01-01"}}
 	if len(d.Inputs) != len(want) {
 		t.Fatalf("inputs: got %+v, want %v", d.Inputs, want)
 	}
@@ -82,12 +82,12 @@ func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 	}
 }
 
-// The children of a child-dispatching run (task 03): Detail lists one
+// The children of a child-dispatching run: Detail lists one
 // entry per child workflow (the child id, the child's name, the child's
 // badge state) — the read model the detail page's child list renders.
 func TestDetailChildrenOfChildDispatchingRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("kitchen", "FlowDeck")
+	ex, err := actions.Enqueue("child-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -105,8 +105,8 @@ func TestDetailChildrenOfChildDispatchingRun(t *testing.T) {
 	if c.ID == "" {
 		t.Fatal("child without an id")
 	}
-	if c.Name != "pipeline" || c.State != status.Success {
-		t.Fatalf("child: got %s (%s), want pipeline (success)", c.Name, c.State)
+	if c.Name != "inner-test" || c.State != status.Success {
+		t.Fatalf("child: got %s (%s), want inner-test (success)", c.Name, c.State)
 	}
 }
 

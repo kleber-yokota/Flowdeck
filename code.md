@@ -72,24 +72,29 @@ spec is two intentions: the spec tests live in the spec's files.
 
 | Kind | What it proves | Named for | Lives as long as |
 | --- | --- | --- | --- |
-| Unit | one function, in isolation (fake, no env) | the behavior: `sanitize_test.go` | the function |
+| Unit | one function, in isolation (no env, no core) | the behavior: `sanitize_test.go` | the function |
 | Contract | the package's public behavior (env-booted, via the public surface) | the package: `core_test.go` | the contract |
 | E2E | the full loop (build tag, the real DB) | `e2e_test.go` | the loop |
-| Harness | the fixtures: stubs, fakes, `TestMain` | the package: `web_test.go` | the contract it mirrors |
+| Harness | the fixtures: the `TestMain` boot · the `testworkflows` fixtures · the HTTP helpers | the package: `web_test.go` | the contract it mirrors |
 | Spike | one runtime value no code shows | `zz_spike_test.go` (temporary) | the commit — deleted, promoted to a fact |
 | Fact-pin | a pinned runtime behavior (an SDK fact) | the behavior: `TestResumeOfFailedRun` | the fact — only a re-validation changes it |
 
 Rules:
 
-- **The harness is the test's Port** — one stub per package, the single
-  mirror of the production contract. A harness change is a cross-cutting
+- **The harness is the test's boot** — the `TestMain` per package (the
+  `testworkflows` registration · the workflows source) and the shared
+  helpers (`web/internal/webtest`). A harness change is a cross-cutting
   change: it is named in every task that touches the contract it mirrors.
-- **The booted twin tests the wiring, the stub tests the logic** — the
-  per-behavior tests run on the stub; one booted file per package proves
-  the live contract (`booted_core_test.go`).
+- **The test runs on the real stack** — no mock: the per-behavior tests run
+  on the booted core (SQLite · the `testworkflows` fixtures); the state a
+  test needs is a real run (an enqueue, a cancel, the `err` mode). The
+  not-launched port (`core.NewPort()`) proves the core-down path.
+- **A step adds a test file for a new intention** — one file, one
+  intention, like the code files; a test file that outgrew its intention
+  splits, as its own green step.
 - **The test is declared, not discovered** — a task names every test that
-  dies, changes shape, or moves, with its kind. A red test outside a task's
-  declared surface is a bug, not a discovery.
+  dies, changes shape, moves or is added, with its kind. A red test outside
+  a task's declared surface is a bug, not a discovery.
 - **The fact-pin changes only with the fact** — its evidence is a `Fact`
   row of the folder page; the diff-check (evidence files, SDK version)
   decides re-validation, not taste.

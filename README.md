@@ -19,17 +19,21 @@ docker compose up --build
 
 ## Testes
 
+Todos os testes com banco rodam em SQLite (o Postgres é só a produção do
+compose): unitários sem env, booted via `.env.test`, e o e2e (build tag
+`e2e`) — o CI roda os dois em SQLite (o job `unit` roda a camada pura
+sem env; o job `race` roda a suíte booted com `-race`).
+
 ```bash
-go test ./...
+# booted (race, count=2, shuffled — o job `race` do CI)
+set -a && source .env.test && set +a
+go test -race -count=2 -shuffle=on -p 1 ./...
+
+# e2e (o job `e2e` do CI)
+DBOS_APP_NAME=flowdeck_e2e \
+DBOS_SYSTEM_DATABASE_URL=sqlite:/tmp/flowdeck-e2e.db \
+  go test -tags e2e -run TestE2E -p 1 ./...
 ```
 
-Teste e2e (build tag `e2e`) contra um Postgres real:
-
-```bash
-DBOS_E2E_DATABASE_URL=postgres://flowdeck:flowdeck@localhost:5432/flowdeck \
-  go test -tags e2e -run TestE2E ./...
-```
-
-(ou aponte `DBOS_E2E_DATABASE_URL` para qualquer Postgres 18 com um banco dedicado;
-o e2e da web deriva um banco dedicado `<db>_web` do URL — auto-criado pelo DBOS —
-para não conflitar com o e2e do core, que é stateful).
+(`-p 1`: um test binário por vez — os binários compartilham o arquivo
+SQLite e um único executor poll a fila.)

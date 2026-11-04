@@ -14,14 +14,13 @@ import (
 	"flowdeck/core/status"
 )
 
-// ExecutionDetail is the read model of a single execution (phase 3,
-// DETAIL): the badge state, the first execution date (created_at), the
-// attempts (total: recovery_attempts + 1 — a run on its first attempt is
-// 1; the display renders attempts − 1 recovered failures), the stored
-// input values (phase 5 — the input is written once at enqueue, immutable
-// per workflow_id), the children (task 03 — one entry per child workflow
-// of the run, sorted by id), and — on failure — the error and the step
-// that failed.
+// ExecutionDetail is the read model of a single execution: the badge
+// state, the first execution date (created_at), the attempts (total: the
+// dispatches so far — a run that is enqueued is 1, the first attempt; the
+// display renders attempts − 1 recovered failures), the stored input
+// values (the input is written once at enqueue, immutable per
+// workflow_id), the children (one entry per child workflow of the run,
+// sorted by id), and — on failure — the error and the step that failed.
 type ExecutionDetail struct {
 	ID         string
 	Name       string
@@ -34,9 +33,9 @@ type ExecutionDetail struct {
 	FailedStep string
 }
 
-// ChildRef is one child workflow of the run (task 03): the child id, the
-// child's name, and the child's badge state (the child rows read by the
-// child ids — the same read the step rows use).
+// ChildRef is one child workflow of the run: the child id, the child's
+// name, and the child's badge state (the child rows read by the child ids
+// — the same read the step rows use).
 type ChildRef struct {
 	ID    string
 	Name  string
@@ -50,20 +49,20 @@ type InputValue struct {
 	Value string
 }
 
-// DetailPath is the read model of the execution detail page (phase 3,
-// DETAIL · phase 4, STEP 3): the execution's row (the badge state, the
-// first execution date, the attempts, the stored input values, and — on
-// failure — the error and the failed step) and the executed path (the
-// state + the steps that ran, in execution order) — one read: the status
-// row, the step rows, and the child rows (only when the run dispatched a
-// child). The state rides on the path (the poll control).
+// DetailPath is the read model of the execution detail page: the
+// execution's row (the badge state, the first execution date, the
+// attempts, the stored input values, and — on failure — the error and the
+// failed step) and the executed path (the state + the steps that ran, in
+// execution order) — one read: the status row, the step rows, and the
+// child rows (only when the run dispatched a child). The state rides on
+// the path (the poll control).
 type DetailPath struct {
 	ExecutionDetail
 	RunPath
 }
 
-// Detail reads the execution detail page (phase 3, DETAIL: GET
-// /executions/{id}) — one read: the status row (SELECT · workflow_id:
+// Detail reads the execution detail page (GET /executions/{id}) — one
+// read: the status row (SELECT · workflow_id:
 // status, retries, error, the stored input) and the step rows (SELECT
 // STEPS · id: the step that errored, on failure, and the executed path).
 func Detail(workflowID string) (DetailPath, error) {
@@ -87,7 +86,7 @@ func Detail(workflowID string) (DetailPath, error) {
 	if err != nil {
 		return DetailPath{}, err
 	}
-	d := DetailPath{ExecutionDetail: ExecutionDetail{ID: s.ID, Name: s.Name, State: st, CreatedAt: s.CreatedAt, Attempts: s.Attempts + 1}}
+	d := DetailPath{ExecutionDetail: ExecutionDetail{ID: s.ID, Name: s.Name, State: st, CreatedAt: s.CreatedAt, Attempts: displayAttempts(s.Attempts)}}
 	d.Inputs = inputValues(s.Input, s.Name)
 	if s.Error != nil {
 		d.Error = s.Error.Error()
@@ -109,9 +108,21 @@ func Detail(workflowID string) (DetailPath, error) {
 	return d, nil
 }
 
-// childrenOf lists the children of the run (task 03): one entry per child
-// workflow, sorted by id (deterministic) — the child rows are the batched
-// query by the child ids (the same read the step rows use).
+// displayAttempts is the display's attempts (the dispatches so far) from
+// the SDK's attempts: the status row counts the current claim (0 until
+// the first claim, 1 once claimed — a resume re-enqueues and starts the
+// count again), and an enqueued run has its first attempt scheduled, so
+// the display minimum is 1.
+func displayAttempts(attempts int) int {
+	if attempts < 1 {
+		return 1
+	}
+	return attempts
+}
+
+// childrenOf lists the children of the run: one entry per child workflow,
+// sorted by id (deterministic) — the child rows are the batched query by
+// the child ids (the same read the step rows use).
 func childrenOf(c dbos.Context, rows []dbos.StepInfo) ([]ChildRef, error) {
 	ids := childIDsOf(rows)
 	if len(ids) == 0 {
@@ -141,10 +152,10 @@ func failedStepOf(rows []dbos.StepInfo) string {
 	return failed
 }
 
-// inputValues maps the stored input (DBOS keeps it as the JSON text of the
-// input) onto the display pairs (phase 5, DETAIL): a struct input is the
-// map of field → value (sorted by field name); a simple input is the
-// bare value under the input's name (a JSON string is unquoted).
+// inputValues maps the stored input (DBOS keeps it as the JSON text of
+// the input) onto the display pairs: a struct input is the map of field
+// → value (sorted by field name); a simple input is the bare value under
+// the input's name (a JSON string is unquoted).
 func inputValues(raw any, workflow string) []InputValue {
 	if raw == nil {
 		return nil // no input (a dispatch without a form)
@@ -153,7 +164,7 @@ func inputValues(raw any, workflow string) []InputValue {
 	if !ok {
 		return nil
 	}
-	if m := structValues(raw); m != nil {
+	if m, isStruct := structValues(raw, workflow); isStruct {
 		return m
 	}
 	if s, isText := jsonText(raw); isText {
@@ -175,28 +186,83 @@ func inputOf(workflow string) (string, bool) {
 	return spec.Inputs[0].Name, true
 }
 
-// structValues is the sorted map of field → value of the stored struct
-// input (the JSON text of the map) — nil for anything that is not the
-// JSON of a map.
-func structValues(raw any) []InputValue {
+// structValues is the field → value of the stored struct input (the JSON
+// text of the map): every field of the spec, the stored value when the
+// dispatch posted it, the Go zero value when it did not (the run received
+// the zero). ok is false for anything that is not the JSON of a map.
+func structValues(raw any, workflow string) ([]InputValue, bool) {
+	m, ok := storedMap(raw)
+	if !ok {
+		return nil, false
+	}
+	return structInputValues(m, workflow), true
+}
+
+// storedMap is the stored input as a map (the JSON text that starts with
+// "{").
+func storedMap(raw any) (map[string]any, bool) {
 	s, isText := jsonText(raw)
 	if !isText || !strings.HasPrefix(s, "{") {
-		return nil
+		return nil, false
 	}
 	var m map[string]any
 	if err := json.Unmarshal([]byte(s), &m); err != nil {
-		return nil
+		return nil, false
 	}
-	names := make([]string, 0, len(m))
-	for name := range m {
-		names = append(names, name)
+	return m, true
+}
+
+// inputField is one field of a struct input: its name and its type (the
+// parser supports string and int).
+type inputField struct{ name, typ string }
+
+// structInputValues is the sorted (by name) field → value of a stored
+// struct input: every field of the spec (the parsed source is the source
+// of truth of the struct's fields), the stored value when the dispatch
+// posted it, the Go zero value when it did not (the run received the
+// zero). The stored keys when the spec is not available.
+func structInputValues(m map[string]any, workflow string) []InputValue {
+	fields, ok := structFields(workflow)
+	if !ok {
+		fields = make([]inputField, 0, len(m))
+		for name := range m {
+			fields = append(fields, inputField{name: name})
+		}
 	}
-	sort.Strings(names)
-	out := make([]InputValue, 0, len(m))
-	for _, name := range names {
-		out = append(out, InputValue{Name: name, Value: fmt.Sprint(m[name])})
+	sort.Slice(fields, func(i, j int) bool { return fields[i].name < fields[j].name })
+	out := make([]InputValue, 0, len(fields))
+	for _, f := range fields {
+		if v, ok := m[f.name]; ok {
+			out = append(out, InputValue{Name: f.name, Value: fmt.Sprint(v)})
+		} else {
+			out = append(out, InputValue{Name: f.name, Value: zeroOf(f.typ)})
+		}
 	}
 	return out
+}
+
+// structFields is the fields of the workflow's struct input (the spec's
+// inputs — a struct input has several fields; a simple input has one).
+func structFields(workflow string) ([]inputField, bool) {
+	spec, ok := registry.SpecOf(workflow)
+	if !ok || len(spec.Inputs) <= 1 {
+		return nil, false
+	}
+	out := make([]inputField, 0, len(spec.Inputs))
+	for _, p := range spec.Inputs {
+		out = append(out, inputField{name: p.Name, typ: p.Type})
+	}
+	return out, true
+}
+
+// zeroOf is the Go zero value of the field's type (the run received the
+// zero when the dispatch did not post the field): "" for string, "0" for
+// int (the parser supports string and int inputs).
+func zeroOf(typ string) string {
+	if typ == "string" {
+		return ""
+	}
+	return "0"
 }
 
 // quotedString unquotes a stored JSON string (a simple input) — ok is

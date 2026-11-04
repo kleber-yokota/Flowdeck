@@ -10,16 +10,15 @@ import (
 	"flowdeck/core/status"
 )
 
-// The executed path of a kitchen run (phase 4, STEP 3): the run's state
-// (the poll control) and the eight rows in order (Postgres returns them
-// step_id asc), each mapped onto its kind — the step rows (base, side; spin
-// — one row per iteration), the wait rows (DBOS.sleep · DBOS.getResult ·
-// DBOS.select — the SDK-internal names) and the child row (pipeline — the
-// RunWorkflow dispatch: the row's name is the child workflow's name and it
-// never completes; the wait row does).
-func TestStepsOfKitchenRun(t *testing.T) {
+// The executed path of a child-test run: the run's state (the poll
+// control) and the rows in order (returned step_id asc), each
+// mapped onto its kind — the step row (base), the child row (inner-test —
+// the RunWorkflow dispatch: the row's name is the child workflow's name and
+// it never completes) and the wait row (DBOS.getResult — the SDK-internal
+// name; it completes when the child does).
+func TestStepsOfChildDispatchingRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("kitchen", "FlowDeck")
+	ex, err := actions.Enqueue("child-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -38,13 +37,8 @@ func TestStepsOfKitchenRun(t *testing.T) {
 		kind string
 	}{
 		{"base", reads.KindStep},
-		{"DBOS.sleep", reads.KindWait},
-		{"pipeline", reads.KindChild},
+		{"inner-test", reads.KindChild},
 		{"DBOS.getResult", reads.KindWait},
-		{"side", reads.KindStep},
-		{"DBOS.select", reads.KindWait},
-		{"spin", reads.KindStep},
-		{"spin", reads.KindStep},
 	}
 	if len(path.Steps) != len(want) {
 		t.Fatalf("rows: got %d (%v), want %d", len(path.Steps), stepNames(path.Steps), len(want))
@@ -57,12 +51,12 @@ func TestStepsOfKitchenRun(t *testing.T) {
 	// The child row: the child id plus the child workflow's name and
 	// badge state (fetched from the child rows) — the row itself is the
 	// dispatch and never completes (the wait row does).
-	child := path.Steps[2]
+	child := path.Steps[1]
 	if child.ChildID == "" {
 		t.Fatal("child row without a child id")
 	}
-	if child.ChildName != "pipeline" || child.ChildState != status.Success {
-		t.Fatalf("child: got %s (%s), want pipeline (success)", child.ChildName, child.ChildState)
+	if child.ChildName != "inner-test" || child.ChildState != status.Success {
+		t.Fatalf("child: got %s (%s), want inner-test (success)", child.ChildName, child.ChildState)
 	}
 	if child.StartedAt.IsZero() {
 		t.Fatal("child row without a started_at")

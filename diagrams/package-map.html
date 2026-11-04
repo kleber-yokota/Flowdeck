@@ -193,7 +193,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <tr><td><code>workflows → core</code></td><td><code>core/boot</code></td><td>the launch ctx for each dbos context</td><td class="kind">rt</td></tr>
       <tr><td><code>workflows → dbos</code></td><td><code>dbos</code></td><td><code>RegisterWorkflow</code> (11 registered + the steps helpers)</td><td class="kind">rt</td></tr>
       <tr><td><code>web → core</code></td><td><code>web</code> · the 4 subpackages</td><td>the Port + the read models</td><td class="kind">rt</td></tr>
-      <tr><td><code>core → dbos</code></td><td><code>core/boot</code> · <code>actions</code> · <code>reads</code> · <code>registry</code> · <code>testcore</code></td><td>launch · the mutations · the queries · the registrations</td><td class="kind">rt</td></tr>
+      <tr><td><code>core → dbos</code></td><td><code>core/boot</code> · <code>actions</code> · <code>reads</code> · <code>registry</code> · <code>testcore</code> · <code>testworkflows</code></td><td>launch · the mutations · the queries · the registrations · the test registrations</td><td class="kind">rt</td></tr>
       <tr><td><code>cmd/workflowgen → workflows</code></td><td><code>workflows</code></td><td>codegen — writes <code>zz_generated.go</code> (build-time, not imported)</td><td class="kind">build</td></tr>
       <tr><td><code>cmd/svgdump → web</code></td><td><code>web/graph</code></td><td>the static block dump</td><td class="kind">rt</td></tr>
       <tr><td><code>cmd/svgdump → core</code></td><td><code>core/graph</code></td><td>parse the workflow tree from disk</td><td class="kind">rt</td></tr>
@@ -206,7 +206,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
   <table>
     <thead><tr><th>group</th><th>packages</th><th>page</th></tr></thead>
     <tbody>
-      <tr><td><code>core</code></td><td><code>core</code> · <code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code> · <code>status</code> · <code>graph</code> · <code>internal/testcore</code> (8)</td><td><a href="../core/README.md">core/README.md</a> · the 7 subpages</td></tr>
+      <tr><td><code>core</code></td><td><code>core</code> · <code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code> · <code>status</code> · <code>graph</code> · <code>internal/testcore</code> · <code>testworkflows</code> (9)</td><td><a href="../core/README.md">core/README.md</a> · the 8 subpages</td></tr>
       <tr><td><code>web</code></td><td><code>web</code> · <code>executions</code> · <code>catalog</code> · <code>render</code> · <code>graph</code> · <code>internal/webtest</code> (6)</td><td><a href="../web/README.md">web/README.md</a> · the 5 subpages</td></tr>
       <tr><td><code>entry</code></td><td><code>main</code> · <code>workflows</code> · <code>cmd/workflowgen</code> · <code>cmd/svgdump</code> (4)</td><td>— (the next round pages this group)</td></tr>
       <tr><td><code>dbos</code></td><td>DBOS Go SDK v1.7.0 (third-party)</td><td>— (third-party)</td></tr>

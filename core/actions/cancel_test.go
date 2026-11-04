@@ -31,7 +31,7 @@ func TestCancelUnknownExecution(t *testing.T) {
 // ErrNotCancellable (the web maps it to a 400).
 func TestCancelOfNotLiveRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestCancelQueuedRun(t *testing.T) {
 	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -78,12 +78,14 @@ func TestCancelQueuedRun(t *testing.T) {
 	}
 }
 
-// The cancel of a running run: the row flips at the SDK call (no wait for
-// the step — the running step completes in-process but the row stays
-// CANCELLED). The ACK is the same id, now cancelled.
+// The cancel of a running run: the block-test run sits in its block step
+// (it blocks until the run is cancelled — the deterministic Running state,
+// no timing window). The row flips at the SDK call and the step unblocks
+// at the cancel (no leftover tail: the suite settles). The ACK is the same
+// id, now cancelled.
 func TestCancelRunningRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("pause", nil)
+	ex, err := actions.Enqueue("block-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}

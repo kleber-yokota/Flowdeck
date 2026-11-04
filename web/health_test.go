@@ -5,22 +5,29 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/web/internal/webtest"
 )
 
-// The health endpoint mirrors the core: 200 when the core is up,
-// 503 when it is not.
-func TestHealthz(t *testing.T) {
-	up := httptest.NewServer(New(webtest.TestPort(), okReady))
-	defer up.Close()
-	if status, _ := webtest.Get(t, up.URL+"/healthz"); status != http.StatusOK {
+// The health endpoint mirrors the core: 200 when the core is up, 503 when
+// it is not — the real boot.Ready, no stub.
+
+func TestHealthzCoreUpIs200(t *testing.T) {
+	srv := bootedTestServer(t)
+	defer srv.Close()
+
+	if status, _ := webtest.Get(t, srv.URL+"/healthz"); status != http.StatusOK {
 		t.Fatalf("status: got %d want %d", status, http.StatusOK)
 	}
+}
 
-	down := httptest.NewServer(New(webtest.TestPort(), func() error { return boot.ErrNotLaunched }))
-	defer down.Close()
-	if status, _ := webtest.Get(t, down.URL+"/healthz"); status != http.StatusServiceUnavailable {
+func TestHealthzCoreDownIs503(t *testing.T) {
+	skipBooted(t)
+	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
+	defer srv.Close()
+
+	if status, _ := webtest.Get(t, srv.URL+"/healthz"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)
 	}
 }

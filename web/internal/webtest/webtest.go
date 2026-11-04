@@ -1,6 +1,7 @@
-// Package webtest is the shared test scaffolding of the web packages:
-// the stub Port (every core operation stubbed, the test overrides the
-// one under test) and the HTTP helpers the tests use to hit the server.
+// Package webtest is the shared HTTP helpers of the web handler tests:
+// the web is only tested against the booted core (the env-driven context
+// and the testworkflows fixtures) or the real not-launched port (the 503
+// and empty-state paths) — there is no fake Port.
 package webtest
 
 import (
@@ -10,83 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"flowdeck/core"
-	"flowdeck/core/graph"
-	"flowdeck/core/reads"
-	"flowdeck/core/registry"
-	"flowdeck/core/status"
 )
-
-// TestPort builds the base stub port: every core operation is a stub
-// (the empty listing, the empty graph, the clean stubs below) so a test
-// can override only the one operation under test.
-func TestPort() core.Port {
-	return core.Port{
-		List:       emptyLister,
-		Graph:      &graph.PathGraph{},
-		Executions: okExecutions,
-		Spec:       okSpec,
-		Enqueue:    AckEnqueuer,
-		Status:     okStatuser,
-		Steps:      okSteps,
-		Detail:     okDetail,
-		Resume:     okResumer,
-		Cancel:     okCanceller,
-		Live:       okLive,
-	}
-}
-
-func emptyLister() []registry.Workflow { return nil }
-
-func okExecutions(name string) ([]reads.Execution, error) { return nil, nil }
-
-// okSpec is the spec stub: a string input and one step with a default.
-func okSpec(name string) (graph.Spec, error) {
-	return graph.Spec{Inputs: []graph.Param{{Name: "msg", Type: "string"}}}, nil
-}
-
-// AckEnqueuer is the ACK execution stub: id + queued state + created_at.
-func AckEnqueuer(name string, payload any) (reads.Execution, error) {
-	return reads.Execution{
-		ID:        "00000000-0000-0000-0000-000000000001",
-		State:     status.Queued,
-		CreatedAt: time.Date(2026, 5, 13, 13, 35, 0, 0, time.Local),
-	}, nil
-}
-
-func okStatuser(workflowID string) (status.State, error) {
-	return status.Queued, nil
-}
-
-// okSteps returns the executed path of a clean run: the terminal state
-// (the poll stops) and a single successful step.
-func okSteps(workflowID string) (reads.RunPath, error) {
-	return reads.RunPath{
-		State: status.Success,
-		Steps: []reads.Step{{Name: "greet", State: status.Success}},
-	}, nil
-}
-
-// okDetail is the detail-page stub: the unknown execution (the 404 twin of
-// the booted detail tests).
-func okDetail(id string) (reads.DetailPath, error) {
-	return reads.DetailPath{}, reads.ErrUnknownExecution
-}
-
-func okResumer(id string) (reads.Execution, error) {
-	return reads.Execution{ID: id, State: status.Queued}, nil
-}
-
-func okCanceller(id string) (reads.Execution, error) {
-	return reads.Execution{ID: id, State: status.Cancelled}, nil
-}
-
-// okLive is the live stub: three non-zero counts (a test that asserts
-// the partial overrides Live with its own counts).
-func okLive() (reads.Live, error) {
-	return reads.Live{Running: 1, Queued: 2, Failed: 3}, nil
-}
 
 // Get issues a GET and returns the status code and the body as a string.
 func Get(t *testing.T, url string) (int, string) {
@@ -125,6 +50,52 @@ func ReadAll(t *testing.T, resp *http.Response) string {
 		t.Fatalf("read body: %v", err)
 	}
 	return string(body)
+}
+
+// Dispatch posts a dispatch (form nil for the no-input dispatch) and
+// returns the ACK row fragment (the 200 response).
+func Dispatch(t *testing.T, srvURL, name string, form url.Values) string {
+	t.Helper()
+	resp, err := PostForm(t, srvURL+"/run/"+name, form)
+	if err != nil {
+		t.Fatalf("POST /run/%s: %v", name, err)
+	}
+	body := ReadAll(t, resp)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dispatch %s: %d, %s", name, resp.StatusCode, body)
+	}
+	return body
+}
+
+// Ack is the dispatch of a run that stays live (the deterministic
+// fixtures): the ACK row is the queued badge row with the new workflow ID.
+func Ack(t *testing.T, srvURL, name string, form url.Values) string {
+	t.Helper()
+	body := Dispatch(t, srvURL, name, form)
+	if !strings.Contains(body, `class="badge queued"`) {
+		t.Fatalf("dispatch %s: no queued badge: %s", name, body)
+	}
+	return body
+}
+
+// Detail polls GET /executions/{id} until the page contains frag (30s
+// deadline) and returns the final page body.
+func Detail(t *testing.T, srvURL, id, frag string) string {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	var code int
+	var body string
+	for {
+		code, body = Get(t, srvURL+"/executions/"+id)
+		if code == http.StatusOK && strings.Contains(body, frag) {
+			return body
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("detail %s: no %q: %d, %s", id, frag, code, body)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
 
 // ExecutionID extracts the workflow ID from an execution row (the dispatch

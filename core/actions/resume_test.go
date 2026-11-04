@@ -11,10 +11,11 @@ import (
 	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testworkflows"
 )
 
-// Phase 5, RESUME: the resume re-enqueues a failed run by id — the same
-// stored input, restarting from the last completed step.
+// The resume re-enqueues a failed run by id — the same stored input,
+// restarting from the last completed step.
 
 // Resume of an id that is not known by the core errors with
 // ErrUnknownExecution (the web maps it to a 404).
@@ -29,7 +30,7 @@ func TestResumeUnknownExecution(t *testing.T) {
 // ErrNotResumable (the web maps it to a 400).
 func TestResumeOfNotFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("hello-world", "FlowDeck")
+	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -50,7 +51,7 @@ func TestResumeOfQueuedRun(t *testing.T) {
 	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -67,11 +68,12 @@ func TestResumeOfQueuedRun(t *testing.T) {
 }
 
 // Resume of a run that is running errors with ErrNotResumable (the web
-// maps it to a 400): only failed runs are resumable. The run (the pause)
-// then finishes normally.
+// maps it to a 400): only failed runs are resumable. The run (the
+// block-test) sits in its block step, and the rejected resume leaves the
+// row untouched (still running) — the cancel unblocks the step.
 func TestResumeOfRunningRun(t *testing.T) {
 	testcore.NeedCore(t)
-	ex, err := actions.Enqueue("pause", nil)
+	ex, err := actions.Enqueue("block-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -81,25 +83,29 @@ func TestResumeOfRunningRun(t *testing.T) {
 	if _, err := actions.Resume(ex.ID); !errors.Is(err, actions.ErrNotResumable) {
 		t.Fatalf("Resume of running: got %v, want ErrNotResumable", err)
 	}
-	// The running run is untouched: it finishes with success.
-	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
-		t.Fatalf("poll to success: %v", err)
+	// The running run is untouched: the row is still running.
+	if st, err := reads.Status(ex.ID); err != nil || st != status.Running {
+		t.Fatalf("state after the rejected resume: got %s, want running", st)
+	}
+	// The cancel unblocks the block step (the suite settles).
+	if _, err := actions.Cancel(ex.ID); err != nil {
+		t.Fatalf("Cancel: %v", err)
 	}
 }
 
-// The resume of a cancelled run (phase 5, RESUME): the guard accepts the
-// cancelled row, the SDK resume re-enqueues it (the resume SQL re-enqueues
+// The resume of a cancelled run: the guard accepts the cancelled row, the
+// SDK resume re-enqueues it (the resume SQL re-enqueues CANCELLED rows —
 // CANCELLED rows — it resumes after the last completed step), and the ACK
 // reads the row back: the same id, now enqueued again. The frozen queue
 // keeps the run queued until the cancel; the resume re-queues on
-// boot.QueueName, so the executor runs it (the pause takes its 10s — the
-// suite's deadline covers it).
+// boot.QueueName, so the executor runs it (the noinput-test reaches
+// success fast).
 func TestResumeOfCancelledRun(t *testing.T) {
 	testcore.NeedCore(t)
 	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
 		t.Fatalf("RegisterQueue: %v", err)
 	}
-	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "pause", nil)
+	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
@@ -123,8 +129,8 @@ func TestResumeOfCancelledRun(t *testing.T) {
 	}
 }
 
-// The resume of a failed (retries-exhausted) run (phase 5, RESUME): the
-// guard lets the error state through and the core rewinds the run — the
+// The resume of a failed (retries-exhausted) run: the guard lets the error
+// state through and the core rewinds the run — the
 // SDK deletes the step rows from the first failed row onward (the cut),
 // keeps the stored input, resets recovery_attempts, and re-enqueues the
 // same id on the same queue. The flaky test workflow provides the
@@ -132,8 +138,8 @@ func TestResumeOfCancelledRun(t *testing.T) {
 // success.
 func TestResumeOfFailedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	t.Cleanup(func() { testcore.FlakyFail = false })
-	testcore.FlakyFail = true
+	t.Cleanup(func() { testworkflows.FlakyFail = false })
+	testworkflows.FlakyFail = true
 	ex, err := actions.Enqueue("resume-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -142,7 +148,7 @@ func TestResumeOfFailedRun(t *testing.T) {
 		t.Fatalf("poll to failed: %v", err)
 	}
 	// The flaky step passes now: the resumed run reaches success.
-	testcore.FlakyFail = false
+	testworkflows.FlakyFail = false
 	ack, err := actions.Resume(ex.ID)
 	if err != nil {
 		t.Fatalf("Resume of failed run: %v", err)
