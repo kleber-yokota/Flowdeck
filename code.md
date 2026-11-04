@@ -1,9 +1,8 @@
 # code.md — the code is a change index
 
-The code is planned against the *changes*, not the *domain*. A project is not
-a snapshot of what it is — it is the set of changes it will receive. The right
-structure is the one that makes each planned change cheap, nameable, and
-verifiable. Folders and files are a **change index**, not a domain taxonomy.
+The code is planned against the *changes*, not the *domain*: folders and
+files are a **change index** — the layout that makes each planned change
+cheap, nameable, and verifiable.
 
 ## Principles
 
@@ -13,8 +12,7 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    future change and by every doc line that describes it. Files inside a
    package are rearranged for free — a combine or a split changes nothing
    outside the package. Split files freely; create packages reluctantly —
-   a refactor may still draw, move, or redraw one (step 6): the edge names
-   an intention, and every break is repaired in the same change. A package
+   a refactor may still draw, move, or redraw one (step 6). A package
    split into subfolders groups them by purpose — the conversation each
    subfolder owns (an execution, a catalog, a boot) — never by technical
    role (controller, service, model): the top-level package is the
@@ -30,8 +28,7 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
 
 2. **One file, one responsibility, named for the behavior it owns.**
    Files are named for the thing they own (the handler, the entity, the
-   state, the command) — never for a layer (`utils/`, `helpers/`, `common/`
-   are where names go to die). The test is named for the intention it
+   state, the command). The test is named for the intention it
    asserts (*The tests*). "Where is X?" must be answerable from name +
    index, without a search.
 
@@ -42,11 +39,13 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
    every change of that kind re-justifies.
 
 4. **The map moves with the code.**
-   The project keeps a routing index ("task → where to start") and a
-   file·function map ("file → responsibility · contacts · verified facts").
-   The map is updated *by* the change that moved the code, as its last step —
-   never as a separate chore. A map maintained apart from the code is a map
-   that lies. The map's SVG is a diagram: an update that touches the drawing
+   The project keeps a boundary map (frontiers · groups · fan-in · suites ·
+   gates) and the folder pages (the rules and the verified facts, indexed by
+   `index.md`). The map is refreshed *by* the change that moved a frontier
+   (or a map row), as its last step — never as a separate chore, and a
+   change that moved nothing there leaves the map untouched. A map
+   maintained apart from the code is a map that lies. The map's SVG is a
+   diagram: an update that touches the drawing
    (nodes, edges, labels, layout) loads the `diagram-design` skill first and
    lets it guide the edit.
 
@@ -66,8 +65,7 @@ verifiable. Folders and files are a **change index**, not a domain taxonomy.
 
 The test file asserts **one intention**, and is named for that intention —
 never for the production file it lives next to. The map row declares the
-intention ("asserts X · Y"); a test file that asserts two intentions splits,
-the same rule as source. The mirror is at the *intention* level, not the
+intention ("asserts X · Y"). The mirror is at the *intention* level, not the
 file level: a source file with N behaviors has N test files (`spec.go` →
 `default_test.go` + `sanitize_test.go`). A parser that also extracts the
 spec is two intentions: the spec tests live in the spec's files.
@@ -92,9 +90,9 @@ Rules:
 - **The test is declared, not discovered** — a task names every test that
   dies, changes shape, or moves, with its kind. A red test outside a task's
   declared surface is a bug, not a discovery.
-- **The fact-pin changes only with the fact** — its evidence is a `#facts`
-  row; the diff-check (evidence files, SDK version) decides re-validation,
-  not taste.
+- **The fact-pin changes only with the fact** — its evidence is a `Fact`
+  row of the folder page; the diff-check (evidence files, SDK version)
+  decides re-validation, not taste.
 
 ## The intentions
 
@@ -151,8 +149,7 @@ way tests are the first line of the correctness budget.
   test, or a map row left at the old address).
 - Catch-all layer folders (`utils/`, `misc/`, `helpers/`).
 - Bucket files (N unrelated things in one file).
-- A package drawn over a cycle (an edge whose cluster still holds a mutual
-  file reference — the break is the preceding step, not the following one).
+- A package drawn over a cycle (the mutual pair breaks first — step 1).
 - Doc updates as a separate chore.
 - Two layout recipes for one kind of entity.
 - A test file that asserts two intentions (the parser and the spec in one
@@ -173,10 +170,11 @@ grep; in a behavior layout, it is a name.
 
 | Piece | Where |
 | --- | --- |
-| The map (file · responsibility · contacts · verified facts) | `diagrams/package-map.html` |
-| The routing index (task → where to start) | the map's `#tasks` section |
+| The map (frontiers · groups · fan-in · suites · gates) | `diagrams/package-map.html` |
+| The verified facts and rules | the folder `README.md` pages · the index: `index.md` |
+| The routing index (task → where to start) | `index.md` (one row per page · the `covers` keywords) |
 | The green steps | `tasks/*.md` (one step = one commit = one green state) |
-| The last-step map update | the last task of every set (the SVG goes through the `diagram-design` skill) |
+| The last-step promotion | the last task of every set (facts into the folder pages · the map refreshes only when a frontier or a map row moved · the SVG goes through the `diagram-design` skill) |
 | The clean-context actors | `agent-diagram.md` · `agent-write-task.md` · `agent-task.md` |
 | The uniform recipe (workflow) | `workflows/<name>/` + `go generate ./workflows` |
 | The load lines (complexity · nesting · cycles · import contract) | `scripts/structure-gate.sh` + `.goimportmaps.yaml` |
