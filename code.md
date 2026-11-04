@@ -172,6 +172,7 @@ grep; in a behavior layout, it is a name.
 | --- | --- |
 | The map (frontiers · groups · fan-in · suites · gates) | `diagrams/package-map.html` |
 | The verified facts and rules | the folder `README.md` pages · the index: `index.md` |
+| The markdown rule (writing the pages) | `AGENT.md` (the `writing-great-skills` skill applied to the edit) |
 | The routing index (task → where to start) | `index.md` (one row per page · the `covers` keywords) |
 | The green steps | `tasks/*.md` (one step = one commit = one green state) |
 | The last-step promotion | the last task of every set (facts into the folder pages · the map refreshes only when a frontier or a map row moved · the SVG goes through the `diagram-design` skill) |

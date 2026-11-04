@@ -65,7 +65,7 @@ exception:
 - NEW/CHANGED markers against the current base — the diagrams say *what
   changes*, not what exists.
 - Register each file in `diagrams/README.md` (the improve section + the
-  Files list), with the one-line description.
+  Files list), with the one-line description (the markdown rule: `AGENT.md`).
 
 The values come from the WANT or the code — never invented. The status
 palette is fixed (queued `#7cc0ff` · running `#ff9142` · success `#46d19a` ·

@@ -143,7 +143,8 @@ After the step is green, before the report:
    A fact is a verified *runtime behavior* — not a code shape and not a
    decision (that is the task Notes).
 2. The **last task of the set** is the promotion: promote every row of
-   `tasks/fact.md` into the folder page it belongs to (via `index.md`).
+   `tasks/fact.md` into the folder page it belongs to (via `index.md`),
+   writing the pages per `AGENT.md` (the markdown rule).
    Refresh `diagrams/package-map.html` only when the set crossed a frontier
    or moved a map row (a node, an edge, a fan-in, a suite, a gate) — a set
    that moved nothing there leaves the map untouched. Then delete the set's
