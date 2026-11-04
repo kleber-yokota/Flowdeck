@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>flowdeck · v6.3 · running</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd"><a class="back" href="index.html">← /</a></div>
+    <div class="cmd">$ flowdeck runnings</div>
+    <div class="table-head">workflow · id · started · elapsed</div>
+    <!-- Produção: GET /live (ou ListWorkflows status=Running), poll leve —
+         a lista muda sem refresh. A caixa "running" no índice aponta aqui. -->
+    <div id="running-list" class="executions">
+      <div class="exec-row">
+        <span class="wf-name">process</span>
+        <a class="wf-id" href="execution.html">wf_8f3k2</a>
+        <span class="ts">19:12</span>
+        <span class="status running">running</span>
+        <span class="elapsed">42s</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">sync</span>
+        <a class="wf-id" href="execution.html">wf_2n4p8</a>
+        <span class="ts">19:11</span>
+        <span class="status running">running</span>
+        <span class="elapsed">51s</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">export</span>
+        <a class="wf-id" href="execution.html">wf_5r7t3</a>
+        <span class="ts">19:09</span>
+        <span class="status running">running</span>
+        <span class="elapsed">1m 12s</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">fetch</span>
+        <a class="wf-id" href="execution.html">wf_1a9c4</a>
+        <span class="ts">19:07</span>
+        <span class="status running">running</span>
+        <span class="elapsed">1m 34s</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">pipeline</span>
+        <a class="wf-id" href="execution.html">wf_6h2d0</a>
+        <span class="ts">19:03</span>
+        <span class="status running">running</span>
+        <span class="elapsed">2m 02s</span>
+      </div>
+      <div class="exec-row">
+        <span class="wf-name">cleanup</span>
+        <a class="wf-id" href="execution.html">wf_8w3f6</a>
+        <span class="ts">19:01</span>
+        <span class="status running">running</span>
+        <span class="elapsed">2m 24s</span>
+      </div>
+    </div>
+    <div class="note">cada linha → a página da execução (cancel/resume no topo, log de steps)</div>
+  </main>
+</body>
+</html>

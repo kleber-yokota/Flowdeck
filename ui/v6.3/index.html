@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>flowdeck · v6</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd">$ flowdeck workflows</div>
+
+    <!-- boxes de live (poll 5s · GET /live): só números — o estado atual
+         dos workflows:
+           running           = runs rodando agora          → runnings.html
+           queued (fila)     = runs na fila                → queued.html
+           cancelled · error = workflows cujo último run
+                                 terminou cancelled/error  → failed.html
+         Produção: ListWorkflows(status="running"|"queued")
+         (filtros existentes) + último run por workflow (Port.Executions). -->
+    <div id="live" class="boxes" hx-disabled="true"
+         hx-get="/live" hx-trigger="load, every 5s" hx-target="this" hx-swap="innerHTML">
+      <a class="box running" href="runnings.html">
+        <span class="box-label">running</span>
+        <span class="box-num" id="running-count">3</span>
+      </a>
+      <a class="box queued" href="queued.html">
+        <span class="box-label">queued</span>
+        <span class="box-num" id="queued-count">2</span>
+      </a>
+      <a class="box failed" href="failed.html">
+        <span class="box-label">cancelled · error</span>
+        <span class="box-num" id="failed-count">3</span>
+      </a>
+    </div>
+
+    <!-- catálogo: só nome (sem status) · 20 por página (?page=N → limit=20) -->
+    <div class="table-head">workflows · 20 por página</div>
+    <div id="wall" class="wall">
+      <div class="page" data-page="1">
+        <div class="wf-row"><a class="wf-name" href="workflow.html">fetch</a></div>
+        <div class="wf-row"><a class="wf-name" href="workflow.html">process</a></div>
+        <div class="wf-row"><a class="wf-name" href="workflow.html">notify</a></div>
+        <div class="wf-row"><a class="wf-name" href="workflow.html">audit</a></div>
+        <div class="wf-row"><a class="wf-name" href="workflow.html">export</a></div>
+      </div>
+      <div class="page" data-page="2" hidden>
+        <div class="wf-row"><a class="wf-name" href="workflow.html">sync</a></div>
+        <div class="wf-row"><a class="wf-name" href="workflow.html">cleanup</a></div>
+      </div>
+    </div>
+    <!-- Produção: pager hx-get="/workflows?page=N" (limit=20, offset) -->
+    <nav class="pager">
+      <span class="pager-info">1–20 de 43</span>
+      <span>
+        <a class="pager-link js-prev" href="#" hidden>‹</a>
+        <a class="pager-link js-next" href="#">›</a>
+      </span>
+    </nav>
+
+    <div class="hint">
+      <span class="kbd">running</span> → <span class="kbd">runnings.html</span> ·
+      <span class="kbd">queued</span> → <span class="kbd">queued.html</span> ·
+      <span class="kbd">cancelled · error</span> → <span class="kbd">failed.html</span>
+      · status por workflow fica só nessas páginas
+    </div>
+  </main>
+
+  <!-- DEMO-ONLY: live count (3→2→3) + paginação (2 páginas pré-render) -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      let running = 3;
+      const rc = document.getElementById("running-count");
+      setInterval(() => {
+        running = running === 3 ? 2 : 3;
+        rc.textContent = running;
+      }, 4000);
+
+      const pages = Array.from(document.querySelectorAll("#wall .page"));
+      const info = document.querySelector(".pager-info");
+      const prev = document.querySelector(".js-prev");
+      const next = document.querySelector(".js-next");
+      const COUNTS = ["1–20 de 43", "21–43 de 43"];
+      let page = 1;
+      function show(p) {
+        page = p;
+        pages.forEach(pg => { pg.hidden = Number(pg.dataset.page) !== p; });
+        info.textContent = COUNTS[p - 1];
+        prev.hidden = p === 1;
+        next.hidden = p === pages.length;
+      }
+      next.addEventListener("click", (e) => { e.preventDefault(); show(page + 1); });
+      prev.addEventListener("click", (e) => { e.preventDefault(); show(page - 1); });
+      show(1);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>flowdeck · v6.3 · wf_8f3k2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd"><a class="back" href="workflow.html">← /workflows/process</a></div>
+    <div class="cmd">$ flowdeck execution wf_8f3k2</div>
+
+  <!-- dividida em 2: esquerda = actions + step log ·
+       direita = executed path (o que já rodou), top-down, sticky -->
+  <div class="split">
+    <div class="split-left">
+
+    <!-- header da run: status (poll 2s · GET /status/{id}, para em
+         terminal) + elapsed (o elapsed do concept D) + created/inputs/retries -->
+    <div id="badge" class="status-line" hx-disabled="true"
+         hx-get="/status/wf_8f3k2" hx-trigger="every 2s" hx-swap="innerHTML" hx-target="this">
+      <span class="status running">running</span>
+    </div>
+    <div class="meta">
+      <span>created 03/11 19:12</span> ·
+      <span class="elapsed">elapsed <b class="js-elapsed">4.0s</b></span> ·
+      <span>input: demo</span> ·
+      <span>retries: 0</span>
+    </div>
+
+    <!-- actions como comandos, no TOPO (mesmos POSTs existentes) -->
+    <div class="actions">
+      <button type="button" class="run" id="cancel-btn" hx-disabled="true"
+              hx-confirm="cancel wf_8f3k2?"
+              hx-post="/cancel/wf_8f3k2" hx-target="#badge" hx-swap="innerHTML">
+        &gt; cancel
+      </button>
+      <button type="button" class="run" id="resume-btn" hidden hx-disabled="true"
+              hx-post="/resume/wf_8f3k2" hx-target="#badge" hx-swap="innerHTML">
+        &gt; resume
+      </button>
+    </div>
+
+    <!-- STEP LOG (a step tree do v1 vira log): 1 linha por step COMPLETO
+         (StepInfo · StartedAt/CompletedAt — mesma honestidade do DBOS).
+         Production: poll 2s no GET /executions/{id}/steps; expand:
+         GET /executions/{id}/steps/{step} (fragmento com output/erro). -->
+    <section id="steps" class="steps" hx-disabled="true"
+             hx-get="/executions/wf_8f3k2/steps" hx-trigger="every 2s"
+             hx-target="this" hx-swap="outerHTML">
+      <div class="cmd" style="margin-bottom:0.5rem">+ step log</div>
+
+      <div class="step" data-step="fetch" data-start="0" data-end="0.5">
+        <div class="logline" hx-get="/executions/wf_8f3k2/steps/fetch" hx-target="#det-fetch" hx-swap="innerHTML">
+          <span class="t">t+0.0s</span>
+          <span class="name">fetch</span>
+          <span class="state">done in 0.5s</span>
+        </div>
+        <div class="detail" id="det-fetch">
+          <pre class="output">{ "rows": 120, "ms": 480 }</pre>
+        </div>
+      </div>
+
+      <!-- não revelados até o step completar (o servidor só renderiza
+           steps completos — StepInfo não tem "próximo step") -->
+      <div class="step js-reveal" data-step="compute" data-start="0.5" data-end="5.0" style="display:none">
+        <div class="logline" hx-get="/executions/wf_8f3k2/steps/compute" hx-target="#det-compute" hx-swap="innerHTML">
+          <span class="t">t+0.5s</span>
+          <span class="name">compute</span>
+          <span class="state">done in 4.5s</span>
+        </div>
+        <div class="detail" id="det-compute">
+          <pre class="output">{ "score": 0.91 }</pre>
+        </div>
+      </div>
+
+      <div class="step js-reveal" data-step="store" data-start="5.0" data-end="8.5" style="display:none">
+        <div class="logline" hx-get="/executions/wf_8f3k2/steps/store" hx-target="#det-store" hx-swap="innerHTML">
+          <span class="t">t+5.0s</span>
+          <span class="name">store</span>
+          <span class="state">done in 3.5s</span>
+        </div>
+        <div class="detail" id="det-store">
+          <pre class="output">{ "stored": 120 }</pre>
+        </div>
+      </div>
+
+      <div class="step js-reveal" data-step="notify" data-start="8.5" data-end="12.0" style="display:none">
+        <div class="logline" hx-get="/executions/wf_8f3k2/steps/notify" hx-target="#det-notify" hx-swap="innerHTML">
+          <span class="t">t+8.5s</span>
+          <span class="name">notify</span>
+          <span class="state">done in 3.5s</span>
+        </div>
+        <div class="detail" id="det-notify">
+          <pre class="output">{ "sent": true }</pre>
+        </div>
+      </div>
+
+      <!-- a cauda "ainda rodando" (a stripe do v1 vira cursor piscando) -->
+      <div class="tail-line js-tail">
+        <span class="t">…</span>
+        <span class="name">&nbsp;</span>
+        <span class="state running">running<span class="cursor">▌</span></span>
+      </div>
+    </section>
+    </div>
+
+    <!-- executed path: um box por step COMPLETO (StepInfo · poll 2s) ·
+         a cauda tracejada é o "ainda rodando" — o step em execução
+         só vira box quando completa (DBOS não expõe o próximo) -->
+    <aside class="graph-side">
+      <div class="cmd">$ executed path</div>
+      <svg class="block-graph" viewBox="0 0 212 228" role="img"
+           aria-label="executed path: fetch, compute, store, notify">
+        <defs>
+          <marker id="flowdeck-arrow" markerWidth="8" markerHeight="8"
+                  refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <path class="g-arrow" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+        </defs>
+        <g>
+          <rect class="g-node success" x="76" y="12" width="60" height="36" rx="5"/>
+          <text class="g-text" x="106" y="34" text-anchor="middle">fetch</text>
+        </g>
+        <g class="js-g" data-end="5.0" style="display:none">
+          <line class="g-edge" x1="106" y1="48" x2="106" y2="68" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node success" x="69" y="68" width="74" height="36" rx="5"/>
+          <text class="g-text" x="106" y="90" text-anchor="middle">compute</text>
+        </g>
+        <g class="js-g" data-end="8.5" style="display:none">
+          <line class="g-edge" x1="106" y1="104" x2="106" y2="124" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node success" x="76" y="124" width="60" height="36" rx="5"/>
+          <text class="g-text" x="106" y="146" text-anchor="middle">store</text>
+        </g>
+        <g class="js-g js-glast" data-end="12.0" style="display:none">
+          <line class="g-edge" x1="106" y1="160" x2="106" y2="180" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node success" x="76" y="180" width="60" height="36" rx="5"/>
+          <text class="g-text" x="106" y="202" text-anchor="middle">notify</text>
+        </g>
+        <g class="js-gtail">
+          <line class="g-edge" x1="106" y1="48" x2="106" y2="68" marker-end="url(#flowdeck-arrow)"/>
+          <rect class="g-node tail" x="76" y="68" width="60" height="36" rx="5"/>
+          <text class="g-text tail" x="106" y="90" text-anchor="middle">…</text>
+        </g>
+      </svg>
+      <div class="graph-legend">box por step completo (poll) · cauda tracejada = em execução</div>
+    </aside>
+  </div>
+
+  </main>
+
+  <!-- DEMO-ONLY: run criada há 4s; steps completam em 0.5/5.0/8.5/12.0s;
+       success em 12s (poll para). Cancel congela o log e revela resume. -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const T0 = Date.now() - 4000;
+      const TOTAL = 12;
+      const badge = document.querySelector("#badge");
+      const elapsedEl = document.querySelector(".js-elapsed");
+      const tail = document.querySelector(".js-tail");
+      const steps = Array.from(document.querySelectorAll(".step")).map(el => ({
+        el,
+        start: parseFloat(el.dataset.start),
+        end: parseFloat(el.dataset.end),
+      }));
+      let done = false;
+      const gSteps = Array.from(document.querySelectorAll(".js-g"));
+      const gtail = document.querySelector(".js-gtail");
+      let gShift = 0;
+
+      function tick() {
+        if (done) return;
+        const e = Math.min((Date.now() - T0) / 1000, TOTAL);
+        elapsedEl.textContent = e.toFixed(1) + "s";
+        steps.forEach(s => {
+          if (e >= s.end && s.el.style.display === "none") s.el.style.display = "";
+        });
+        gSteps.forEach(g => {
+          if (e >= parseFloat(g.dataset.end) && g.style.display === "none") {
+            g.style.display = "";
+            if (g.classList.contains("js-glast")) gtail.style.display = "none";
+            else gShift += 56;
+            gtail.setAttribute("transform", `translate(0,${gShift})`);
+          }
+        });
+        if (e >= TOTAL) {
+          done = true;
+          tail.style.display = "none";
+          badge.innerHTML = '<span class="status success">success</span>';
+          badge.setAttribute("hx-trigger", "load");
+          elapsedEl.textContent = TOTAL.toFixed(1) + "s";
+        }
+      }
+      const timer = setInterval(tick, 400);
+      tick();
+
+      // expand: mostra o output (production: fragmento HTMX)
+      document.querySelectorAll(".logline").forEach(line => line.addEventListener("click", () => {
+        line.closest(".step").classList.toggle("open");
+      }));
+
+      document.getElementById("cancel-btn").addEventListener("click", () => {
+        if (!confirm("cancel wf_8f3k2?")) return;
+        done = true;
+        clearInterval(timer);
+        tail.style.display = "none";
+        gtail.style.display = "none";
+        badge.innerHTML = '<span class="status cancelled">cancelled</span>';
+        badge.setAttribute("hx-trigger", "load");
+        document.getElementById("cancel-btn").hidden = true;
+        document.getElementById("resume-btn").hidden = false;
+      });
+      document.getElementById("resume-btn").addEventListener("click", () => {
+        badge.innerHTML = '<span class="status queued">queued</span>';
+      });
+    });
+  </script>
+</body>
+</html>

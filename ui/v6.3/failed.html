@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>flowdeck · v6.3 · failed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+</head>
+<body>
+  <main class="console">
+    <div class="cmd"><a class="back" href="index.html">← /</a></div>
+    <!-- a caixa "cancelled · error" do índice aponta aqui:
+         o último run de cada workflow que terminou em error ou cancelled -->
+    <div class="cmd">$ flowdeck failed</div>
+    <div class="table-head">workflow · id · ts · status · message</div>
+    <!-- Produção: GET /failed (último run por workflow, error|cancelled) —
+         a mensagem sai da execution (Port: message, sem trace). -->
+    <div id="failed-list" class="executions">
+      <div class="exec-row failed-row">
+        <span class="wf-name">process</span>
+        <a class="wf-id" href="execution.html">wf_c2x44</a>
+        <span class="ts">03/11 17:55</span>
+        <span class="status error">error</span>
+        <span class="message">notify: 502 from upstream</span>
+      </div>
+      <div class="exec-row failed-row">
+        <span class="wf-name">pipeline</span>
+        <a class="wf-id" href="execution.html">wf_a5b02</a>
+        <span class="ts">03/11 16:20</span>
+        <span class="status cancelled">cancelled</span>
+        <span class="message"></span>
+      </div>
+      <div class="exec-row failed-row">
+        <span class="wf-name">sync</span>
+        <a class="wf-id" href="execution.html">wf_m4t77</a>
+        <span class="ts">03/11 11:30</span>
+        <span class="status error">error</span>
+        <span class="message">parse: unexpected token</span>
+      </div>
+      <div class="exec-row failed-row">
+        <span class="wf-name">export</span>
+        <a class="wf-id" href="execution.html">wf_0z3r9</a>
+        <span class="ts">03/10 22:41</span>
+        <span class="status error">error</span>
+        <span class="message">timeout waiting for worker</span>
+      </div>
+      <div class="exec-row failed-row">
+        <span class="wf-name">fetch</span>
+        <a class="wf-id" href="execution.html">wf_7c2b5</a>
+        <span class="ts">03/10 19:12</span>
+        <span class="status cancelled">cancelled</span>
+        <span class="message"></span>
+      </div>
+    </div>
+    <!-- Produção: ?page=N (limit=20) -->
+    <nav class="pager">
+      <span class="pager-info">1–5 de 5</span>
+      <span></span>
+    </nav>
+    <div class="note">cada linha → a página da execução (o step com o erro fica destacado)</div>
+  </main>
+</body>
+</html>
