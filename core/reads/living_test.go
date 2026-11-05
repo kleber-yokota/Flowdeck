@@ -18,20 +18,22 @@ import (
 // quiesced baseline, and ends with live-test's latest run in SUCCESS
 // (start state = end state: the live-test contribution is zero).
 
-// Two sleep fires of live-test are two rows of the same name (no dedup
+// Two block fires of live-test are two rows of the same name (no dedup
 // by workflow name); the terminal runs are out of the list again after
 // the cancel + the latest success (the suite contract).
 //
-// The strict row count is sound (F9): the main queue is registered with
-// no worker limit (core/boot/lifecycle.go — RegisterQueue without
-// WithWorkerConcurrency), so the executor claims every sleep fire and
-// both runs are PENDING (running) at once.
+// The row is PENDING until the cancel; the strict row count is sound
+// (F3): the main queue is registered with no worker limit
+// (core/boot/lifecycle.go — RegisterQueue without WithWorkerConcurrency),
+// so the executor claims every fire and both runs are PENDING (running)
+// at once; the cancels are the release (the block step unblocks at the
+// 100ms poll — no leftover tail).
 func TestLivingNoDedupByWorkflow(t *testing.T) {
 	testcore.NeedCore(t)
 	quiescedLive(t)
 	fireIDs := make([]string, 2)
 	for i := range fireIDs {
-		ex, err := actions.Enqueue("live-test", "sleep")
+		ex, err := actions.Enqueue("live-test", "block")
 		if err != nil {
 			t.Fatalf("Enqueue: %v", err)
 		}
