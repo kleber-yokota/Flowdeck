@@ -13,8 +13,6 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/core/status"
 	"flowdeck/web/internal/webtest"
-
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
 
 // The status badge (the poll half of the dispatch) against the booted
@@ -78,11 +76,9 @@ func runInState(t *testing.T, srv *httptest.Server, state status.State) string {
 	t.Helper()
 	switch state {
 	case status.Queued:
-		// The frozen queue (worker concurrency 0): the executor never
-		// claims the run — it stays ENQUEUED.
-		if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-			t.Fatalf("frozen queue: %v", err)
-		}
+		// The frozen queue (registered with the test workflows · worker
+		// concurrency 0): the executor never claims the run — it stays
+		// ENQUEUED.
 		h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 		if err != nil {
 			t.Fatalf("enqueue: %v", err)

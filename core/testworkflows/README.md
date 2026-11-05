@@ -1,10 +1,11 @@
 # core/testworkflows
 
-The fixtures of the test suite: the ten test-only workflows registered on the env DBOS context (`RegisterTestWorkflows`), and the parser's source — the suites point the workflows source at this package directory. Never part of the `workflows` package, so they do not appear in the production registry.
+The fixtures of the test suite: the ten test-only workflows and the frozen queue (the queued-state fixture), registered on the env DBOS context (`RegisterTestWorkflows`), and the parser's source — the suites point the workflows source at this package directory. Never part of the `workflows` package, so they do not appear in the production registry.
 
 ## Rules (decisions · pinned values)
 
 - The ten fixtures, all with `WithMaxRecoveryAttempts(3)`: `failing-test` · `resume-test` · `live-test` · `noinput-test` · `block-test` · `fork-test` · `struct-test` · `linear-test` · `inner-test` · `child-test`. *(evidence: `testworkflows.go · RegisterTestWorkflows`)*
+- The frozen queue (`frozen`, `WithWorkerConcurrency(0)`) is registered by `RegisterTestWorkflows`: a run enqueued on it is never claimed — the deterministic queued-state fixture (it stays ENQUEUED until the owning test cancels it). *(evidence: `testworkflows.go · RegisterTestWorkflows`)*
 - `live-test`'s payload (`mode`) picks the run outcome: `"err"` → the step errors · `"block"` → the step blocks until the cancel · anything else (including the dispatch default) → success. No fixed sleep: the block mode is the deterministic Running window, released by the cancel itself. *(evidence: `testworkflows.go · liveTestWorkflow` · `liveStep`)*
 - `block-test` is the single-step Running fixture: the `block` step blocks until the run is cancelled; the test that owns the run cancels it and the step unblocks (the suite settles — no leftover tail). *(evidence: `testworkflows.go · blockTestWorkflow` · `blockUntilCancelled`)*
 - `blockUntilCancelled` polls the run's own row (`dbos.ListWorkflows` with the workflow id captured at the top of the workflow — constant per run, replay-safe) every 100ms and returns when the row is `CANCELLED`; the row stays `CANCELLED` (terminal) no matter what the workflow does after. *(evidence: `testworkflows.go · blockUntilCancelled` · `blockPollInterval`)*

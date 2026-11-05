@@ -1,0 +1,11 @@
+{{range .}}
+<div class="exec-row">
+  <span class="wf-name">{{ .Name }}</span>
+  <a class="wf-id" href="/executions/{{ .ID | urlquery }}">{{ .ID }}</a>
+  <span class="ts">{{ .Started }}</span>
+  <span class="status running">running</span>
+  <span class="elapsed">{{ .Elapsed }}</span>
+</div>
+{{else}}
+<p class="empty">no runs</p>
+{{end}}
