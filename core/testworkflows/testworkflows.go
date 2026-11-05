@@ -18,7 +18,9 @@ import (
 // RegisterTestWorkflows registers the test-only workflows on the env
 // context (failing-test · resume-test · live-test · noinput-test ·
 // block-test · fork-test · struct-test · linear-test · inner-test ·
-// child-test).
+// child-test), and the frozen queue (worker concurrency 0 — the
+// deterministic queued-state fixture: a run enqueued on it is never
+// claimed · it stays ENQUEUED until the owning test cancels it).
 func RegisterTestWorkflows(c dbos.Context) {
 	dbos.RegisterWorkflow(c, failingTestWorkflow,
 		dbos.WithWorkflowName("failing-test"),
@@ -60,6 +62,10 @@ func RegisterTestWorkflows(c dbos.Context) {
 		dbos.WithWorkflowName("child-test"),
 		dbos.WithMaxRecoveryAttempts(3),
 	)
+
+	// The frozen queue (worker concurrency 0): the executor never claims
+	// a run enqueued on it — the deterministic queued-state fixture.
+	dbos.RegisterQueue(c, "frozen", dbos.WithWorkerConcurrency(0))
 }
 
 // FlakyFail makes the flaky test workflow fail in its step — the test-only
