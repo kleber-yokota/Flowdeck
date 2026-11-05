@@ -132,6 +132,21 @@ Rules:
   on the booted core (SQLite · the `testworkflows` fixtures); the state a
   test needs is a real run (an enqueue, a cancel, the `err` mode). The
   not-launched port (`core.NewPort()`) proves the core-down path.
+- **Negative space.** The set of states a contract must never hold. The
+  term is from the art: the empty space around a figure pins the figure's
+  shape — the negative defines the positive. In code the same: a contract
+  is pinned by the states it must hold *and* the states it must never hold.
+- **The contract pins both spaces.** A contract test asserts the contract's
+  whole space: the positive (each state that rows · the multi-row case, no
+  dedup) and the negative (each state that must never row — the empty case,
+  the queued run, the terminal run). A negative assertion is as strict as a
+  positive one (the empty case is `len(rows) == 0`, the count is the exact
+  row count), and every pinned space is a fact row.
+- **Derive the space (the variations).** For each declared test, ask the
+  space before writing: more than one running (the second run · another
+  workflow · no dedup), none (the empty case), and each state that must
+  never row (the negative space). The variations are tests of the same
+  intention — the same test file — each pinned as a fact row.
 - **A step adds a test file for a new intention** — one file, one
   intention, like the code files; a test file that outgrew its intention
   splits, as its own green step.

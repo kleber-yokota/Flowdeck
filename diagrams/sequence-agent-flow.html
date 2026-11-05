@@ -15,7 +15,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 960 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="af-title af-desc">
         <title id="af-title">Agent flow — the design-to-code pipeline</title>
-        <desc id="af-desc">The agent pipeline: the user's WANT goes to agent-diagram, which writes the improvement diagrams (improve/*.html) and loops with the user until approved, deleting any bug.md from a previous cycle; clean-context handoffs then pass improve/*.html to agent-write-task, which writes tasks/*.md and tasks/fact.md, and tasks/ to agent-task, which implements red to green task by task; when all tasks are green the ephemeral artifacts are deleted and DONE is reported, and when a bug is found (an existing test fails outside the task surface) bug.md is written and the run stops — the user reads bug.md and starts over, and bug.md is deleted when the new diagrams are created.</desc>
+        <desc id="af-desc">The agent pipeline: the user's WANT goes to agent-diagram, which writes the improvement diagrams (improve/*.html) and loops with the user until approved, deleting any bug.md from a previous cycle; clean-context handoffs then pass improve/*.html to agent-write-task, which writes tasks/*.md and tasks/fact.md — and, when the authoring meets a bug, bug.md and the bug fix as the set's first step (tasks/01.md) — and tasks/ to agent-task, which implements red to green task by task; when all tasks are green the ephemeral artifacts are deleted and DONE is reported, and when a bug is found (an existing test fails outside the task surface) bug.md is written and the run stops — the user reads bug.md and starts over, and bug.md is deleted when the new diagrams are created.</desc>
         <defs>
           <marker id="af-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b8bcc4"/>
@@ -45,10 +45,10 @@
         <text x="90" y="491" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
 
         <!-- lifelines -->
-        <line x1="120" y1="124" x2="120" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
-        <line x1="340" y1="124" x2="340" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
-        <line x1="560" y1="124" x2="560" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
-        <line x1="800" y1="124" x2="800" y2="708" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="120" y1="124" x2="120" y2="716" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="340" y1="124" x2="340" y2="716" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="560" y1="124" x2="560" y2="716" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="800" y1="124" x2="800" y2="716" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
 
         <!-- activation bars -->
         <rect x="116" y="188" width="8" height="108" fill="rgba(232,230,225,0.06)" stroke="#b8bcc4" stroke-width="0.8"/>
@@ -109,12 +109,12 @@
         <text x="356" y="326" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">delete bug.md here if present</text>
 
         <text x="572" y="340" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">context = improve/*.html + package-map + code</text>
+        <text x="84" y="410" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">a bug in authoring → bug.md + tasks/01.md (the fix is STEP 01)</text>
 
         <!-- alt guards -->
         <text x="84" y="508" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[ALL TASKS GREEN]</text>
         <line x1="80" y1="588" x2="880" y2="588" stroke="rgba(232,230,225,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
         <text x="84" y="608" fill="#ff5450" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[A BUG: AN EXISTING TEST FAILS OUTSIDE THE TASK SURFACE]</text>
-        <text x="84" y="640" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">agent-write-task also writes bug.md (a bug in the diagram)</text>
 
         <!-- notes: green cleanup -->
         <text x="460" y="560" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.04em">delete improve/*.html + tasks/ (ephemeral)</text>
@@ -150,6 +150,9 @@
         <text x="800" y="118" fill="#b8bcc4" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">red → green · bug.md</text>
 
         <!-- bug loop (next cycle) -->
+        <line x1="120" y1="712" x2="340" y2="712" stroke="#7cc0ff" stroke-width="1.2" marker-end="url(#af-arrow-link)"/>
+        <rect x="174" y="696" width="112" height="12" rx="2" fill="#0b0c0e"/>
+        <text x="230" y="705" fill="#b8bcc4" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">NEW WANT (with bug.md)</text>
         <text x="72" y="732" fill="#ff5450" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">BUG LOOP:</text>
         <text x="124" y="732" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">the user reads bug.md and starts over — a new WANT (next cycle)</text>
         <text x="72" y="744" fill="#8f96a3" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">bug.md is deleted when the new diagrams are created</text>
@@ -247,7 +250,7 @@
             <td><code>bug.md</code> (repo root)</td>
             <td>agent-task — or agent-write-task</td>
             <td>user · the next agent-diagram</td>
-            <td>when the new diagrams are created (agent-diagram)</td>
+            <td>after <code>tasks/01.md</code> exists (agent-write-task) · or when the new diagrams are created (agent-diagram)</td>
             <td>per bug</td>
           </tr>
           <tr>
