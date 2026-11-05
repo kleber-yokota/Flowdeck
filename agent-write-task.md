@@ -143,30 +143,47 @@ map's `#groups` + `index.md` name them) + the spec HTMLs + the SDK.
   (SQLite · the `testworkflows` fixtures): the state a test needs is a run
   the step names (an enqueue, a cancel, the `err` mode). A task that writes
   a stub or a fake is a wrong step.
+- **The tests are declared; the space is derived.** The task's `Green`
+  names the tests it expects; the run derives each declared test's space
+  (the cardinality · the negative space · the multiplicity) and adds the
+  variations as tests of the same file (`agent-task.md` · the method ·
+  `code.md` · the negative space rule).
 - **The author's check (per step):** for each symbol whose signature
   changes, every call site is either in the step's `Files`, or unchanged
   (the type is still the old one), or a declared "keep" that compiles with
   the new type. If the check fails, move the type change to the consumer's
   step.
 
-## Bugs and divergences (`bug.md`)
+## Bugs and divergences (the STEP 01 rule)
 
 A bug is the behavior affecting something it does not name. When the
 authoring meets a bug — a divergence (map, diagram, code or runtime
-disagree) or a test error the task does not declare — the author writes
-`bug.md` (repo root) and **stops the set**: the user reads it and the
-process starts over (a new WANT to `agent-diagram.md`). The title is
-`# bug — <the wrong behavior in one line>` — with the three parts:
+disagree) or a test error the task does not declare — the author records
+it and makes the fix the set's first step:
 
-- **The problem** — the wrong behavior as observed: the failing test, the
-  wrong row or the wrong state, with the evidence (the output, the row
-  dump, the source line).
-- **The cause** — the code path or SDK behavior that produces it (file ·
-  function · version); when doc and implementation disagree, the
-  disagreement is the cause.
-- **The touch** — what was changed to create the behavior: the commit,
-  the step or the SDK version that introduced it, and why it never showed
-  before.
+1. **Record** — write `bug.md` (repo root), titled `# bug — <the wrong
+   behavior in one line>`, with the three parts:
+   - **The problem** — the wrong behavior as observed: the failing test,
+     the wrong row or the wrong state, with the evidence (the output, the
+     row dump, the source line).
+   - **The cause** — the code path or SDK behavior that produces it (file ·
+     function · version); when doc and implementation disagree, the
+     disagreement is the cause.
+   - **The touch** — what was changed to create the behavior: the commit,
+     the step or the SDK version that introduced it, and why it never
+     showed before.
+2. **Task** — write `tasks/01.md` (the bug fix) per the template: the
+   record's three parts become its "The bug" section (between `Files` and
+   `Purpose`), the `Do` opens on the red (the failing command + the
+   observed output — the test exists, the task re-declares it), the
+   `Green` is the baseline green (the red test green, the suites end to
+   end), and the bug's runtime facts become rows of `tasks/fact.md` the
+   later steps cite. The feature's steps shift down: the numbering is
+   the fix first, then the feature (02, 03, ...).
+3. **Delete `bug.md`** — after the task file exists: the record lives in
+   the task and the evidence rows live in `tasks/fact.md` (one source
+   each). A stale row of the spec or a page dies with the promotion (the
+   folder page carries the corrected fact).
 
 ## Template (every file, same sections, same order)
 
@@ -221,6 +238,10 @@ Rules of the fields:
 - `Notes` carries the decisions (value + the why). The runtime facts the
   task depends on live in `tasks/fact.md` — the task cites the row it needs.
   A fact without evidence is a guess.
+- **STEP 01 (the bug fix) alone** carries the record: the section "The
+  bug (the record — the problem · the cause · the touch)" sits between
+  `Files` and `Purpose` — the three parts of the diagnosis (the STEP 01
+  rule owns them).
 
 ## ASD-STE100 (as applied to the task files)
 
@@ -240,9 +261,12 @@ Rules of the fields:
 The README holds, once for the whole set:
 
 - The goal (today → target, two sentences).
-- **Steps** — the table of the files and the step names. The **last step is
-  always the promotion**: promote every row of `tasks/fact.md` into the
-  folder page it belongs to (via `index.md`), refresh
+- **Steps** — the table of the files and the step names. When the
+  authoring met a bug, the first row is the fix (the STEP 01 rule). The
+  **last step is always the promotion**: promote every row of
+  `tasks/fact.md` into the folder page it belongs to (via `index.md`) — a
+  row that is history (the evidence of a bug the fix already greened) stays
+  in the task and dies with the set — refresh
   `diagrams/package-map.html` only when the set touched a frontier or a map
   row (a node, an edge, a fan-in, a suite, a gate) — a set that moved
   nothing there leaves the map — and delete the set's ephemeral files (the
@@ -256,7 +280,6 @@ The README holds, once for the whole set:
 ## What the author does not do
 
 - It does not leave the impact analysis to the executor: the author names
-  the surface, the executor verifies it (agent-task.md, rule 5).
-- One step, one file.
+  the surface, the executor verifies it (agent-task.md, rule 6).
 - The `Source` cites only the diagram parts the author opened.
 - It does not read `code.md`: the map and the code carry the layout.
