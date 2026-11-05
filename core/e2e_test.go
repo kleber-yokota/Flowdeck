@@ -4,9 +4,11 @@ package core_test
 
 import (
 	"testing"
+	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
+	"flowdeck/core"
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/internal/testcore"
@@ -114,6 +116,48 @@ func TestE2EStepsOfBranchedRun(t *testing.T) {
 	}
 	if got := testcore.MustStepNames(t, ex); len(got) != 2 || got[0] != "base" || got[1] != "left" {
 		t.Fatalf("fork-test left steps: got %v", got)
+	}
+}
+
+// The Port's Living field on the e2e database (the e2e twin of
+// TestPortLivingRowsTheRunningRun in living_test.go): the fired block
+// run is the one row the Port rows.
+func TestE2EPortLivingRowsTheRunningRun(t *testing.T) {
+	testcore.NeedCore(t)
+	fired, err := actions.Enqueue("live-test", "block")
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := testcore.PollState(t, fired.ID, status.Running); err != nil {
+		t.Fatalf("poll to running: %v", err)
+	}
+
+	runs, err := core.NewPort().Living()
+	if err != nil {
+		t.Fatalf("Living: %v", err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("Living rows: got %d (%+v), want the one running run", len(runs), runs)
+	}
+	row := runs[0]
+	if row.ID != fired.ID || row.Name != "live-test" || row.State != string(status.Running) {
+		t.Fatalf("the fired run's row: got %+v, want id %s · name live-test · state running", row, fired.ID)
+	}
+	if _, err := time.Parse(time.RFC3339, row.CreatedAt); err != nil {
+		t.Fatalf("created_at: %q is not RFC 3339: %v", row.CreatedAt, err)
+	}
+
+	// Settle (fact F2): the block fire is cancelled inside the test, then
+	// an ok fire runs to success — the suite leaves no live-test residue.
+	if _, err := actions.Cancel(fired.ID); err != nil {
+		t.Fatalf("Cancel: %v", err)
+	}
+	ok, err := actions.Enqueue("live-test", "FlowDeck")
+	if err != nil {
+		t.Fatalf("Enqueue (ok): %v", err)
+	}
+	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
+		t.Fatalf("poll to success: %v", err)
 	}
 }
 
