@@ -153,3 +153,41 @@ body {
   color: var(--soft);
   margin-top: 1.5rem;
 }
+
+/* the runnings list (the partial: the running runs · the 5s poll) */
+.back { color: var(--soft); }
+.back:hover { color: var(--steel); }
+.cmd .back { margin-right: 0.5rem; }
+
+.table-head {
+  color: var(--soft);
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.exec-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 90px 100px 90px;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.wf-name { color: var(--ink); }
+.wf-name:hover { color: var(--accent); }
+.wf-id { color: var(--steel); }
+.wf-id:hover { color: var(--accent); }
+.ts { color: var(--soft); }
+.status { letter-spacing: 0.05em; }
+.status.running { color: var(--running); }
+.elapsed { color: var(--running); }
+
+.note {
+  color: var(--soft);
+  font-size: 0.72rem;
+  margin-top: 0.5rem;
+}
