@@ -70,6 +70,11 @@ type Port struct {
 	// workflows whose latest run is failed (error or cancelled) — a
 	// latest success with no live run is in no box.
 	Live func() (reads.Live, error)
+
+	// Living — the runnings list: one row per running run (no dedup by
+	// workflow name), the SDK's desc order, not up → boot.ErrNotLaunched
+	// (like every other read).
+	Living func() ([]reads.LiveRun, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -92,5 +97,6 @@ func NewPort() Port {
 		Resume:     actions.Resume,
 		Cancel:     actions.Cancel,
 		Live:       reads.LiveCounts,
+		Living:     reads.Living,
 	}
 }
