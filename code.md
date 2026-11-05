@@ -4,6 +4,41 @@ The code is planned against the *changes*, not the *domain*: folders and
 files are a **change index** — the layout that makes each planned change
 cheap, nameable, and verifiable.
 
+## The load path (index → page → files)
+
+The index is a load path: how an agent — or a human — gets from "I'm
+changing X" to the exact files, loading only what the change needs.
+
+1. **File = one intention** (principle 2). Named for the behavior it owns.
+2. **Folder = a set of intentions** (principle 3).
+3. **Page = the folder's `README.md`.** The loadable unit for that set:
+   its rules and validated facts, each with `Evidence` and `Validated`.
+4. **Index = `index.md`.** The retrieval index (the RAG): read first, open
+   only the pages whose `covers` intersect the touch set, load only those
+   pages + the files they name. It holds no facts — navigation, not
+   knowledge.
+
+The load is proportional to the task: index (small) → page(s) → files,
+never the whole repo. The agent and the human share the path — a folder
+name and its page say what that part does, with no archaeology.
+
+The path only holds because of the intention discipline (principles 2 · 3):
+a file with two intentions can't be loaded in isolation, and a folder with
+unrelated things can't be routed to.
+
+**The separation metric (routing precision of the page index).** A folder
+is a page; `index.md` routes a task to the pages whose `covers` intersect
+its touch set. A folder is correctly separated when that routing is
+precise: its `covers` set names one set of intentions, and no backticked
+`covers` key appears in two pages. Two signals drive the split — the page
+is **too broad** (`covers` no longer names one set: a task touching part
+of the folder loads the rest) → split into subfolders, each naming one
+set; or the routing is **ambiguous** (a backticked `covers` key appears in
+two pages) → move the intention to the one page that owns it. The load-cost
+guard is the folder twin of the 300-line rule: a page must be loadable in
+isolation. The metric says *when* to split; the grain (principle 3) says
+*where*. Measured by `scripts/page-index-metric.py`.
+
 ## Principles
 
 1. **Packages are contracts, files are the working unit.**
@@ -32,13 +67,21 @@ cheap, nameable, and verifiable.
    asserts (*The tests*). "Where is X?" must be answerable from name +
    index, without a search.
 
-3. **One recipe per entity kind.**
+3. **A folder is a set of intentions.**
+   A file owns one intention (principle 2). Files whose intentions are
+   about the same thing form a *set*, and a folder, subfolder, or package
+   is the name of the set it owns. Two grains of draw, both a structure
+   change (step 6) and a design decision the run never invents: a
+   **subfolder** is drawn when a package's files have grown into more than
+   one set of intentions — it names the set it owns; a **package** (a root
+   folder) appears when a second consumer of the contract appears (step 1).
+4. **One recipe per entity kind.**
    Every entity of the same kind (endpoint, workflow, migration, tool) has
    exactly one layout: where the file goes, how the test looks, the single
    wiring point (router, registry, generated file). Two recipes = a decision
    every change of that kind re-justifies.
 
-4. **The map moves with the code.**
+5. **The map moves with the code.**
    The project keeps a boundary map (frontiers · groups · fan-in · suites ·
    gates) and the folder pages (the rules and the verified facts, indexed by
    `index.md`). The map is refreshed *by* the change that moved a frontier
@@ -49,13 +92,13 @@ cheap, nameable, and verifiable.
    (nodes, edges, labels, layout) loads the `diagram-design` skill first and
    lets it guide the edit.
 
-5. **Changes are sequences of green steps.**
+6. **Changes are sequences of green steps.**
    Each step leaves the system compiling and tested. Small files are what
    make small steps possible. Prefer a move over an in-place edit: when
    moving to a smaller surface simplifies the change, the move is its own
    step — a pure move is trivially green.
 
-6. **The reader is the same as the writer.**
+7. **The reader is the same as the writer.**
    The read path is planned like the write path: index → named files →
    nothing else. A clean-context actor (a fresh agent session, a new hire)
    must be able to start a change from the structure alone. If finding
@@ -142,7 +185,7 @@ way tests are the first line of the correctness budget.
    intention is redrawn). The rules of the structure change: each draw,
    break, and move names the intention it serves, and every break point —
    call sites, tests, the map — is repaired in the same green sequence
-   (principle 5). The goal is the improvement, not the move: a break left
+   (principle 6). The goal is the improvement, not the move: a break left
    unfixed is not green, it is debt. A change that is *not* about structure
    adds no package, no folder layer, no naming convention.
 
