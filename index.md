@@ -18,7 +18,9 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 | `web/README.md` | the router · healthz · the middlewares · the static assets · the Port + the ready seam |
 | `web/catalog/README.md` | the dashboard · the workflow pages · the spec form · the possible-paths SVG · the empty state |
 | `web/executions/README.md` | the dispatch · the badge · the detail · the steps · the resume · the cancel · the poll · the attempts display · `retriesFor` |
-| `web/graph/README.md` | the SVG · the grouping (loop · parallel · collapse) · the layout · the geometry · the scale |
+| `web/graph/README.md` | the shared geometry · the scale · the arrow marker |
+| `web/graph/block/README.md` | the possible-paths block SVG · `BlockToSVG` · the block DAG layout |
+| `web/graph/executed/README.md` | the executed-path SVG · `ExecutedPathToSVG` · the grouping (loop · parallel · collapse) · the top-down layout · the state colors |
 | `web/render/README.md` | the templates · Page vs Partial · Fail (the error→status map) |
 | `web/internal/webtest/README.md` | the HTTP helpers · `Dispatch` · `Ack` · `Detail` |
 

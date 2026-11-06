@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"flowdeck/core/graph"
-	webgraph "flowdeck/web/graph"
+	"flowdeck/web/graph/block"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 		}
 		fmt.Println()
 		fmt.Println("svg:")
-		fmt.Print(webgraph.BlockToSVG(wg))
+		fmt.Print(block.BlockToSVG(wg))
 		fmt.Println()
 	}
 }

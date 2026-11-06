@@ -2,7 +2,7 @@
 // plain box · the parallel group (overlap → the ∥ mark) · the loop group
 // (repeated name → the arc + ×N) · the collapse (> 4 members → one
 // annotated box, the full list in <title>) · the child box · the wait box.
-package graph
+package executed
 
 import (
 	"strings"

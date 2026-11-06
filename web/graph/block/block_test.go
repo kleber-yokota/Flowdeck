@@ -1,6 +1,6 @@
 // block_test.go asserts BlockToSVG renders the block structure: nil ·
 // sequence · loop · forks · scale · async (side by side · group edge) · join.
-package graph
+package block
 
 import (
 	"encoding/xml"

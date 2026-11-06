@@ -1,7 +1,8 @@
-package graph
+package executed
 
 import (
 	coregraph "flowdeck/core/graph"
+	graphshared "flowdeck/web/graph"
 )
 
 // graphLayout is the measured paths graph: one rect per step and one
@@ -78,7 +79,7 @@ func walkDepth(n pathNode, depth int, s *depthStats) {
 		}
 		return
 	}
-	if w := nodeBoxW(n.Step, n.Kind); w > s.maxW {
+	if w := graphshared.NodeBoxW(n.Step, n.Kind); w > s.maxW {
 		s.maxW = w
 	}
 	if visibleKids(n) == 0 {
@@ -102,10 +103,10 @@ func (g *graphLayout) measure(roots []pathNode) (colW, rowH, maxW float64) {
 		s.leaves = 1 // no path: a valid (empty) canvas
 	}
 	g.maxDepth = s.maxDepth
-	colW = s.maxW + graphColGap
-	rowH = graphNodeH + graphRowGap
-	g.width = 2*graphMargin + (float64(s.leaves)-1)*colW + s.maxW
-	g.height = 2*graphMargin + float64(g.maxDepth)*rowH + graphNodeH
+	colW = s.maxW + graphshared.GraphColGap
+	rowH = graphshared.GraphNodeH + graphshared.GraphRowGap
+	g.width = 2*graphshared.GraphMargin + (float64(s.leaves)-1)*colW + s.maxW
+	g.height = 2*graphshared.GraphMargin + float64(g.maxDepth)*rowH + graphshared.GraphNodeH
 	return colW, rowH, s.maxW
 }
 
@@ -136,17 +137,17 @@ func (s *placeState) placeNode(n pathNode, depth int) graphNode {
 	node := graphNode{
 		step:  n.Step,
 		state: n.State,
-		w:     nodeBoxW(n.Step, n.Kind),
+		w:     graphshared.NodeBoxW(n.Step, n.Kind),
 		kind:  n.Kind,
 		loop:  n.Loop,
 		title: n.Title,
 	}
-	node.y = graphMargin + float64(depth)*s.rowH + graphNodeH/2
+	node.y = graphshared.GraphMargin + float64(depth)*s.rowH + graphshared.GraphNodeH/2
 	if n.Step == "" {
 		return s.placeGroup(n, depth)
 	}
 	if visibleKids(n) == 0 {
-		node.x = graphMargin + s.slot*s.colW + s.maxW/2
+		node.x = graphshared.GraphMargin + s.slot*s.colW + s.maxW/2
 		s.slot++
 		return node
 	}
@@ -158,7 +159,7 @@ func (s *placeState) placeNode(n pathNode, depth int) graphNode {
 // members take the group's depth row, and the group centers on their x.
 func (s *placeState) placeGroup(n pathNode, depth int) graphNode {
 	node := graphNode{}
-	node.y = graphMargin + float64(depth)*s.rowH + graphNodeH/2
+	node.y = graphshared.GraphMargin + float64(depth)*s.rowH + graphshared.GraphNodeH/2
 	sum := 0.0
 	for _, c := range n.Children {
 		if isTerminal(c) {
