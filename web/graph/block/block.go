@@ -6,10 +6,11 @@
 // boxes, outlines, and edges; block_svg.go emits the SVG (the entry). The
 // shared geometry (metrics.go) and the shared svg emission (svg.go) keep
 // the two graphs reading as one family.
-package graph
+package block
 
 import (
 	"flowdeck/core/graph"
+	graphshared "flowdeck/web/graph"
 )
 
 // blockBox is a positioned node box.
@@ -95,7 +96,7 @@ func (l *blockLayout) connectTo(first, last *blockBox) {
 // placeNode places a box centered at (cx, top) and records it.
 func (l *blockLayout) placeNode(n *graph.Node, cx, top, w float64) *blockBox {
 	box := blockBox{
-		x: cx - w/2, y: top, w: w, h: graphNodeH,
+		x: cx - w/2, y: top, w: w, h: graphshared.GraphNodeH,
 		text: n.Name, kind: n.Kind,
 	}
 	l.boxes = append(l.boxes, box)
@@ -110,12 +111,12 @@ func (l *blockLayout) placeAsyncRun(run []graph.Child, cx, top float64, connect 
 	bb = &bbox{}
 	totalW := 0.0
 	for _, c := range run {
-		totalW += nodeBoxW(c.Node.Name, c.Node.Kind)
+		totalW += graphshared.NodeBoxW(c.Node.Name, c.Node.Kind)
 	}
-	totalW += graphColGap * float64(len(run)-1)
+	totalW += graphshared.GraphColGap * float64(len(run)-1)
 	x := cx - totalW/2
 	for i, c := range run {
-		w := nodeBoxW(c.Node.Name, c.Node.Kind)
+		w := graphshared.NodeBoxW(c.Node.Name, c.Node.Kind)
 		box := l.placeNode(c.Node, x+w/2, top, w)
 		if i == 0 {
 			first = box
@@ -123,12 +124,12 @@ func (l *blockLayout) placeAsyncRun(run []graph.Child, cx, top float64, connect 
 		last = box
 		bb.add(box.x, box.y, box.x+box.w, box.y+box.h)
 		if i > 0 {
-			l.asyncMarks = append(l.asyncMarks, point{box.x - graphColGap/2, top + graphNodeH/2})
+			l.asyncMarks = append(l.asyncMarks, point{box.x - graphshared.GraphColGap/2, top + graphshared.GraphNodeH/2})
 		}
-		x += w + graphColGap
+		x += w + graphshared.GraphColGap
 	}
 	if connect {
-		group := &blockBox{x: bb.minX, y: top, w: bb.maxX - bb.minX, h: graphNodeH}
+		group := &blockBox{x: bb.minX, y: top, w: bb.maxX - bb.minX, h: graphshared.GraphNodeH}
 		l.connectTo(group, group)
 		first, last = group, group
 	}
@@ -146,10 +147,10 @@ func (l *blockLayout) canvas() {
 	for _, o := range l.outlines {
 		all.add(o.x, o.y, o.x+o.w, o.y+o.h)
 	}
-	l.width = (all.maxX - all.minX) + 2*graphCanvasPad
-	l.height = (all.maxY - all.minY) + 2*graphCanvasPad
-	shiftX := all.minX - graphCanvasPad
-	shiftY := all.minY - graphCanvasPad
+	l.width = (all.maxX - all.minX) + 2*graphshared.GraphCanvasPad
+	l.height = (all.maxY - all.minY) + 2*graphshared.GraphCanvasPad
+	shiftX := all.minX - graphshared.GraphCanvasPad
+	shiftY := all.minY - graphshared.GraphCanvasPad
 	for i := range l.boxes {
 		l.boxes[i].x -= shiftX
 		l.boxes[i].y -= shiftY
@@ -173,7 +174,7 @@ func (l *blockLayout) canvas() {
 // outlineOf is the padded outline of a content's bounding box (the
 // inner-block padding).
 func outlineOf(bb *bbox, level int, isLoop bool) blockOutline {
-	return outlinePadded(bb, level, isLoop, graphPadX)
+	return outlinePadded(bb, level, isLoop, graphshared.GraphPadX)
 }
 
 // outlinePadded is the outline of a bounding box, padded: the L0 root

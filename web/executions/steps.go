@@ -6,7 +6,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/reads"
-	"flowdeck/web/graph"
+	"flowdeck/web/graph/executed"
 	"flowdeck/web/render"
 )
 
@@ -24,7 +24,7 @@ func newStepsView(workflowID string, path reads.RunPath) stepsView {
 	return stepsView{
 		WorkflowID: workflowID,
 		Terminal:   path.State.Terminal(),
-		Graph:      graph.ExecutedPathToSVG(path.Steps),
+		Graph:      executed.ExecutedPathToSVG(path.Steps),
 	}
 }
 

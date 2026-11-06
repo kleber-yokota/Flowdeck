@@ -7,18 +7,20 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 | page | covers |
 |---|---|
 | `core/README.md` | the Port (the contract) · fan-in · the web never touches DBOS |
-| `core/actions/README.md` | Enqueue · Resume · Cancel · the guards · the single queue · the ACK · recovery attempts · rewind cut · `WithMaxRecoveryAttempts` · `recovery_attempts` |
+| `core/actions/README.md` | Enqueue · Resume · Cancel · the guards · the single queue · the ACK · recovery attempts (`WithMaxRecoveryAttempts` · `recovery_attempts`) · rewind cut |
 | `core/boot/README.md` | Launch · Shutdown · Ready · `ErrNotLaunched` · the env-driven context · `SetWorkflowsSource` · `warnUnregistered` · the paths |
 | `core/registry/README.md` | List (the registered workflows) · Spec · `SpecOf` · `ErrUnknownWorkflow` · the empty state |
-| `core/reads/README.md` | Executions · Status · Steps · Detail · MapState · the attempts mapping · the wait-row names · the child rows · `ErrUnknownExecution` |
-| `core/status/README.md` | the five states · the terminal rule · the badge colors |
+| `core/reads/README.md` | Executions · Status (MapState) · Steps (the wait-row names · the child rows) · Detail (the attempts mapping) · Live · `ErrUnknownExecution` |
+| `core/status/README.md` | the states · the terminal rule · the badge colors |
 | `core/graph/README.md` | the possible-paths graph · the block model · the spec from source · the default constants · Sanitize · `ErrInvalidInput` |
 | `core/internal/testcore/README.md` | the test setup · `Setup` · `NeedCore` · `PollState` · `MustStepNames` · the test env |
 | `core/testworkflows/README.md` | the test-workflows fixtures · `RegisterTestWorkflows` · the payloads of `live-test` · the block step |
 | `web/README.md` | the router · healthz · the middlewares · the static assets · the Port + the ready seam |
 | `web/catalog/README.md` | the dashboard · the workflow pages · the spec form · the possible-paths SVG · the empty state |
-| `web/executions/README.md` | the dispatch · the badge · the detail · the steps · the resume · the cancel · the poll · the attempts display · `retriesFor` |
-| `web/graph/README.md` | the SVG · the grouping (loop · parallel · collapse) · the layout · the geometry · the scale |
+| `web/executions/README.md` | the dispatch · the badge · the detail · the steps · the resume · the cancel · the poll · the attempts display (`retriesFor`) |
+| `web/graph/README.md` | the shared geometry · the scale · the arrow marker |
+| `web/graph/block/README.md` | the possible-paths block SVG · `BlockToSVG` · the block DAG layout |
+| `web/graph/executed/README.md` | the executed-path SVG · `ExecutedPathToSVG` · the grouping (loop · parallel · collapse) · the top-down layout · the state colors |
 | `web/render/README.md` | the templates · Page vs Partial · Fail (the error→status map) |
 | `web/internal/webtest/README.md` | the HTTP helpers · `Dispatch` · `Ack` · `Detail` |
 
