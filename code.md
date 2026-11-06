@@ -30,7 +30,10 @@ unrelated things can't be routed to.
 is a page; `index.md` routes a task to the pages whose `covers` intersect
 its touch set. A folder is correctly separated when that routing is
 precise: its `covers` set names one set of intentions, and no backticked
-`covers` key appears in two pages. Two signals drive the split — the page
+`covers` key appears in two pages. A `covers` entry names the intention,
+never a pinned value — a number in the index duplicates the code (the poll
+interval, a line limit) and goes stale when the code changes; the value
+belongs in the page's evidence. Two signals drive the split — the page
 is **too broad** (`covers` no longer names one set: a task touching part
 of the folder loads the rest) → split into subfolders, each naming one
 set; or the routing is **ambiguous** (a backticked `covers` key appears in
@@ -81,15 +84,20 @@ isolation. The metric says *when* to split; the grain (principle 3) says
    wiring point (router, registry, generated file). Two recipes = a decision
    every change of that kind re-justifies.
 
-5. **The map moves with the code.**
+5. **The map and the pages move with the code.**
    The project keeps a boundary map (frontiers · groups · fan-in · suites ·
-   gates) and the folder pages (the rules and the verified facts, indexed by
-   `index.md`). The map is refreshed *by* the change that moved a frontier
-   (or a map row), as its last step — never as a separate chore, and a
-   change that moved nothing there leaves the map untouched. A map
-   maintained apart from the code is a map that lies. The map's SVG is a
-   diagram: an update that touches the drawing
-   (nodes, edges, labels, layout) loads the `diagram-design` skill first and
+   gates), the folder pages (the rules and the verified facts, each with its
+   `Evidence` and `Validated`), and the index (`index.md`: one row per page ·
+   the `covers` keywords). The map is refreshed *by* the change that moved a
+   frontier (or a map row). The pages and the index move with the code too:
+   every code change refreshes the folder page it touched and the `index.md`
+   row it added, moved, or removed — as the change's last step, never as a
+   separate chore, and a change that moved nothing there leaves them
+   untouched. A doc maintained apart from the code is a doc that lies. The
+   map's SVG is a diagram: an update that touches the drawing (nodes, edges,
+   labels, layout) loads the `diagram-design` skill first and lets it guide
+   the edit. A page or an index row is markdown: an update to them loads the
+   `writing-great-skills` skill first (the markdown rule: `AGENT.md`) and
    lets it guide the edit.
 
 6. **Changes are sequences of green steps.**
