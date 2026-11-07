@@ -1,6 +1,7 @@
 package workflows
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -12,13 +13,23 @@ import (
 	"flowdeck/core/status"
 )
 
-// The workflows run through the env-driven core: boot.init() created the
-// DBOS context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL (see
-// .env.test), this package's inits registered the workflows, and the
-// TestMain starts the executor once — the same lifecycle as production.
+// The workflows run through the env-driven core: the explicit boot
+// (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL, see .env.test) creates the
+// DBOS context, the generated RegisterAll registers the workflows on it,
+// and the TestMain starts the executor once — the same lifecycle as
+// production (when the env values are set; the unit tests run without
+// them).
 func TestMain(m *testing.M) {
-	boot.SetWorkflowsSource(os.DirFS("."))
-	if c := boot.Ctx(); c != nil {
+	if appName := os.Getenv("DBOS_APP_NAME"); appName != "" && os.Getenv("DBOS_SYSTEM_DATABASE_URL") != "" {
+		if err := boot.Boot(context.Background(), appName, os.Getenv("DBOS_SYSTEM_DATABASE_URL")); err != nil {
+			fmt.Fprintln(os.Stderr, "workflows_test: boot:", err)
+			os.Exit(1)
+		}
+		RegisterAll(boot.Ctx())
+		if err := boot.SetWorkflowsSource(os.DirFS(".")); err != nil {
+			fmt.Fprintln(os.Stderr, "workflows_test: set workflows source:", err)
+			os.Exit(1)
+		}
 		if err := boot.Launch(); err != nil {
 			fmt.Fprintln(os.Stderr, "workflows_test: launch:", err)
 			os.Exit(1)

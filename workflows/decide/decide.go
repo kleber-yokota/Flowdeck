@@ -1,11 +1,10 @@
 // Package decide registers the decide workflow in the core DBOS context
-// (the subpackage form: its own folder, its own init).
+// (the subpackage form: its own folder, its own Register).
 package decide
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core/boot"
 	"flowdeck/workflows/steps"
 )
 
@@ -13,17 +12,14 @@ import (
 // parser extracts the const default<NamePascal>).
 const defaultMsg = "FlowDeck"
 
-// Registers the decide workflow in the core DBOS context — the context is
-// up since boot's init (dependency order: core before this package). With
-// no env (unit tests, tools) the context is nil and the registration is
-// skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Decide,
-			dbos.WithWorkflowName("decide"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the decide workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Decide,
+		dbos.WithWorkflowName("decide"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // Decide is a workflow with a branch: after the first step, the second step

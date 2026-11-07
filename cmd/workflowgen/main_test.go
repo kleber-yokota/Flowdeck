@@ -47,9 +47,12 @@ func TestRenderNoSubpackages(t *testing.T) {
 func TestRenderWithSubpackages(t *testing.T) {
 	got := render("flowdeck", []string{"buy", "ship/express"})
 	for _, want := range []string{
-		"\t_ \"flowdeck/workflows/buy\"\n",
-		"\t_ \"flowdeck/workflows/ship/express\"\n",
+		"\t\"flowdeck/workflows/buy\"\n",
+		"\t\"flowdeck/workflows/ship/express\"\n",
 		"import (",
+		"func RegisterAll(c dbos.Context) {\n",
+		"\tbuy.Register(c)\n",
+		"\texpress.Register(c)\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("render missing %q:\n%s", want, got)
@@ -62,9 +65,10 @@ func TestSubpackages(t *testing.T) {
 		"go.mod":                  "module flowdeck\n",
 		"workflows.go":            "package workflows\n",
 		"zz_generated.go":         "package workflows\n",
-		"buy/buy.go":              "package buy\n",
+		"buy/buy.go":              "package buy\n\nfunc Register(c dbos.Context) {}\n",
 		"buy/buy_test.go":         "package buy\n",
-		"ship/express/express.go": "package express\n",
+		"ship/express/express.go": "package express\n\nfunc Register(c dbos.Context) {}\n",
+		"steps/steps.go":          "package steps\n",
 		"emptydir/README.md":      "no go files here\n",
 		"testonly/only_test.go":   "package testonly\n",
 	})
@@ -97,7 +101,7 @@ func TestModuleLineMissing(t *testing.T) {
 func TestRunWritesGeneratedFile(t *testing.T) {
 	inTempModule(t, map[string]string{
 		"go.mod":     "module flowdeck\n",
-		"buy/buy.go": "package buy\n",
+		"buy/buy.go": "package buy\n\nfunc Register(c dbos.Context) {}\n",
 	})
 	if err := run(); err != nil {
 		t.Fatalf("run: %v", err)
@@ -106,7 +110,12 @@ func TestRunWritesGeneratedFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read generated file: %v", err)
 	}
-	if want := "\t_ \"flowdeck/workflows/buy\"\n"; !strings.Contains(string(data), want) {
-		t.Fatalf("generated file missing %q:\n%s", want, data)
+	for _, want := range []string{
+		"\t\"flowdeck/workflows/buy\"\n",
+		"\tbuy.Register(c)\n",
+	} {
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("generated file missing %q:\n%s", want, data)
+		}
 	}
 }

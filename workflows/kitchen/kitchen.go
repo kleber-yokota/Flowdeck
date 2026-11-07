@@ -1,5 +1,5 @@
 // Package kitchen registers the kitchen workflow in the core DBOS context
-// (the subpackage form: its own folder, its own init).
+// (the subpackage form: its own folder, its own Register).
 package kitchen
 
 import (
@@ -9,7 +9,6 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core/boot"
 	"flowdeck/workflows/pipeline"
 	"flowdeck/workflows/steps"
 )
@@ -18,15 +17,14 @@ import (
 // parser extracts the const default<NamePascal>).
 const defaultMsg = "FlowDeck"
 
-// Registers the kitchen workflow in the core DBOS context. With no env (unit
-// tests, tools) the context is nil and the registration is skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Kitchen,
-			dbos.WithWorkflowName("kitchen"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the kitchen workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Kitchen,
+		dbos.WithWorkflowName("kitchen"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // Kitchen is a workflow with every node kind: a step, a sleep (wait), a

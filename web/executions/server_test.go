@@ -1,6 +1,7 @@
 package executions
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -41,16 +42,21 @@ func bootedTestServer(t *testing.T) *httptest.Server {
 }
 
 // TestMain brings the env-driven core up for the booted tests: the paths
-// graph from the testworkflows source (the parser fixture), the test
-// workflows registered on the env context, and the executor when the env
-// context exists (the unit tests run without it).
+// graph from the testworkflows source (the parser fixture), and — when
+// the env values are set — the explicit boot, the test workflows
+// registered on the live context and the executor (the unit tests run
+// without them).
 func TestMain(m *testing.M) {
 	if err := boot.SetWorkflowsSource(os.DirFS("../../core/testworkflows")); err != nil {
 		fmt.Fprintln(os.Stderr, "executions: set workflows source:", err)
 		os.Exit(1)
 	}
-	if c := boot.Ctx(); c != nil {
-		testworkflows.RegisterTestWorkflows(c)
+	if appName := os.Getenv("DBOS_APP_NAME"); appName != "" && os.Getenv("DBOS_SYSTEM_DATABASE_URL") != "" {
+		if err := boot.Boot(context.Background(), appName, os.Getenv("DBOS_SYSTEM_DATABASE_URL")); err != nil {
+			fmt.Fprintln(os.Stderr, "executions: boot:", err)
+			os.Exit(1)
+		}
+		testworkflows.RegisterTestWorkflows(boot.Ctx())
 		if err := boot.Launch(); err != nil {
 			fmt.Fprintln(os.Stderr, "executions: launch:", err)
 			os.Exit(1)

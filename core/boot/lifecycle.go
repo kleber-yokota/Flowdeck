@@ -1,10 +1,12 @@
 // Package boot is the DBOS root of the core: the process-wide singleton
-// that owns the DBOS context and the single queue — the env-driven init
-// (the context from DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL), Launch
-// (the executor, the queue registration, the registry verification),
-// Shutdown, the readiness contact (Ready) and Ctx (the contact the
-// workflow files use to register their workflows). The paths graph
-// (SetWorkflowsSource) is the boot map the whole core reads from it.
+// that owns the DBOS context and the single queue — the explicit Boot
+// (Boot(ctx, appName, databaseURL), the error returned to the caller),
+// Launch (the executor, the queue registration, the registry
+// verification), Shutdown, the readiness contact (Ready) and Ctx (the
+// contact the registration calls). No env read here — the call sites
+// (main.go, the test bootstraps) read the env and pass the values. The
+// paths graph (SetWorkflowsSource) is the boot map the whole core reads
+// from it.
 package boot
 
 import (
@@ -13,7 +15,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
@@ -46,29 +47,11 @@ type coreState struct {
 
 var theCore = &coreState{}
 
-// init brings up the DBOS context from the environment — the production
-// path: docker compose sets DBOS_APP_NAME and DBOS_SYSTEM_DATABASE_URL, so
-// the context exists before main runs and the workflow files (which import
-// this package, and therefore init after it) register their workflows in
-// their own init.
-// Without env (unit tests, tools) the context stays nil: the explicit
-// Boot creates it on demand.
-func init() {
-	appName := os.Getenv("DBOS_APP_NAME")
-	dbURL := os.Getenv("DBOS_SYSTEM_DATABASE_URL")
-	if appName == "" || dbURL == "" {
-		return
-	}
-	theCore.mu.Lock()
-	defer theCore.mu.Unlock()
-	if err := boot(context.Background(), appName, dbURL); err != nil {
-		slog.Error("core: dbos context from env", "err", err)
-	}
-}
-
-// boot creates the DBOS context on the singleton. The caller holds
-// theCore.mu.
-func boot(ctx context.Context, appName, databaseURL string) error {
+// Boot creates the DBOS context on the singleton — the single explicit
+// boot: the env values are read by the caller (main.go, the test
+// bootstraps) and passed here, and the error is returned to the caller,
+// not logged (a failed boot is visible before any launch).
+func Boot(ctx context.Context, appName, databaseURL string) error {
 	c, err := dbos.NewContext(ctx, dbos.Config{
 		AppName:     appName,
 		DatabaseURL: databaseURL,
@@ -76,6 +59,8 @@ func boot(ctx context.Context, appName, databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("dbos boot: %w", err)
 	}
+	theCore.mu.Lock()
+	defer theCore.mu.Unlock()
 	theCore.dbosCtx = c
 	theCore.booted = true
 	theCore.launched = false
@@ -108,7 +93,7 @@ func Launch() error {
 	theCore.mu.Lock()
 	defer theCore.mu.Unlock()
 	if !theCore.booted {
-		return errors.New("core: Launch needs a booted core (env DBOS context or Boot)")
+		return errors.New("core: Launch needs a booted core (Boot)")
 	}
 	if theCore.launched {
 		return errors.New("core: Launch already called (singleton — one executor)")
@@ -148,10 +133,10 @@ func Shutdown(timeout time.Duration) {
 	dbos.Shutdown(c, timeout)
 }
 
-// Ctx returns the singleton DBOS context — nil until the package init
-// (env) or a Boot creates it, and nil after Shutdown. The workflow files
-// use it to register their workflows directly in the DBOS (see the
-// workflows package).
+// Ctx returns the singleton DBOS context — nil until a Boot creates it,
+// and nil after Shutdown. The workflow registration calls
+// (workflows.RegisterAll) use it to register their workflows on the
+// live context.
 func Ctx() dbos.Context {
 	theCore.mu.RLock()
 	defer theCore.mu.RUnlock()
@@ -193,9 +178,10 @@ func Ready() error {
 
 // warnUnregistered compares the possible-paths graph (built from the
 // embedded source — no imports involved) with the DBOS registry (built by
-// the workflow files' init). A name the source declares but the registry
-// lacks means workflows/zz_generated.go is stale — the subpackage's
-// registration never ran.
+// the workflow files' Register calls, via the generated RegisterAll). A
+// name the source declares but the registry lacks means
+// workflows/zz_generated.go is stale — the subpackage's registration never
+// ran.
 func warnUnregistered(c dbos.Context, paths *graph.PathGraph) {
 	if paths == nil {
 		return

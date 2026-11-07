@@ -18,7 +18,7 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/web"
 
-	_ "flowdeck/workflows" // the workflow files register themselves in the core DBOS context (init); zz_generated.go pulls in every subpackage
+	"flowdeck/workflows" // the generated RegisterAll — the explicit registration of every workflow subpackage
 )
 
 // The source of the workflow packages, embedded so the core's paths parser
@@ -44,18 +44,24 @@ func main() {
 
 // config is the process configuration, read from the environment.
 type config struct {
+	appName     string
+	databaseURL string
 	httpAddr    string
 	httpTimeout time.Duration
 	coreTimeout time.Duration
 }
 
 func loadConfig() (config, error) {
-	// The core reads these in its own init; validate here for an early
-	// error before the web boots.
-	if os.Getenv("DBOS_APP_NAME") == "" || os.Getenv("DBOS_SYSTEM_DATABASE_URL") == "" {
+	// The explicit boot reads these; validate here for an early error
+	// before the web boots.
+	appName := os.Getenv("DBOS_APP_NAME")
+	databaseURL := os.Getenv("DBOS_SYSTEM_DATABASE_URL")
+	if appName == "" || databaseURL == "" {
 		return config{}, errors.New("DBOS_APP_NAME and DBOS_SYSTEM_DATABASE_URL are required")
 	}
 	return config{
+		appName:     appName,
+		databaseURL: databaseURL,
 		httpAddr:    envOr("FLOWDECK_HTTP_ADDR", ":8080"),
 		httpTimeout: envDuration("FLOWDECK_HTTP_TIMEOUT", 5*time.Second),
 		coreTimeout: envDuration("FLOWDECK_CORE_TIMEOUT", 5*time.Second),
@@ -94,6 +100,18 @@ func run() error {
 	defer stop()
 	defer boot.Shutdown(cfg.coreTimeout)
 
+	// The explicit boot: the env values main.go read — the error surfaces
+	// before any launch (it used to be swallowed in the boot package's
+	// init).
+	if err := boot.Boot(context.Background(), cfg.appName, cfg.databaseURL); err != nil {
+		slog.Error("boot", "err", err)
+		return err
+	}
+
+	// The generated registration: one call per workflow subpackage, on the
+	// live context.
+	workflows.RegisterAll(boot.Ctx())
+
 	// The possible-paths graph (phase 4, STEP 1): parse the embedded
 	// workflows source (each file's RegisterWorkflow + the workflow funcs),
 	// once, before the web serves it.
@@ -101,14 +119,19 @@ func run() error {
 		return err
 	}
 
-	// The core DBOS context is up since core's init (env), and the workflow
-	// files registered their workflows there in their init — Launch starts
-	// the executor.
+	// Launch starts the executor.
 	if err := boot.Launch(); err != nil {
 		return err
 	}
 	slog.Info("core DBOS is up")
 
+	return serve(ctx, cfg)
+}
+
+// serve listens on the configured address and serves the web until the
+// context (SIGINT/SIGTERM) asks for a graceful stop — returning the serve
+// error (a clean shutdown is not an error).
+func serve(ctx context.Context, cfg config) error {
 	// Listen before logging, so the log line only prints if the port is free
 	ln, err := net.Listen("tcp", cfg.httpAddr)
 	if err != nil {

@@ -5,21 +5,16 @@ import (
 	"time"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
-	"flowdeck/core/boot"
 )
 
-// Registers the pause workflow in the core DBOS context — the context
-// is up since boot's init (dependency order: core before this package).
-// With no env (unit tests, tools) the context is nil and the registration
-// is skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Pause,
-			dbos.WithWorkflowName("pause"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the pause workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Pause,
+		dbos.WithWorkflowName("pause"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // pauseDuration is the fixed pause of the pause step — long enough that a

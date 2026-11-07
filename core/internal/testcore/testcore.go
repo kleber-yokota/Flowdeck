@@ -1,11 +1,13 @@
 // Package testcore is the shared setup of the core test binaries: the
-// env-driven lifecycle (the paths graph from the workflows tree on disk,
-// and — when the env context exists — the test workflows and the executor)
-// and the shared poll helpers. Every core test binary calls Setup from
-// its TestMain; the env-var absence is handled by the NeedCore skip.
+// explicit env boot (the paths graph from the workflows tree on disk, and
+// — when the env values are set — the boot, the test workflows and the
+// executor) and the shared poll helpers. Every core test binary calls
+// Setup from its TestMain; the env-var absence is handled by the NeedCore
+// skip.
 package testcore
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -19,23 +21,25 @@ import (
 
 // Setup brings the env-driven core up for the test binary: the paths graph
 // from the testworkflows source (workflowsDir, relative to the test
-// binary's directory), and — when the env context exists — the test
-// workflows registered on the env context and the executor. The env-var
-// absence is not an error: the NeedCore skip handles it (the unit tests
-// run without it).
+// binary's directory), and — when the env values are set — the explicit
+// boot, the test workflows registered on the live context and the
+// executor. The env-var absence is not an error: the NeedCore skip
+// handles it (the unit tests run without it).
 func Setup(workflowsDir string) {
 	if err := boot.SetWorkflowsSource(os.DirFS(workflowsDir)); err != nil {
 		fmt.Fprintln(os.Stderr, "testcore: workflows source:", err)
 		os.Exit(1)
 	}
-	c := boot.Ctx()
-	if c == nil {
-		return
-	}
-	testworkflows.RegisterTestWorkflows(c)
-	if err := boot.Launch(); err != nil {
-		fmt.Fprintln(os.Stderr, "testcore: launch:", err)
-		os.Exit(1)
+	if appName := os.Getenv("DBOS_APP_NAME"); appName != "" && os.Getenv("DBOS_SYSTEM_DATABASE_URL") != "" {
+		if err := boot.Boot(context.Background(), appName, os.Getenv("DBOS_SYSTEM_DATABASE_URL")); err != nil {
+			fmt.Fprintln(os.Stderr, "testcore: boot:", err)
+			os.Exit(1)
+		}
+		testworkflows.RegisterTestWorkflows(boot.Ctx())
+		if err := boot.Launch(); err != nil {
+			fmt.Fprintln(os.Stderr, "testcore: launch:", err)
+			os.Exit(1)
+		}
 	}
 }
 
