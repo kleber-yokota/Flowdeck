@@ -10,17 +10,31 @@ import (
 	"testing"
 	"time"
 
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/web/internal/webtest"
 )
+
+// e2eCore returns the env-booted core of the e2e job (this package's
+// TestMain brought it up from the env values): without env the test fails
+// — not skip (the e2e job's env is the precondition of the suite).
+func e2eCore(t *testing.T) dbos.Context {
+	t.Helper()
+	c := boot.Ctx()
+	if c == nil {
+		t.Fatal("no env boot (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL)")
+	}
+	return c
+}
 
 // E2E (against the real database of the e2e job: a SQLite file — the
 // booted core, the web rendering, and a dispatch that the DBOS executor
 // picks off the queue and runs to success). Packages run with -p 1 so only
 // one executor polls the queue at a time.
 func TestE2EDispatchRunsToSuccess(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
@@ -51,7 +65,7 @@ func TestE2EDispatchRunsToSuccess(t *testing.T) {
 // takes the value (the fork-test run branches to the left, the executed
 // path shows it).
 func TestE2EFormDispatchTakesBranch(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
@@ -87,7 +101,7 @@ func TestE2EFormDispatchTakesBranch(t *testing.T) {
 
 // The resume of an id that is not known by the core is a clean 404.
 func TestE2EResumeUnknownIs404(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
@@ -105,7 +119,7 @@ func TestE2EResumeUnknownIs404(t *testing.T) {
 // appear as they execute, the poll reaches the terminal state, and the
 // detail page shows the badge of the finished run.
 func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
@@ -148,7 +162,7 @@ func TestE2EExecutedPathPollsToTerminal(t *testing.T) {
 // sanitizes) — the spaces-only value reaches the workflow as the zero
 // value: the fork-test run branches to the right.
 func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
@@ -186,7 +200,7 @@ func TestE2ETrimsValuesBeforeDispatch(t *testing.T) {
 // carry the raw markup — the template layer escapes everything
 // it renders.
 func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 
@@ -229,7 +243,7 @@ func TestE2EHTMLInInputNeverRendersRaw(t *testing.T) {
 // sanitizes the values into the map input, and the execution detail shows
 // the stored input values the run used.
 func TestE2EStructDispatchShowsInputValues(t *testing.T) {
-	needCore(t)
+	e2eCore(t)
 	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
 	defer srv.Close()
 

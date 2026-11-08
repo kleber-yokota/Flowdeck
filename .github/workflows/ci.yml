@@ -38,11 +38,10 @@ jobs:
       # in scripts/structure-gate.sh — raise one there and in code.md.
       - name: Structure gate (complexity, nesting, cycles, import contract)
         run: bash scripts/structure-gate.sh
-      # The unit layer, separate from the race run: no env — the core
-      # booted tests boot their own per-test cores (a fresh sqlite file
-      # each), and the web · workflows booted tests skip (their env boot
-      # is the e2e path).
-      - name: Unit tests (no env — the booted tests skip)
+      # The unit layer, separate from the race run: no env — every booted
+      # test boots its own per-test core (a fresh sqlite file each);
+      # nothing skips.
+      - name: Unit tests (self-boot — nothing skips)
         run: go test -count=1 ./...
 
   race:

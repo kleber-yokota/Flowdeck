@@ -69,9 +69,8 @@ func TestStatusBadgeRendersState(t *testing.T) {
 }
 
 // runInState creates a real run in the given state (the deterministic
-// fixtures) and settles it via t.Cleanup (the live runs are cancelled,
-// the error run is followed by an ok dispatch) — the suite converges
-// regardless of test order.
+// fixtures) — the per-test file converges by death (the boot Shutdown in
+// the t.Cleanup, the TempDir removal): there is no shared DB to converge.
 func runInState(t *testing.T, srv *httptest.Server, state status.State) string {
 	t.Helper()
 	switch state {
@@ -83,9 +82,7 @@ func runInState(t *testing.T, srv *httptest.Server, state status.State) string {
 		if err != nil {
 			t.Fatalf("enqueue: %v", err)
 		}
-		id := h.GetWorkflowID()
-		t.Cleanup(func() { cancelRun(t, srv, id) })
-		return id
+		return h.GetWorkflowID()
 	case status.Running:
 		id := blockRun(t, srv)
 		// The claim takes a poll cycle: wait for the run to be running
@@ -101,9 +98,6 @@ func runInState(t *testing.T, srv *httptest.Server, state status.State) string {
 		ack := webtest.Ack(t, srv.URL, "live-test", url.Values{"mode": {"err"}})
 		id := webtest.ExecutionID(t, ack)
 		webtest.Detail(t, srv.URL, id, `class="badge error terminal"`)
-		// Convergence: the live-test back on success (the failed box reads
-		// the latest run per workflow).
-		t.Cleanup(func() { webtest.Ack(t, srv.URL, "live-test", nil) })
 		return id
 	case status.Cancelled:
 		id := blockRun(t, srv)

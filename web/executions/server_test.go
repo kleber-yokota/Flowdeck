@@ -6,7 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"testing"
+	"time"
+
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
@@ -32,13 +36,37 @@ func testServer(t *testing.T, p core.Port) *httptest.Server {
 }
 
 // bootedTestServer builds the server of a booted core (no stubs): this
-// package's routes against the live core (the env-driven context,
-// RegisterTestWorkflows, and the executor this package's TestMain
-// started).
+// package's routes against the live core (the per-test boot —
+// bootedTestCore: the fresh sqlite file, RegisterTestWorkflows, and the
+// executor the boot launched).
 func bootedTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	needCore(t)
+	bootedTestCore(t)
 	return testServer(t, core.NewPort())
+}
+
+// bootedTestCore brings the test core up for one test and shuts it down
+// when the test ends: the explicit boot on app flowdeck_test with a fresh
+// sqlite file under the test's TempDir, the paths graph from the
+// testworkflows source, the test workflows and the fixture queues
+// registered on the live context — and the Shutdown in the t.Cleanup (the
+// TempDir removal is the framework's). Tests read the live context from
+// the return — no env, no shared DB.
+func bootedTestCore(t *testing.T) dbos.Context {
+	t.Helper()
+	if err := boot.Boot(context.Background(), "flowdeck_test", "sqlite:"+path.Join(t.TempDir(), "test.db")); err != nil {
+		t.Fatalf("boot: %v", err)
+	}
+	c := boot.Ctx()
+	if err := boot.SetWorkflowsSource(os.DirFS("../../core/testworkflows")); err != nil {
+		t.Fatalf("set workflows source: %v", err)
+	}
+	testworkflows.RegisterTestWorkflows(c)
+	if err := boot.Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+	t.Cleanup(func() { boot.Shutdown(5 * time.Second) })
+	return c
 }
 
 // TestMain brings the env-driven core up for the booted tests: the paths
@@ -63,15 +91,6 @@ func TestMain(m *testing.M) {
 		}
 	}
 	os.Exit(m.Run())
-}
-
-// needCore skips the test when the env-driven context is absent (the env
-// vars were not exported before the test binary started).
-func needCore(t *testing.T) {
-	t.Helper()
-	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — the env boot is the e2e job's path")
-	}
 }
 
 // skipBooted skips the test when the env-driven context is up: the test

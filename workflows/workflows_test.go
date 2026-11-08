@@ -4,47 +4,47 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"testing"
 	"time"
+
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/workflows/buy"
+	"flowdeck/workflows/decide"
+	"flowdeck/workflows/hello"
+	"flowdeck/workflows/pipeline"
 )
 
-// The workflows run through the env-driven core: the explicit boot
-// (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) creates the
-// DBOS context, the generated RegisterAll registers the workflows on it,
-// and the TestMain starts the executor once — the same lifecycle as
-// production (when the env values are set; the unit tests run without
-// them).
-func TestMain(m *testing.M) {
-	if appName := os.Getenv("DBOS_APP_NAME"); appName != "" && os.Getenv("DBOS_SYSTEM_DATABASE_URL") != "" {
-		if err := boot.Boot(context.Background(), appName, os.Getenv("DBOS_SYSTEM_DATABASE_URL")); err != nil {
-			fmt.Fprintln(os.Stderr, "workflows_test: boot:", err)
-			os.Exit(1)
-		}
-		RegisterAll(boot.Ctx())
-		if err := boot.SetWorkflowsSource(os.DirFS(".")); err != nil {
-			fmt.Fprintln(os.Stderr, "workflows_test: set workflows source:", err)
-			os.Exit(1)
-		}
-		if err := boot.Launch(); err != nil {
-			fmt.Fprintln(os.Stderr, "workflows_test: launch:", err)
-			os.Exit(1)
-		}
-	}
-	os.Exit(m.Run())
-}
-
-// needCore skips the test when the env-driven context is absent (the env
-// vars were not exported before the test binary started).
-func needCore(t *testing.T) {
+// bootWorkflows brings the test core up for one test, registering the
+// given workflows (a subset of the generated All list — the
+// warnUnregistered warning is diagnostic) on the live context, and shuts
+// it down when the test ends: the explicit boot on app flowdeck_test with
+// a fresh sqlite file under the test's TempDir, the paths graph from this
+// package's source (os.DirFS(".")) — and the Shutdown in the t.Cleanup
+// (the TempDir removal is the framework's). Tests read the live context
+// from the return — no env, no skip.
+func bootWorkflows(t *testing.T, register ...func(dbos.Context)) dbos.Context {
 	t.Helper()
-	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — the env boot is the e2e job's path")
+	if err := boot.Boot(context.Background(), "flowdeck_test", "sqlite:"+path.Join(t.TempDir(), "test.db")); err != nil {
+		t.Fatalf("boot: %v", err)
 	}
+	c := boot.Ctx()
+	for _, r := range register {
+		r(c)
+	}
+	if err := boot.SetWorkflowsSource(os.DirFS(".")); err != nil {
+		t.Fatalf("set workflows source: %v", err)
+	}
+	if err := boot.Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+	t.Cleanup(func() { boot.Shutdown(5 * time.Second) })
+	return c
 }
 
 // runToSuccess enqueues the workflow with the clean input (the values the
@@ -110,14 +110,14 @@ func assertStepNames(t *testing.T, ex reads.Execution, want ...string) {
 
 // The hello-world run ends successful with its single step.
 func TestHelloWorldRun(t *testing.T) {
-	needCore(t)
+	bootWorkflows(t, hello.Register)
 	ex := runToSuccess(t, "hello-world", "FlowDeck")
 	assertStepNames(t, ex, "greet")
 }
 
 // The pipeline run takes its single possible path: the four steps in order.
 func TestPipelineRun(t *testing.T) {
-	needCore(t)
+	bootWorkflows(t, pipeline.Register)
 	ex := runToSuccess(t, "pipeline", nil)
 	assertStepNames(t, ex, "fetch", "parse", "transform", "store")
 }
@@ -126,7 +126,7 @@ func TestPipelineRun(t *testing.T) {
 // the zero payload goes right — the else branch is the one the boot parser
 // forks on.
 func TestDecideRunBranches(t *testing.T) {
-	needCore(t)
+	bootWorkflows(t, decide.Register)
 	left := runToSuccess(t, "decide", "left")
 	assertStepNames(t, left, "base", "left")
 	right := runToSuccess(t, "decide", "")
@@ -136,7 +136,7 @@ func TestDecideRunBranches(t *testing.T) {
 // The buy subpackage run ends successful with its single step — the
 // subpackage is wired by the generated blank import, not by hand.
 func TestBuyRun(t *testing.T) {
-	needCore(t)
+	bootWorkflows(t, buy.Register)
 	ex := runToSuccess(t, "buy", "order-42")
 	assertStepNames(t, ex, "charge")
 }
