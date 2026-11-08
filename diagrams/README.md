@@ -11,6 +11,8 @@ The map the agents read. One HTML per view + CSS (no images, no JS — static, g
 
 `css/` holds the CSS. The maps are navigation + contact (the folder pages: the facts and the rules, via `index.md`).
 
+The improvement specs (ephemeral — deleted after implementation) live in `improve/` with their own README (`improve/README.md`) — not in this file.
+
 ## contracts
 
 - **Boundary, group-level.** `package-map.html` shows the packages that cross a group border. Fan-in is counted at the group level (a node = a group of packages) — the `workflows` node fans out to its subpackages.
