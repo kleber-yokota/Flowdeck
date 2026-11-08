@@ -1,7 +1,7 @@
 // block_symbols_test.go asserts the node-kind symbols: the loop arc (shape ·
 // top-right anchor), the child ring + dot, the wait dots, the async ∥ mark,
 // and the symbol space (the label clears the symbol).
-package graph
+package block
 
 import (
 	"strconv"

@@ -8,7 +8,7 @@ import (
 	corengraph "flowdeck/core/graph"
 	"flowdeck/core/registry"
 	"flowdeck/web/executions"
-	"flowdeck/web/graph"
+	blocksvg "flowdeck/web/graph/block"
 	"flowdeck/web/render"
 )
 
@@ -48,7 +48,7 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	// process — map lookup, no re-parse, no DB).
 	var svg template.HTML
 	if block := p.Graph.Of(name); block != nil {
-		svg = graph.BlockToSVG(block)
+		svg = blocksvg.BlockToSVG(block)
 	}
 	exs, err := p.Executions(name)
 	if err != nil {

@@ -2,10 +2,11 @@
 // (the vertical stack and the per-child dispatch) and the if-fork (the
 // branches side by side, equal width, the skip branch forks as arrows only,
 // the width metrics, and the fork wiring).
-package graph
+package block
 
 import (
 	"flowdeck/core/graph"
+	graphshared "flowdeck/web/graph"
 )
 
 // layoutColumn lays out the children (a vertical stack) centered at cx,
@@ -35,7 +36,7 @@ func (l *blockLayout) layoutColumn(children []graph.Child, cx, top float64, conn
 			first = itemFirst
 		}
 		last = itemLast
-		top = itemBB.maxY + graphRowGap
+		top = itemBB.maxY + graphshared.GraphRowGap
 	}
 	return bb, first, last
 }
@@ -59,7 +60,7 @@ func (l *blockLayout) placeChild(c graph.Child, cx, top float64, connect bool) (
 
 // placeNodeChild places a single node box and connects it to the main flow.
 func (l *blockLayout) placeNodeChild(n *graph.Node, cx, top float64, connect bool) (bb *bbox, first, last *blockBox) {
-	box := l.placeNode(n, cx, top, nodeBoxW(n.Name, n.Kind))
+	box := l.placeNode(n, cx, top, graphshared.NodeBoxW(n.Name, n.Kind))
 	if connect {
 		l.connectTo(box, box)
 	}
@@ -129,14 +130,14 @@ func (l *blockLayout) layoutIf(b *graph.Block, cx, top float64) (bb *bbox, first
 		if branchLast != nil {
 			lasts = append(lasts, branchLast)
 		}
-		x += maxW + graphColGap
+		x += maxW + graphshared.GraphColGap
 	}
 	return bb, firsts, lasts
 }
 
 // forkWidth is the total width of a fork of n equal-width branches.
 func forkWidth(n int, maxW float64) float64 {
-	return float64(n)*maxW + graphColGap*float64(n-1)
+	return float64(n)*maxW + graphshared.GraphColGap*float64(n-1)
 }
 
 // forkMaxWidth is the branches' equal width (the max content width).
@@ -177,7 +178,7 @@ func measureContentWidth(children []graph.Child) float64 {
 	for _, c := range children {
 		var cw float64
 		if c.Node != nil {
-			cw = nodeBoxW(c.Node.Name, c.Node.Kind)
+			cw = graphshared.NodeBoxW(c.Node.Name, c.Node.Kind)
 		} else {
 			cw = measureChildWidth(c.Block)
 		}
@@ -190,9 +191,9 @@ func measureContentWidth(children []graph.Child) float64 {
 
 func measureChildWidth(c *graph.Block) float64 {
 	if c.Type == graph.BlockIf {
-		return forkWidth(len(ifBranches(c)), forkMaxWidth(ifBranches(c))) + 2*graphPadX
+		return forkWidth(len(ifBranches(c)), forkMaxWidth(ifBranches(c))) + 2*graphshared.GraphPadX
 	}
-	return measureContentWidth(c.Children) + 2*graphPadX
+	return measureContentWidth(c.Children) + 2*graphshared.GraphPadX
 }
 
 // forkIn draws the incoming fork arrow (from the incoming box to each

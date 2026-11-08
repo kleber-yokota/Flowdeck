@@ -1,6 +1,6 @@
 // block_outlines_test.go asserts the block outlines: the root outline
 // clears the inner blocks, and no two outlines overlap.
-package graph
+package block
 
 import (
 	"strconv"
