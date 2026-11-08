@@ -76,7 +76,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 <div class="frame">
 <header>
   <h1>FlowDeck <span>package map · boundary</span></h1>
-  <p class="desc">The boundary map: the 7 packages that cross a group border (<code>main</code> · <code>workflows</code> · <code>core</code> · <code>web</code> · <code>dbos</code> · the two <code>cmd</code> tools) · 10 frontiers · zero cycles. Fan-in is counted at the group level (a node = a group of packages); <code>workflows</code> fans out to 12 subpackages. The <code>core</code> and <code>web</code> nodes link to their folder pages; facts and rules live in the folder pages (<a href="../index.md"><code>index.md</code></a>).</p>
+  <p class="desc">The boundary map: the 7 packages that cross a group border (<code>main</code> · <code>workflows</code> · <code>core</code> · <code>web</code> · <code>dbos</code> · the two <code>cmd</code> tools) · 9 frontiers · zero cycles. Fan-in is counted at the group level (a node = a group of packages); <code>workflows</code> fans out to 12 subpackages. The <code>core</code> and <code>web</code> nodes link to their folder pages; facts and rules live in the folder pages (<a href="../index.md"><code>index.md</code></a>).</p>
   <nav>
     <span>PAGES</span>
     <a href="../index.md">index.md</a>
@@ -97,10 +97,10 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 </ul>
 
 <section id="diagram">
-  <h2>boundary graph <span class="badge">7 PACKAGES · 10 FRONTIERS · 0 CYCLES</span></h2>
+  <h2>boundary graph <span class="badge">7 PACKAGES · 9 FRONTIERS · 0 CYCLES</span></h2>
   <svg viewBox="0 0 960 560" role="img" aria-labelledby="boundary-title boundary-desc" aria-describedby="boundary-desc" id="boundary">
     <title id="boundary-title">FlowDeck · boundary map</title>
-    <desc id="boundary-desc">Boundary view at the group level (a node = a group of packages). Rank 0 (entry): cmd/workflowgen, main, cmd/svgdump. Rank 1: workflows (12 subpackages: 11 registered + the steps helpers), web. Rank 2: core. Rank 3: dbos (third-party). Fan-in per node (incoming edges on this view): main 0, workflowgen 0, svgdump 0, workflows 2, web 2, core 4, dbos 2. Edges: main→core (launch · port), main→web (router), main→workflows (blank imports), cmd/svgdump→web (block svg), cmd/workflowgen→workflows (codegen, build-time), workflows→core (launch ctx), workflows→dbos (register), web→core (the port), core→dbos (sdk surface), cmd/svgdump→core (parse · dump).</desc>
+    <desc id="boundary-desc">Boundary view at the group level (a node = a group of packages). Rank 0 (entry): cmd/workflowgen, main, cmd/svgdump. Rank 1: workflows (12 subpackages: 11 registered + the steps helpers), web. Rank 2: core. Rank 3: dbos (third-party). Fan-in per node (incoming edges on this view): main 0, workflowgen 0, svgdump 0, workflows 2, web 2, core 3, dbos 2. Edges: main→core (launch · port), main→web (router), main→workflows (RegisterAll · embed), cmd/svgdump→web (block svg), cmd/workflowgen→workflows (codegen, build-time), workflows→dbos (register), web→core (the port), core→dbos (sdk surface), cmd/svgdump→core (parse · dump).</desc>
     <defs>
       <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 z" class="arrow"/>
@@ -112,7 +112,6 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
     <path class="edge" d="M 430 96 V 120 H 348 V 160" marker-end="url(#arrow)"/>
     <path class="edge" d="M 810 96 V 144 H 668 V 160" marker-end="url(#arrow)"/>
     <path class="edge build" d="M 118 96 V 112 H 292 V 160" marker-end="url(#arrow)"/>
-    <path class="edge" d="M 348 216 V 232 H 420 V 280" marker-end="url(#arrow)"/>
     <path class="edge" d="M 292 216 V 428 H 400" marker-end="url(#arrow)"/>
     <path class="edge" d="M 640 216 V 248 H 520 V 280" marker-end="url(#arrow)"/>
     <path class="edge" d="M 480 336 V 400" marker-end="url(#arrow)"/>
@@ -120,10 +119,9 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 
     <g class="edge-label"><rect x="392" y="131" width="78" height="12" rx="2"/><text x="470" y="140" text-anchor="end">LAUNCH · PORT</text></g>
     <g class="edge-label"><rect x="614" y="139" width="45" height="12" rx="2"/><text x="620" y="148">ROUTER</text></g>
-    <g class="edge-label"><rect x="350" y="98" width="78" height="12" rx="2"/><text x="389" y="107" text-anchor="middle">BLANK IMPORTS</text></g>
+    <g class="edge-label"><rect x="350" y="98" width="78" height="12" rx="2"/><text x="389" y="107" text-anchor="middle">REGISTER ALL</text></g>
     <g class="edge-label"><rect x="708" y="127" width="62" height="12" rx="2"/><text x="739" y="136" text-anchor="middle">BLOCK SVG</text></g>
     <g class="edge-label"><rect x="234" y="131" width="56" height="12" rx="2"/><text x="284" y="140" text-anchor="end">CODEGEN</text></g>
-    <g class="edge-label"><rect x="351" y="243" width="67" height="12" rx="2"/><text x="412" y="252" text-anchor="end">LAUNCH CTX</text></g>
     <g class="edge-label"><rect x="234" y="311" width="56" height="12" rx="2"/><text x="284" y="320" text-anchor="end">REGISTER</text></g>
     <g class="edge-label"><rect x="522" y="255" width="56" height="12" rx="2"/><text x="528" y="264">THE PORT</text></g>
     <g class="edge-label"><rect x="482" y="363" width="73" height="12" rx="2"/><text x="488" y="372">SDK SURFACE</text></g>
@@ -153,7 +151,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
     <g>
       <rect class="node" x="240" y="160" width="160" height="56" rx="6"/>
       <text class="name" x="320" y="184">workflows</text>
-      <text class="node-sub" x="320" y="201">12 subpackages · init()</text>
+      <text class="node-sub" x="320" y="201">12 subpackages · Register</text>
       <rect class="badge" x="418" y="154" width="24" height="12" rx="2"/>
       <text class="badge-t" x="430" y="163">2 IN</text>
     </g>
@@ -169,7 +167,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <text class="name" x="480" y="304">core</text>
       <text class="node-sub" x="480" y="321">the Port (the contract)</text>
       <rect class="badge" x="578" y="274" width="24" height="12" rx="2"/>
-      <text class="badge-t" x="590" y="283">4 IN</text>
+      <text class="badge-t" x="590" y="283">3 IN</text>
     </a>
     <g>
       <rect class="node ext" x="400" y="400" width="160" height="56" rx="6"/>
@@ -182,15 +180,14 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 </section>
 
 <section id="frontiers">
-  <h2>frontiers <span class="badge">10 · GROUP LEVEL</span></h2>
+  <h2>frontiers <span class="badge">9 · GROUP LEVEL</span></h2>
   <p class="role">Who touches whom, at the group level. The package-level detail (files · functions) lives in the folder pages — <a href="../index.md">index.md</a>.</p>
   <table>
     <thead><tr><th>frontier</th><th>packages</th><th>carries</th><th>kind</th></tr></thead>
     <tbody>
       <tr><td><code>main → core</code></td><td><code>core</code> · <code>core/boot</code></td><td>the Port · launch · health · shutdown</td><td class="kind">rt</td></tr>
       <tr><td><code>main → web</code></td><td><code>web</code></td><td>the router + the ready guard</td><td class="kind">rt</td></tr>
-      <tr><td><code>main → workflows</code></td><td><code>workflows</code></td><td>init registration · the embedded source tree</td><td class="kind">rt</td></tr>
-      <tr><td><code>workflows → core</code></td><td><code>core/boot</code></td><td>the launch ctx for each dbos context</td><td class="kind">rt</td></tr>
+      <tr><td><code>main → workflows</code></td><td><code>workflows</code></td><td>RegisterAll (the generated call list) · the embedded source tree</td><td class="kind">rt</td></tr>
       <tr><td><code>workflows → dbos</code></td><td><code>dbos</code></td><td><code>RegisterWorkflow</code> (11 registered + the steps helpers)</td><td class="kind">rt</td></tr>
       <tr><td><code>web → core</code></td><td><code>web</code> · the 4 subpackages</td><td>the Port + the read models</td><td class="kind">rt</td></tr>
       <tr><td><code>core → dbos</code></td><td><code>core/boot</code> · <code>actions</code> · <code>reads</code> · <code>registry</code> · <code>testcore</code> · <code>testworkflows</code></td><td>launch · the mutations · the queries · the registrations · the test registrations</td><td class="kind">rt</td></tr>
@@ -206,7 +203,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
   <table>
     <thead><tr><th>group</th><th>packages</th><th>page</th></tr></thead>
     <tbody>
-      <tr><td><code>core</code></td><td><code>core</code> · <code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code> · <code>status</code> · <code>graph</code> · <code>internal/testcore</code> · <code>testworkflows</code> (9)</td><td><a href="../core/README.md">core/README.md</a> · the 8 subpages</td></tr>
+      <tr><td><code>core</code></td><td><code>core</code> · <code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code> · <code>status</code> · <code>graph</code> · <code>testcore</code> · <code>testworkflows</code> (9)</td><td><a href="../core/README.md">core/README.md</a> · the 8 subpages</td></tr>
       <tr><td><code>web</code></td><td><code>web</code> · <code>executions</code> · <code>catalog</code> · <code>render</code> · <code>graph</code> · <code>internal/webtest</code> (6)</td><td><a href="../web/README.md">web/README.md</a> · the 5 subpages</td></tr>
       <tr><td><code>entry</code></td><td><code>main</code> · <code>workflows</code> · <code>cmd/workflowgen</code> · <code>cmd/svgdump</code> (4)</td><td>— (the next round pages this group)</td></tr>
       <tr><td><code>dbos</code></td><td>DBOS Go SDK v1.7.0 (third-party)</td><td>— (third-party)</td></tr>
@@ -216,12 +213,12 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 
 <section id="suites">
   <h2>suites <span class="badge">THE GREEN BASELINE</span></h2>
-  <p class="role">Run the env suite <em>before</em> and <em>after</em> a task. The env suite needs the env file; the mock suite runs without env. Both must be green.</p>
+  <p class="role">The <em>unit</em> and <em>race</em> suites are self-booting — a fresh per-test boot, no env, no <code>-p 1</code>, nothing skips (the per-test boot: <a href="../core/testworkflows/README.md">core/testworkflows</a>). Run them <em>before</em> and <em>after</em> a task; both must be green.</p>
   <table>
     <thead><tr><th>suite</th><th>command</th><th>what it catches</th></tr></thead>
     <tbody>
-      <tr><td>mock</td><td><code>go test -race -count=2 -shuffle=on ./...</code></td><td>layout · sanitize · map · ack · guard · 503 · template · error mapping · live · wall · pager</td></tr>
-      <tr><td>env</td><td><code>rm -f /tmp/flowdeck-test.db* &amp;&amp; set -a &amp;&amp; source .env.test &amp;&amp; set +a &amp;&amp; go test -race -count=2 -shuffle=on -p 1 ./...</code></td><td>launch · enqueue · poll · step rows · child rows · detail · resume · cancel · live</td></tr>
+      <tr><td>unit</td><td><code>go test -count=1 ./...</code></td><td>the green gate (no env · self-booting)</td></tr>
+      <tr><td>race</td><td><code>go test -race -count=2 -shuffle=on ./...</code></td><td>the green gate (no env · self-booting · race detector · shuffled · repeatable)</td></tr>
     </tbody>
   </table>
 </section>
@@ -242,7 +239,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 
 <footer class="foot">
   <span>flowdeck · diagrams/package-map.html</span>
-  <span>generated from code · verified 2026-11-03</span>
+  <span>generated from code · verified 2026-11-08</span>
 </footer>
 </div>
 </body>

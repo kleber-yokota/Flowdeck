@@ -1,5 +1,5 @@
 // Package buy registers the buy workflow in the core DBOS context — the
-// subpackage form: its own file, its own init. The source is embedded in
+// subpackage form: its own file, its own Register. The source is embedded in
 // main (the whole workflows tree), so the paths parser finds it for free.
 package buy
 
@@ -7,25 +7,20 @@ import (
 	"context"
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
-	"flowdeck/core/boot"
 )
 
 // defaultMsg is the default value of the buy workflow's msg input
 // (phase 5, BOOT: the parser extracts the const default<NamePascal>).
 const defaultMsg = "FlowDeck"
 
-// Registers the buy workflow in the core DBOS context — the context is up
-// since boot's init (dependency order: core before this package). With no
-// env (unit tests, tools) the context is nil and the registration is
-// skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Buy,
-			dbos.WithWorkflowName("buy"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the buy workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Buy,
+		dbos.WithWorkflowName("buy"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // ChargeStep returns a step that "charges" the given message — the plain

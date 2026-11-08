@@ -210,8 +210,8 @@ N. Make the tests pass (green).
 
 ## Green (definition of done)
 
-- `go build ./...` + the booted suite green (the env of `.env.test`) · the
-  e2e when the step touched the loop.
+- `go build ./...` + the booted suite green (the per-test boot) · the e2e
+  when the step touched the loop.
 - <The specific assertions that prove the step.>
 
 ## Out of scope (owned by other steps)

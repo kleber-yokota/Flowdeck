@@ -1,11 +1,10 @@
 // Package compose registers the compose workflow in the core DBOS context
-// (the subpackage form: its own folder, its own init).
+// (the subpackage form: its own folder, its own Register).
 package compose
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core/boot"
 	"flowdeck/workflows/pipeline"
 	"flowdeck/workflows/steps"
 )
@@ -14,15 +13,14 @@ import (
 // parser extracts the const default<NamePascal>).
 const defaultMsg = "FlowDeck"
 
-// Registers the compose workflow in the core DBOS context. With no env (unit
-// tests, tools) the context is nil and the registration is skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Compose,
-			dbos.WithWorkflowName("compose"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the compose workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Compose,
+		dbos.WithWorkflowName("compose"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // Compose is a workflow with a child workflow (RunWorkflow): it runs the

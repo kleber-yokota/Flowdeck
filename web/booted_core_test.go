@@ -10,8 +10,9 @@ import (
 )
 
 // The booted-core tests of the workflow pages (no stubs): the core is up
-// from the environment (core.init + RegisterTestWorkflows, see .env.test),
-// and this package's bootedTestServer is the full-stack server (web.New:
+// from the environment (this package's TestMain env boot +
+// RegisterTestWorkflows), and this package's bootedTestServer is the
+// full-stack server (web.New:
 // the catalog + the executions routes, the healthz, the static).
 
 // The workflow pages of a booted core: the registry listing, the paths

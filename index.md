@@ -8,13 +8,13 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 |---|---|
 | `core/README.md` | the Port (the contract) · fan-in · the web never touches DBOS |
 | `core/actions/README.md` | Enqueue · Resume · Cancel · the guards · the single queue · the ACK · recovery attempts (`WithMaxRecoveryAttempts` · `recovery_attempts`) · rewind cut |
-| `core/boot/README.md` | Launch · Shutdown · Ready · `ErrNotLaunched` · the env-driven context · `SetWorkflowsSource` · `warnUnregistered` · the paths |
+| `core/boot/README.md` | Launch · Shutdown · Ready · `ErrNotLaunched` · the explicit Boot · `SetWorkflowsSource` · `warnUnregistered` · the paths |
 | `core/registry/README.md` | List (the registered workflows) · Spec · `SpecOf` · `ErrUnknownWorkflow` · the empty state |
 | `core/reads/README.md` | Executions · Status (MapState) · Steps (the wait-row names · the child rows) · Detail (the attempts mapping) · Live · `ErrUnknownExecution` |
 | `core/status/README.md` | the states · the terminal rule · the badge colors |
 | `core/graph/README.md` | the possible-paths graph · the block model · the spec from source · the default constants · Sanitize · `ErrInvalidInput` |
-| `core/internal/testcore/README.md` | the test setup · `Setup` · `NeedCore` · `PollState` · `MustStepNames` · the test env |
-| `core/testworkflows/README.md` | the test-workflows fixtures · `RegisterTestWorkflows` · the payloads of `live-test` · the block step |
+| `core/testcore/README.md` | the test setup · `BootTest` · `TestMain` · `PollState` · `MustStepNames` · the per-test boot |
+| `core/testworkflows/README.md` | the test-workflows fixtures · `RegisterTestWorkflows` · the registration lists · the payloads of `live-test` · the block step |
 | `web/README.md` | the router · healthz · the middlewares · the static assets · the Port + the ready seam |
 | `web/catalog/README.md` | the dashboard · the workflow pages · the spec form · the possible-paths SVG · the empty state |
 | `web/executions/README.md` | the dispatch · the badge · the detail · the steps · the resume · the cancel · the poll · the attempts display (`retriesFor`) |

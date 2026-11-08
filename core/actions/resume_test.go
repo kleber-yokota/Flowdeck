@@ -4,13 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 	"flowdeck/core/testworkflows"
 )
 
@@ -20,7 +18,7 @@ import (
 // Resume of an id that is not known by the core errors with
 // ErrUnknownExecution (the web maps it to a 404).
 func TestResumeUnknownExecution(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	if _, err := actions.Resume("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Resume unknown: got %v, want ErrUnknownExecution", err)
 	}
@@ -29,7 +27,7 @@ func TestResumeUnknownExecution(t *testing.T) {
 // Resume of a run that is not failed (here: success) errors with
 // ErrNotResumable (the web maps it to a 400).
 func TestResumeOfNotFailedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -47,10 +45,7 @@ func TestResumeOfNotFailedRun(t *testing.T) {
 // queue no executor worker polls (worker concurrency 0), so the queued
 // state is deterministic — the executor never claims it.
 func TestResumeOfQueuedRun(t *testing.T) {
-	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
+	testcore.BootTest(t, "../testworkflows")
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -72,7 +67,7 @@ func TestResumeOfQueuedRun(t *testing.T) {
 // block-test) sits in its block step, and the rejected resume leaves the
 // row untouched (still running) — the cancel unblocks the step.
 func TestResumeOfRunningRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("block-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -101,10 +96,7 @@ func TestResumeOfRunningRun(t *testing.T) {
 // boot.QueueName, so the executor runs it (the noinput-test reaches
 // success fast).
 func TestResumeOfCancelledRun(t *testing.T) {
-	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
+	testcore.BootTest(t, "../testworkflows")
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -137,7 +129,7 @@ func TestResumeOfCancelledRun(t *testing.T) {
 // deterministic failed run; with FlakyFail off, the resumed run reaches
 // success.
 func TestResumeOfFailedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	t.Cleanup(func() { testworkflows.FlakyFail = false })
 	testworkflows.FlakyFail = true
 	ex, err := actions.Enqueue("resume-test", "FlowDeck")

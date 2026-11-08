@@ -1,5 +1,5 @@
 // Package loop registers the loop workflow in the core DBOS context (the
-// subpackage form: its own folder, its own init).
+// subpackage form: its own folder, its own Register).
 package loop
 
 import (
@@ -7,7 +7,6 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core/boot"
 	"flowdeck/workflows/steps"
 )
 
@@ -15,15 +14,14 @@ import (
 // parser extracts the const default<NamePascal>).
 const defaultMsg = "FlowDeck"
 
-// Registers the loop workflow in the core DBOS context. With no env (unit
-// tests, tools) the context is nil and the registration is skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Loop,
-			dbos.WithWorkflowName("loop"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the loop workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Loop,
+		dbos.WithWorkflowName("loop"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // Loop is a workflow with a loop block: a for-range that repeats a step.

@@ -64,8 +64,14 @@ exception:
   folder pages the WANT touches).
 - NEW/CHANGED markers against the current base — the diagrams say *what
   changes*, not what exists.
-- Register each file in `diagrams/README.md` (the improve section + the
-  Files list), with the one-line description (the markdown rule: `AGENT.md`).
+- Delta diagrams read as two worlds at a glance: the **BEFORE** snapshot is
+  ghosted (neutral ink — no status color, removed objects/edges dashed), and
+  only the **AFTER** snapshot carries the status colors. The two panels must
+  never look like the same diagram twice; the ledger and the bottom legend
+  (swatches, not prose) carry the vocabulary.
+- Register each file in `improve/README.md` (the set's own README, ephemeral —
+  deleted with the folder after implementation), with the one-line description
+  (the markdown rule: `AGENT.md`).
 
 The values come from the WANT or the code — never invented. The status
 palette is fixed (queued `#7cc0ff` · running `#ff9142` · success `#46d19a` ·
@@ -73,6 +79,12 @@ failed `#ff5450` · cancelled `#8f96a3`).
 
 The diagrams are ephemeral: they are deleted by the last task of the set,
 after implementation.
+
+**The two READMEs, by permanence.** `diagrams/README.md` documents only the
+permanent reference maps (the boundary map · the agent pipeline — the
+navigation that stays). The `improve/` set is ephemeral; if it needs a README,
+that README lives at `improve/README.md` and is deleted with the folder. Do
+not document the ephemeral improve set in `diagrams/README.md`.
 
 ## Validation (the loop)
 

@@ -26,6 +26,12 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
 	}
+	if cfg.appName != "flowdeck" {
+		t.Fatalf("appName: got %q", cfg.appName)
+	}
+	if cfg.databaseURL != "postgres://db:5432/flowdeck" {
+		t.Fatalf("databaseURL: got %q", cfg.databaseURL)
+	}
 	if cfg.httpAddr != ":8080" {
 		t.Fatalf("default addr: got %q want %q", cfg.httpAddr, ":8080")
 	}
@@ -47,6 +53,12 @@ func TestLoadConfigEnvOverrides(t *testing.T) {
 	cfg, err := loadConfig()
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
+	}
+	if cfg.appName != "flowdeck" {
+		t.Fatalf("appName: got %q", cfg.appName)
+	}
+	if cfg.databaseURL != "postgres://db:5432/flowdeck" {
+		t.Fatalf("databaseURL: got %q", cfg.databaseURL)
 	}
 	if cfg.httpAddr != "127.0.0.1:9000" {
 		t.Fatalf("addr: got %q", cfg.httpAddr)

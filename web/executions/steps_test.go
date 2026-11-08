@@ -95,7 +95,6 @@ func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 
 // The poll of a not-launched core is a clean 503 (the poll keeps waiting).
 func TestStepsPartialCoreDownIs503(t *testing.T) {
-	skipBooted(t)
 	srv := testServer(t, core.NewPort())
 
 	if code, _ := webtest.Get(t, srv.URL+"/executions/abc/steps"); code != http.StatusServiceUnavailable {

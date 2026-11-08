@@ -1,61 +1,23 @@
 package web
 
 import (
-	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	"flowdeck/core"
 	"flowdeck/core/boot"
-	"flowdeck/core/testworkflows"
+	"flowdeck/core/testcore"
+	"flowdeck/web/internal/webtest"
 )
 
 // bootedTestServer builds the full-stack server of a booted core (no
-// stubs): the env-driven core (see .env.test) with the test workflows
-// registered, this package's TestMain started the executor and built the
-// paths graph from the testworkflows source, and New wires every route.
+// stubs): the per-test boot (testcore.BootTest — the fresh sqlite file
+// and the testworkflows fixtures), and New wires every route.
 func bootedTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	needCore(t)
-	return httptest.NewServer(New(core.NewPort(), boot.Ready))
+	testcore.BootTest(t, "../core/testworkflows")
+	return webtest.TestServer(t, New(core.NewPort(), boot.Ready))
 }
 
-// TestMain brings the env-driven core up for the booted tests: the paths
-// graph from the testworkflows source (the parser fixture, the unit twin
-// of main.go's //go:embed workflows), the test workflows registered on the
-// env context, and the executor (only when the env context exists — the
-// unit tests run without it).
-func TestMain(m *testing.M) {
-	if err := boot.SetWorkflowsSource(os.DirFS("../core/testworkflows")); err != nil {
-		fmt.Fprintln(os.Stderr, "web: set workflows source:", err)
-		os.Exit(1)
-	}
-	if c := boot.Ctx(); c != nil {
-		testworkflows.RegisterTestWorkflows(c)
-		if err := boot.Launch(); err != nil {
-			fmt.Fprintln(os.Stderr, "web: launch:", err)
-			os.Exit(1)
-		}
-	}
-	os.Exit(m.Run())
-}
-
-// needCore skips the test when the env-driven context is absent (the env
-// vars were not exported before the test binary started).
-func needCore(t *testing.T) {
-	t.Helper()
-	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
-	}
-}
-
-// skipBooted skips the test when the env-driven context is up: the test
-// exercises the real not-launched port (the 503 and empty-state paths),
-// which only exists in the unit mode.
-func skipBooted(t *testing.T) {
-	t.Helper()
-	if boot.Ctx() != nil {
-		t.Skip("the env core is booted: the not-launched path is the unit mode (run without the DBOS env)")
-	}
-}
+func TestMain(m *testing.M) { os.Exit(testcore.TestMain(m, "../core/testworkflows")) }

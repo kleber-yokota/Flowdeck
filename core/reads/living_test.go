@@ -6,9 +6,9 @@ import (
 
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // The live read of the running runs (the runnings page): one row per
@@ -29,8 +29,8 @@ import (
 // at once; the cancels are the release (the block step unblocks at the
 // 100ms poll — no leftover tail).
 func TestLivingNoDedupByWorkflow(t *testing.T) {
-	testcore.NeedCore(t)
-	quiescedLive(t)
+	testcore.BootTest(t, "../testworkflows")
+	quiesce(t)
 	fireIDs := make([]string, 2)
 	for i := range fireIDs {
 		ex, err := actions.Enqueue("live-test", "block")
@@ -87,8 +87,8 @@ func TestLivingNoDedupByWorkflow(t *testing.T) {
 // A success run and an error run are out of the list (only the running
 // runs are rows); the closing success is the suite contract.
 func TestLivingTerminalRunsAbsent(t *testing.T) {
-	testcore.NeedCore(t)
-	quiescedLive(t)
+	testcore.BootTest(t, "../testworkflows")
+	quiesce(t)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)

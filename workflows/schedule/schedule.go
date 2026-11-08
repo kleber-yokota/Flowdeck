@@ -1,25 +1,21 @@
 // Package schedule registers the schedule workflow in the core DBOS context
-// (the subpackage form: its own folder, its own init).
+// (the subpackage form: its own folder, its own Register).
 package schedule
 
 import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core/boot"
 	"flowdeck/workflows/steps"
 )
 
-// Registers the schedule workflow in the core DBOS context — the context
-// is up since boot's init (dependency order: core before this package).
-// With no env (unit tests, tools) the context is nil and the registration
-// is skipped.
-func init() {
-	if c := boot.Ctx(); c != nil {
-		dbos.RegisterWorkflow(c, Schedule,
-			dbos.WithWorkflowName("schedule"),
-			dbos.WithMaxRecoveryAttempts(3),
-		)
-	}
+// Register registers the schedule workflow on the core DBOS context — the
+// generated RegisterAll (workflows/zz_generated.go) calls it after
+// the explicit boot.
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Schedule,
+		dbos.WithWorkflowName("schedule"),
+		dbos.WithMaxRecoveryAttempts(3),
+	)
 }
 
 // ScheduleArgs is the schedule workflow's input (phase 5: one form item

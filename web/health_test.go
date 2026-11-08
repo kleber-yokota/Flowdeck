@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"flowdeck/core"
@@ -23,9 +22,7 @@ func TestHealthzCoreUpIs200(t *testing.T) {
 }
 
 func TestHealthzCoreDownIs503(t *testing.T) {
-	skipBooted(t)
-	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
-	defer srv.Close()
+	srv := webtest.TestServer(t, New(core.NewPort(), boot.Ready))
 
 	if status, _ := webtest.Get(t, srv.URL+"/healthz"); status != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want %d", status, http.StatusServiceUnavailable)

@@ -4,13 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // The cancel of a live run by id (the cancel sequence): the guard lets
@@ -21,7 +19,7 @@ import (
 // The cancel of an id that is not known by the core errors with
 // ErrUnknownExecution (the web maps it to a 404).
 func TestCancelUnknownExecution(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	if _, err := actions.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Cancel unknown: got %v, want ErrUnknownExecution", err)
 	}
@@ -30,7 +28,7 @@ func TestCancelUnknownExecution(t *testing.T) {
 // The cancel of a run that is not live (here: success) errors with
 // ErrNotCancellable (the web maps it to a 400).
 func TestCancelOfNotLiveRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -47,10 +45,7 @@ func TestCancelOfNotLiveRun(t *testing.T) {
 // polls (worker concurrency 0), so the queued state is deterministic — the
 // executor never claims it. The ACK is the same id, now cancelled.
 func TestCancelQueuedRun(t *testing.T) {
-	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
+	testcore.BootTest(t, "../testworkflows")
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -84,7 +79,7 @@ func TestCancelQueuedRun(t *testing.T) {
 // at the cancel (no leftover tail: the suite settles). The ACK is the same
 // id, now cancelled.
 func TestCancelRunningRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("block-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
