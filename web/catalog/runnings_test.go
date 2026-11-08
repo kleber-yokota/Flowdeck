@@ -179,7 +179,6 @@ func TestRunningListEmptyState(t *testing.T) {
 // The runnings partial of a not-launched core is a clean 503 (the Fail
 // map: boot.ErrNotLaunched → "core not ready").
 func TestRunningListNotLaunchedIs503(t *testing.T) {
-	skipBooted(t)
 	srv := testServer(t, core.NewPort())
 
 	if code, _ := webtest.Get(t, srv.URL+"/runnings/list"); code != http.StatusServiceUnavailable {

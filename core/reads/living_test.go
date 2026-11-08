@@ -6,9 +6,9 @@ import (
 
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // The live read of the running runs (the runnings page): one row per

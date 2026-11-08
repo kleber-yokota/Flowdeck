@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"flowdeck/core/actions"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // Executions lists the runs of a workflow, newest first: the run the test

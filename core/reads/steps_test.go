@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"flowdeck/core/actions"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // The executed path of a child-test run: the run's state (the poll

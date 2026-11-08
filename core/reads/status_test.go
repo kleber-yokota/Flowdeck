@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
+	"flowdeck/core/testcore"
 )
 
 // A run the core does not know errors with ErrUnknownExecution (the web

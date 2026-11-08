@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -16,8 +15,7 @@ import (
 
 // The vendored assets are served from the embedded FS — no CDN at runtime.
 func TestStaticServesVendoredHTMX(t *testing.T) {
-	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
-	defer srv.Close()
+	srv := webtest.TestServer(t, New(core.NewPort(), boot.Ready))
 
 	status, body := webtest.Get(t, srv.URL+"/static/htmx.min.js")
 	if status != http.StatusOK {
@@ -30,8 +28,7 @@ func TestStaticServesVendoredHTMX(t *testing.T) {
 }
 
 func TestUnknownPathReturns404(t *testing.T) {
-	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
-	defer srv.Close()
+	srv := webtest.TestServer(t, New(core.NewPort(), boot.Ready))
 
 	resp, err := http.Get(srv.URL + "/does-not-exist")
 	if err != nil {
@@ -44,8 +41,7 @@ func TestUnknownPathReturns404(t *testing.T) {
 }
 
 func TestPostRootReturns405(t *testing.T) {
-	srv := httptest.NewServer(New(core.NewPort(), boot.Ready))
-	defer srv.Close()
+	srv := webtest.TestServer(t, New(core.NewPort(), boot.Ready))
 
 	resp, err := http.Post(srv.URL+"/", "application/octet-stream", nil)
 	if err != nil {

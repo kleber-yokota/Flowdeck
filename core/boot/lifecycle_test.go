@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"flowdeck/core/graph"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/registry"
+	"flowdeck/core/testcore"
 )
 
 // The parsed source is the ground truth for which workflows exist: the

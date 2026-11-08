@@ -6,9 +6,9 @@ import (
 
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // The cancel of a live run by id (the cancel sequence): the guard lets

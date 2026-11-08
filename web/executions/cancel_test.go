@@ -123,7 +123,6 @@ func TestCancelOfNotLiveIs400(t *testing.T) {
 
 // A not-launched core maps to a clean 503 (the real port, no stubs).
 func TestCancelCoreDownIs503(t *testing.T) {
-	skipBooted(t)
 	srv := testServer(t, core.NewPort())
 
 	resp, err := webtest.Post(t, srv.URL+"/cancel/abc")

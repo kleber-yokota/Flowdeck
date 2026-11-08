@@ -5,7 +5,8 @@ import (
 
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
-	"flowdeck/core/internal/testcore"
+	"flowdeck/core/testcore"
+	"flowdeck/core/testworkflows"
 )
 
 // TestBootTestBootsAndCleans is the per-test boot contract: BootTest
@@ -14,17 +15,17 @@ import (
 // executor — the returned context is live, and the Shutdown (the t.Cleanup
 // BootTest registered) tears the core down again.
 func TestBootTestBootsAndCleans(t *testing.T) {
-	c := testcore.BootTest(t, "../../testworkflows")
+	c := testcore.BootTest(t, "../testworkflows")
 	if c == nil {
 		t.Fatal("BootTest returned a nil context, want the live context")
 	}
 }
 
-// TestBootTestNamedSubset is the generic argument: a []string of names
-// boots the test core with exactly those test workflows registered (the
-// fixture queues stay registered — the test-core infrastructure).
+// TestBootTestNamedSubset is the register route: the named workflows
+// (a subset of the ten) register on the booted core plus the frozen
+// fixture queues — no name table.
 func TestBootTestNamedSubset(t *testing.T) {
-	c := testcore.BootTest(t, []string{"live-test", "fork-test"})
+	c := testcore.BootTest(t, "../testworkflows", testworkflows.ByName["live-test"], testworkflows.ByName["fork-test"])
 	names := map[string]bool{}
 	for _, w := range dbos.ListRegisteredWorkflows(c) {
 		names[w.Name] = true

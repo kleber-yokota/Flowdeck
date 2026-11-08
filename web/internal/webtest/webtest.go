@@ -7,11 +7,22 @@ package webtest
 import (
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 )
+
+// TestServer serves the handler over HTTP for the duration of the test:
+// the close is the first cleanup registered on t — it runs last (LIFO), so
+// the handler is alive until every cleanup registered later has run.
+func TestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close) // registered first on t: runs last (LIFO)
+	return srv
+}
 
 // Get issues a GET and returns the status code and the body as a string.
 func Get(t *testing.T, url string) (int, string) {

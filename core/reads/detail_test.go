@@ -3,9 +3,9 @@ package reads_test
 import (
 	"errors"
 	"flowdeck/core/actions"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 	"strings"
 	"testing"
 )

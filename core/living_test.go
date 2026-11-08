@@ -8,8 +8,8 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // TestPortLivingNotLaunchedIsError (the guard): the not-launched port

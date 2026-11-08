@@ -144,7 +144,6 @@ func TestLivePartialBootedBoxes(t *testing.T) {
 // The empty registry (the real not-launched port lists nothing): the empty
 // message.
 func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
-	skipBooted(t)
 	srv := testServer(t, core.NewPort())
 
 	status, body := webtest.Get(t, srv.URL+"/workflows")
@@ -158,7 +157,6 @@ func TestWorkflowsPartialEmptyRegistry(t *testing.T) {
 
 // The live partial of a not-launched core is a clean 503 (the Fail map).
 func TestLivePartialCoreDownIs503(t *testing.T) {
-	skipBooted(t)
 	srv := testServer(t, core.NewPort())
 
 	if status, _ := webtest.Get(t, srv.URL+"/live"); status != http.StatusServiceUnavailable {

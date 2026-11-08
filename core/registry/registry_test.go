@@ -3,8 +3,8 @@ package registry_test
 import (
 	"testing"
 
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/registry"
+	"flowdeck/core/testcore"
 )
 
 // The registry (the web listing's source) has exactly the test workflows —

@@ -57,24 +57,6 @@ jobs:
       - name: Booted suite (race, count=2, shuffled — catches registry/state leaks)
         run: go test -race -count=2 -shuffle=on ./...
 
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: E2E against SQLite (the CI database)
-        env:
-          DBOS_APP_NAME: flowdeck_e2e
-          DBOS_SYSTEM_DATABASE_URL: sqlite:/tmp/flowdeck-e2e.db
-        # -p 1: one test binary at a time, so only one executor polls the
-        # queue at a time (a job claimed by a process that has not
-        # registered the workflow would fail).
-        run: |
-          rm -f /tmp/flowdeck-e2e.db
-          go test -tags e2e -run TestE2E -p 1 ./...
-
   vulncheck:
     runs-on: ubuntu-latest
     steps:

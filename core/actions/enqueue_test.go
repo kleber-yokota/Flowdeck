@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"flowdeck/core/actions"
-	"flowdeck/core/internal/testcore"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
+	"flowdeck/core/testcore"
 )
 
 // Enqueue (the dispatch) returns the new execution (id + state +

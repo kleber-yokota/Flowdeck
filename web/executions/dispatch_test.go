@@ -85,7 +85,6 @@ func TestDispatchNoStore(t *testing.T) {
 // lookup of the spec is graph-dependent, and the 503 comes from the
 // enqueue, not the lookup).
 func TestDispatchCoreDownIs503(t *testing.T) {
-	skipBooted(t)
 	if err := boot.SetWorkflowsSource(os.DirFS("../../core/testworkflows")); err != nil {
 		t.Fatalf("set workflows source: %v", err)
 	}
