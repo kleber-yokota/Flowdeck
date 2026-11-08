@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
 	"flowdeck/core"
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
@@ -85,9 +83,6 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 // success (the noinput-test reaches success fast on the main queue).
 func TestE2EResumeOfCancelledRun(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)

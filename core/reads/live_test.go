@@ -145,9 +145,6 @@ func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 // state of the workflow, not its latest run.
 func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "live-frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
 	s0 := quiescedLive(t)
 	block, err := actions.Enqueue("live-test", "block")
 	if err != nil {
@@ -228,9 +225,6 @@ func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 // queued runs.
 func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "live-frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
 	s0 := quiescedLive(t)
 	ids := make([]string, 3)
 	for i := range ids {
@@ -262,9 +256,6 @@ func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 // the latest success on the main queue is the baseline again.
 func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "live-frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
 	s0 := quiescedLive(t)
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "live-frozen", "live-test", "ok")
 	if err != nil {

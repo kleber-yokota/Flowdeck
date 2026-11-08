@@ -50,13 +50,19 @@ func TestRenderWithSubpackages(t *testing.T) {
 		"\t\"flowdeck/workflows/buy\"\n",
 		"\t\"flowdeck/workflows/ship/express\"\n",
 		"import (",
+		"var All []func(dbos.Context) = []func(dbos.Context){\n",
+		"\tbuy.Register,\n",
+		"\texpress.Register,\n",
 		"func RegisterAll(c dbos.Context) {\n",
-		"\tbuy.Register(c)\n",
-		"\texpress.Register(c)\n",
+		"\tfor _, f := range All {\n",
+		"\t\tf(c)\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("render missing %q:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "core/boot") {
+		t.Fatalf("render must not import core/boot:\n%s", got)
 	}
 }
 
@@ -112,7 +118,9 @@ func TestRunWritesGeneratedFile(t *testing.T) {
 	}
 	for _, want := range []string{
 		"\t\"flowdeck/workflows/buy\"\n",
-		"\tbuy.Register(c)\n",
+		"\tbuy.Register,\n",
+		"\tfor _, f := range All {\n",
+		"\t\tf(c)\n",
 	} {
 		if !strings.Contains(string(data), want) {
 			t.Fatalf("generated file missing %q:\n%s", want, data)

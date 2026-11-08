@@ -4,8 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
-
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
 	"flowdeck/core/internal/testcore"
@@ -48,9 +46,6 @@ func TestCancelOfNotLiveRun(t *testing.T) {
 // executor never claims it. The ACK is the same id, now cancelled.
 func TestCancelQueuedRun(t *testing.T) {
 	testcore.NeedCore(t)
-	if _, err := dbos.RegisterQueue(boot.Ctx(), "frozen", dbos.WithWorkerConcurrency(0)); err != nil {
-		t.Fatalf("RegisterQueue: %v", err)
-	}
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
