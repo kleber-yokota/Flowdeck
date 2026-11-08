@@ -4,10 +4,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
 	"flowdeck/core"
+	"flowdeck/core/boot"
 	"flowdeck/web/internal/webtest"
 )
 
@@ -77,9 +79,16 @@ func TestDispatchNoStore(t *testing.T) {
 	}
 }
 
-// The dispatch of a not-launched core is a clean 503.
+// The dispatch of a not-launched core is a clean 503: the precondition is
+// the source-registered graph with no boot (the per-test boots of the
+// siblings tear the singleton down, so the test brings its own — the
+// lookup of the spec is graph-dependent, and the 503 comes from the
+// enqueue, not the lookup).
 func TestDispatchCoreDownIs503(t *testing.T) {
 	skipBooted(t)
+	if err := boot.SetWorkflowsSource(os.DirFS("../../core/testworkflows")); err != nil {
+		t.Fatalf("set workflows source: %v", err)
+	}
 	srv := testServer(t, core.NewPort())
 
 	resp, err := webtest.Post(t, srv.URL+"/run/noinput-test")
