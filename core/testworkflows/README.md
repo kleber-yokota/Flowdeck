@@ -1,6 +1,6 @@
 # core/testworkflows
 
-The fixtures of the test suite: the ten test-only workflows and the frozen queues (`frozen` · `live-frozen`, the queued-state fixtures), registered on the booted DBOS context (the per-test cores of the `core` and `web` suites, and the env context of the two `e2e` suites), and the parser's source — the suites point the workflows source at this package directory. Never part of the `workflows` package, so they do not appear in the production registry.
+The fixtures of the test suite: the ten test-only workflows and the frozen queues (`frozen` · `live-frozen`, the queued-state fixtures), registered on the booted DBOS context (the per-test cores of the `core` · `web` · `workflows` suites), and the parser's source — the suites point the workflows source at this package directory. Never part of the `workflows` package, so they do not appear in the production registry.
 
 ## Rules (decisions · pinned values)
 
@@ -19,4 +19,3 @@ The fixtures of the test suite: the ten test-only workflows and the frozen queue
 |---|---|---|
 | No test leaves an in-flight run: every block fire is cancelled by its owning test, and every frozen-queued fire is cancelled too. | the race suite | 2026-11-07 |
 | The booted suites (unit · race) boot per test: a fresh sqlite file per test — no shared file, no `-p 1`. | `ci.yml · race job` · `testcore.go · BootTest` | 2026-11-07 |
-| The e2e job is SQLite (`sqlite:/tmp/flowdeck-e2e.db`, app `flowdeck_e2e`) — Postgres is production-only (docker compose). | `.github/workflows/ci.yml` | 2026-11-04 |

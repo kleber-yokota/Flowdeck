@@ -13,7 +13,7 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 | `core/reads/README.md` | Executions · Status · Steps · Detail · MapState · the attempts mapping · the wait-row names · the child rows · `ErrUnknownExecution` |
 | `core/status/README.md` | the five states · the terminal rule · the badge colors |
 | `core/graph/README.md` | the possible-paths graph · the block model · the spec from source · the default constants · Sanitize · `ErrInvalidInput` |
-| `core/internal/testcore/README.md` | the test setup · `BootTest` · `PollState` · `MustStepNames` · the per-test boot |
+| `core/testcore/README.md` | the test setup · `BootTest` · `TestMain` · `PollState` · `MustStepNames` · the per-test boot |
 | `core/testworkflows/README.md` | the test-workflows fixtures · `RegisterTestWorkflows` · the registration lists · the payloads of `live-test` · the block step |
 | `web/README.md` | the router · healthz · the middlewares · the static assets · the Port + the ready seam |
 | `web/catalog/README.md` | the dashboard · the workflow pages · the spec form · the possible-paths SVG · the empty state |

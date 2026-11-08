@@ -203,7 +203,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
   <table>
     <thead><tr><th>group</th><th>packages</th><th>page</th></tr></thead>
     <tbody>
-      <tr><td><code>core</code></td><td><code>core</code> · <code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code> · <code>status</code> · <code>graph</code> · <code>internal/testcore</code> · <code>testworkflows</code> (9)</td><td><a href="../core/README.md">core/README.md</a> · the 8 subpages</td></tr>
+      <tr><td><code>core</code></td><td><code>core</code> · <code>boot</code> · <code>registry</code> · <code>reads</code> · <code>actions</code> · <code>status</code> · <code>graph</code> · <code>testcore</code> · <code>testworkflows</code> (9)</td><td><a href="../core/README.md">core/README.md</a> · the 8 subpages</td></tr>
       <tr><td><code>web</code></td><td><code>web</code> · <code>executions</code> · <code>catalog</code> · <code>render</code> · <code>graph</code> · <code>internal/webtest</code> (6)</td><td><a href="../web/README.md">web/README.md</a> · the 5 subpages</td></tr>
       <tr><td><code>entry</code></td><td><code>main</code> · <code>workflows</code> · <code>cmd/workflowgen</code> · <code>cmd/svgdump</code> (4)</td><td>— (the next round pages this group)</td></tr>
       <tr><td><code>dbos</code></td><td>DBOS Go SDK v1.7.0 (third-party)</td><td>— (third-party)</td></tr>
@@ -213,13 +213,12 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 
 <section id="suites">
   <h2>suites <span class="badge">THE GREEN BASELINE</span></h2>
-  <p class="role">The <em>unit</em> and <em>race</em> suites are self-booting (a fresh per-test boot — no env · no <code>-p 1</code>); the <em>e2e</em> suite is env-driven (the DBOS_* env block · one shared boot · <code>-p 1</code>). Run them <em>before</em> and <em>after</em> a task; all three must be green.</p>
+  <p class="role">The <em>unit</em> and <em>race</em> suites are self-booting — a fresh per-test boot, no env, no <code>-p 1</code>, nothing skips (the per-test boot: <a href="../core/testworkflows/README.md">core/testworkflows</a>). Run them <em>before</em> and <em>after</em> a task; both must be green.</p>
   <table>
     <thead><tr><th>suite</th><th>command</th><th>what it catches</th></tr></thead>
     <tbody>
       <tr><td>unit</td><td><code>go test -count=1 ./...</code></td><td>the green gate (no env · self-booting)</td></tr>
       <tr><td>race</td><td><code>go test -race -count=2 -shuffle=on ./...</code></td><td>the green gate (no env · self-booting · race detector · shuffled · repeatable)</td></tr>
-      <tr><td>e2e</td><td>the env block (<code>DBOS_APP_NAME=flowdeck_e2e</code> · <code>DBOS_SYSTEM_DATABASE_URL=sqlite:/tmp/flowdeck-e2e.db</code>) + <code>go test -tags e2e -run TestE2E -p 1 ./...</code></td><td>launch · enqueue · poll · step rows · child rows · detail · resume · cancel · live</td></tr>
     </tbody>
   </table>
 </section>
@@ -240,7 +239,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 
 <footer class="foot">
   <span>flowdeck · diagrams/package-map.html</span>
-  <span>generated from code · verified 2026-11-03</span>
+  <span>generated from code · verified 2026-11-08</span>
 </footer>
 </div>
 </body>

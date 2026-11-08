@@ -10,6 +10,10 @@ empty-state paths). There is no fake `Port`.
 - No fake `Port`, no canned rows: every handler test uses a real
   `core.Port` — booted (the deterministic fixtures) or not-launched (the
   503 / empty paths). *(evidence: `webtest.go` — no `TestPort`)*
+- `TestServer` serves the handler over HTTP for the duration of the
+  test: the close is the first cleanup registered on `t` — it runs last
+  (LIFO), so the handler is alive until every cleanup registered later
+  has run. *(evidence: `webtest.go · TestServer`)*
 - `Dispatch` posts a dispatch (form `nil` for the no-input dispatch) and
   returns the ACK row fragment (the 200 response).
 - `Ack` is `Dispatch` + the queued-badge assertion — for the runs that
