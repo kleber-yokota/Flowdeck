@@ -15,73 +15,85 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 )
 
-// Workflows is the registration of the ten test-only workflows: one
-// entry per workflow (failing-test · resume-test · live-test ·
-// noinput-test · block-test · fork-test · struct-test · linear-test ·
-// inner-test · child-test) — each entry registers its own workflow with
-// its own options (the name and the attempts live in the entries).
-var Workflows []func(dbos.Context) = []func(dbos.Context){
-	func(c dbos.Context) {
+// ByName is the registration of the ten test-only workflows keyed by
+// name: failing-test · resume-test · live-test · noinput-test ·
+// block-test · fork-test · struct-test · linear-test · inner-test ·
+// child-test — each entry registers its own workflow with its own
+// options (the name and the attempts live in the entries). The map is
+// the single source of the entries: Workflows derives from it, and the
+// per-test boot registers the names it names (the subset).
+var ByName = map[string]func(dbos.Context){
+	"failing-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, failingTestWorkflow,
 			dbos.WithWorkflowName("failing-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"resume-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, flakyTestWorkflow,
 			dbos.WithWorkflowName("resume-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"live-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, liveTestWorkflow,
 			dbos.WithWorkflowName("live-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"noinput-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, noinputTestWorkflow,
 			dbos.WithWorkflowName("noinput-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"block-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, blockTestWorkflow,
 			dbos.WithWorkflowName("block-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"fork-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, forkTestWorkflow,
 			dbos.WithWorkflowName("fork-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"struct-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, structTestWorkflow,
 			dbos.WithWorkflowName("struct-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"linear-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, linearTestWorkflow,
 			dbos.WithWorkflowName("linear-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"inner-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, innerTestWorkflow,
 			dbos.WithWorkflowName("inner-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
-	func(c dbos.Context) {
+	"child-test": func(c dbos.Context) {
 		dbos.RegisterWorkflow(c, childTestWorkflow,
 			dbos.WithWorkflowName("child-test"),
 			dbos.WithMaxRecoveryAttempts(3),
 		)
 	},
 }
+
+// Workflows is the registration of the ten test-only workflows — the
+// entries of ByName, one per workflow (the name and the attempts live in
+// the entries).
+var Workflows = func() (list []func(dbos.Context)) {
+	for _, entry := range ByName {
+		list = append(list, entry)
+	}
+	return
+}()
 
 // Queue is a named queue registration: the queue name and its worker
 // concurrency (0 = the executor never claims from it — the deterministic
@@ -100,16 +112,23 @@ var Queues []Queue = []Queue{
 	{Name: "live-frozen", Concurrency: 0},
 }
 
-// RegisterTestWorkflows registers the test-only workflows and the
-// fixture queues on the env context — the lists: each entry registers
+// RegisterQueues registers the fixture queues (frozen · live-frozen) on
+// the live context — the test-core infrastructure (the per-test boot
+// registers them even when it registers a subset of the workflows).
+func RegisterQueues(c dbos.Context) {
+	for _, q := range Queues {
+		dbos.RegisterQueue(c, q.Name, dbos.WithWorkerConcurrency(q.Concurrency))
+	}
+}
+
+// RegisterTestWorkflows registers the ten test-only workflows and the
+// fixture queues on the live context — the lists: each entry registers
 // its own workflow or queue (only what the lists name is registered).
 func RegisterTestWorkflows(c dbos.Context) {
 	for _, f := range Workflows {
 		f(c)
 	}
-	for _, q := range Queues {
-		dbos.RegisterQueue(c, q.Name, dbos.WithWorkerConcurrency(q.Concurrency))
-	}
+	RegisterQueues(c)
 }
 
 // FlakyFail makes the flaky test workflow fail in its step — the test-only

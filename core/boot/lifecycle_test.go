@@ -9,21 +9,13 @@ import (
 	"flowdeck/core/registry"
 )
 
-// TestMain brings the env-driven core up for the tests: the testworkflows
-// source and — when the env context exists — the registration and the
-// executor (the env-var absence is the NeedCore skip).
-func TestMain(m *testing.M) {
-	testcore.Setup("../testworkflows")
-	os.Exit(m.Run())
-}
-
 // The parsed source is the ground truth for which workflows exist: the
 // testworkflows source declares exactly the test workflows, and the
 // registry holds exactly the registered ones — the two must match. A
 // mismatch means a fixture is registered without a func in the source, or
 // a func in the source is not registered in RegisterTestWorkflows.
 func TestRegistrationMatchesSource(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	g, err := graph.New(os.DirFS("../testworkflows"))
 	if err != nil {
 		t.Fatalf("build graph from source: %v", err)

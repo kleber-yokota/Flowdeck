@@ -15,7 +15,7 @@ import (
 // — the values the run used (the input is written once at enqueue,
 // immutable per workflow_id).
 func TestDetailShowsInputValues(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("live-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -32,7 +32,7 @@ func TestDetailShowsInputValues(t *testing.T) {
 // A struct input shows one value per field (the map the core enqueued,
 // stored by DBOS).
 func TestDetailShowsStructInputValues(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("struct-test", map[string]any{"Name": "Ada", "StartDate": "2026-01-01"})
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -55,7 +55,7 @@ func TestDetailShowsStructInputValues(t *testing.T) {
 }
 
 func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -86,7 +86,7 @@ func TestFailingRunDetailHasErrorAndFailedStep(t *testing.T) {
 // entry per child workflow (the child id, the child's name, the child's
 // badge state) — the read model the detail page's child list renders.
 func TestDetailChildrenOfChildDispatchingRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("child-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -113,7 +113,7 @@ func TestDetailChildrenOfChildDispatchingRun(t *testing.T) {
 // A run the core does not know errors with ErrUnknownExecution (the web
 // maps it to a 404).
 func TestDetailOfUnknownExecution(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	if _, err := reads.Detail("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Detail unknown: got %v, want ErrUnknownExecution", err)
 	}

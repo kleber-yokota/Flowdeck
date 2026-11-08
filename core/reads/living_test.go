@@ -29,7 +29,7 @@ import (
 // at once; the cancels are the release (the block step unblocks at the
 // 100ms poll — no leftover tail).
 func TestLivingNoDedupByWorkflow(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	quiescedLive(t)
 	fireIDs := make([]string, 2)
 	for i := range fireIDs {
@@ -87,7 +87,7 @@ func TestLivingNoDedupByWorkflow(t *testing.T) {
 // A success run and an error run are out of the list (only the running
 // runs are rows); the closing success is the suite contract.
 func TestLivingTerminalRunsAbsent(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	quiescedLive(t)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {

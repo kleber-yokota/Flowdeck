@@ -13,7 +13,8 @@ import (
 )
 
 // bootedTestServer builds the full-stack server of a booted core (no
-// stubs): the env-driven core (see .env.test) with the test workflows
+// stubs): the env-driven core (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL)
+// with the test workflows
 // registered, this package's TestMain started the executor and built the
 // paths graph from the testworkflows source, and New wires every route.
 func bootedTestServer(t *testing.T) *httptest.Server {
@@ -51,7 +52,7 @@ func TestMain(m *testing.M) {
 func needCore(t *testing.T) {
 	t.Helper()
 	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
+		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — the env boot is the e2e job's path")
 	}
 }
 

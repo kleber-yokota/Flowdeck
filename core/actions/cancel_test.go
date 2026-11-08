@@ -19,7 +19,7 @@ import (
 // The cancel of an id that is not known by the core errors with
 // ErrUnknownExecution (the web maps it to a 404).
 func TestCancelUnknownExecution(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	if _, err := actions.Cancel("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Cancel unknown: got %v, want ErrUnknownExecution", err)
 	}
@@ -28,7 +28,7 @@ func TestCancelUnknownExecution(t *testing.T) {
 // The cancel of a run that is not live (here: success) errors with
 // ErrNotCancellable (the web maps it to a 400).
 func TestCancelOfNotLiveRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -45,7 +45,7 @@ func TestCancelOfNotLiveRun(t *testing.T) {
 // polls (worker concurrency 0), so the queued state is deterministic — the
 // executor never claims it. The ACK is the same id, now cancelled.
 func TestCancelQueuedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -79,7 +79,7 @@ func TestCancelQueuedRun(t *testing.T) {
 // at the cancel (no leftover tail: the suite settles). The ACK is the same
 // id, now cancelled.
 func TestCancelRunningRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("block-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)

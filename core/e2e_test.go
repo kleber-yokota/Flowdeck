@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
 	"flowdeck/core"
 	"flowdeck/core/actions"
 	"flowdeck/core/boot"
@@ -15,13 +17,25 @@ import (
 	"flowdeck/core/testworkflows"
 )
 
+// e2eCore returns the env-booted context (this package's TestMain booted
+// it from the env vars, once per binary), failing — not skipping — when
+// the env is absent: the e2e job provides it, so an absent env is a broken
+// run, not a mode.
+func e2eCore(t *testing.T) dbos.Context {
+	t.Helper()
+	if boot.Ctx() == nil {
+		t.Fatal("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — the e2e job provides it")
+	}
+	return boot.Ctx()
+}
+
 // E2E against a real database (the e2e job points DBOS_APP_NAME and
 // DBOS_SYSTEM_DATABASE_URL at a SQLite file): the same env-driven
-// lifecycle as the unit suite, on the file database. Packages run with
+// lifecycle as production, on the file database. Packages run with
 // -p 1 so only one executor polls the queue at a time (a job claimed by a
 // process that has not registered it would fail).
 func TestE2EEnqueueRunsToSuccess(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	ex, err := actions.Enqueue("live-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -34,7 +48,7 @@ func TestE2EEnqueueRunsToSuccess(t *testing.T) {
 // A failing run on the e2e database: the retries run out, and Detail shows
 // the error and the failed step.
 func TestE2EDetailOfFailedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	ex, err := actions.Enqueue("failing-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -59,7 +73,7 @@ func TestE2EDetailOfFailedRun(t *testing.T) {
 // the same id and the run reaches success (the e2e twin of the unit test
 // above).
 func TestE2EResumeOfFailedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	t.Cleanup(func() { testworkflows.FlakyFail = false })
 	testworkflows.FlakyFail = true
 	ex, err := actions.Enqueue("resume-test", "FlowDeck")
@@ -82,7 +96,7 @@ func TestE2EResumeOfFailedRun(t *testing.T) {
 // SDK resume re-enqueues the CANCELLED row and the executor runs it to
 // success (the noinput-test reaches success fast on the main queue).
 func TestE2EResumeOfCancelledRun(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -101,7 +115,7 @@ func TestE2EResumeOfCancelledRun(t *testing.T) {
 
 // The executed path of a branched run.
 func TestE2EStepsOfBranchedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	ex, err := actions.Enqueue("fork-test", "left")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -118,7 +132,7 @@ func TestE2EStepsOfBranchedRun(t *testing.T) {
 // TestPortLivingRowsTheRunningRun in living_test.go): the fired block
 // run is the one row the Port rows.
 func TestE2EPortLivingRowsTheRunningRun(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	fired, err := actions.Enqueue("live-test", "block")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -160,7 +174,7 @@ func TestE2EPortLivingRowsTheRunningRun(t *testing.T) {
 // TestDetailChildrenOfChildDispatchingRun): the detail lists the child
 // inner-test with its id and badge state.
 func TestE2EDetailChildrenOfChildTestRun(t *testing.T) {
-	testcore.NeedCore(t)
+	e2eCore(t)
 	ex, err := actions.Enqueue("child-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)

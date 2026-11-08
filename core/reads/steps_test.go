@@ -17,7 +17,7 @@ import (
 // it never completes) and the wait row (DBOS.getResult — the SDK-internal
 // name; it completes when the child does).
 func TestStepsOfChildDispatchingRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("child-test", "FlowDeck")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -69,7 +69,7 @@ func TestStepsOfChildDispatchingRun(t *testing.T) {
 // A run the core does not know errors with ErrUnknownExecution (the web
 // maps it to a 404).
 func TestStepsOfUnknownExecution(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	if _, err := reads.Steps("00000000-0000-0000-0000-000000000000"); !errors.Is(err, reads.ErrUnknownExecution) {
 		t.Fatalf("Steps unknown: got %v, want ErrUnknownExecution", err)
 	}

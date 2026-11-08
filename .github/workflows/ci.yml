@@ -38,9 +38,10 @@ jobs:
       # in scripts/structure-gate.sh — raise one there and in code.md.
       - name: Structure gate (complexity, nesting, cycles, import contract)
         run: bash scripts/structure-gate.sh
-      # The unit layer, separate from the race run: no env, so the booted
-      # tests skip (NeedCore) and the plain run is the pure unit tests
-      # (the logic, no harness).
+      # The unit layer, separate from the race run: no env — the core
+      # booted tests boot their own per-test cores (a fresh sqlite file
+      # each), and the web · workflows booted tests skip (their env boot
+      # is the e2e path).
       - name: Unit tests (no env — the booted tests skip)
         run: go test -count=1 ./...
 
@@ -51,15 +52,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      # The booted layer: the env-driven core + the testworkflows fixtures,
-      # on SQLite (the .env.test database). -p 1: one test binary at a
-      # time — the binaries share the SQLite test database, and the first
-      # one creates and migrates it.
+      # The booted layer: every booted test boots its own core on a fresh
+      # per-test SQLite file (t.TempDir) and shuts it down — no shared
+      # database, so the binaries may run in parallel (no -p 1).
       - name: Booted suite (race, count=2, shuffled — catches registry/state leaks)
-        run: |
-          set -a && source .env.test && set +a
-          rm -f /tmp/flowdeck-test.db
-          go test -race -count=2 -shuffle=on -p 1 ./...
+        run: go test -race -count=2 -shuffle=on ./...
 
   e2e:
     runs-on: ubuntu-latest

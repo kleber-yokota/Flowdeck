@@ -14,9 +14,6 @@ import (
 // creates the context (Ctx() non-nil), Launch and Ready on it, and
 // Shutdown resets the singleton (Ctx() nil).
 func TestBootExplicit(t *testing.T) {
-	if boot.Ctx() != nil {
-		t.Skip("the env context is up — the explicit boot is the unit-mode path")
-	}
 	if err := boot.Boot(context.Background(), "flowdeck_test",
 		"sqlite:"+filepath.Join(t.TempDir(), "test.db")); err != nil {
 		t.Fatalf("Boot: %v", err)

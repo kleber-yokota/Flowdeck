@@ -14,7 +14,7 @@ import (
 )
 
 // The workflows run through the env-driven core: the explicit boot
-// (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL, see .env.test) creates the
+// (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) creates the
 // DBOS context, the generated RegisterAll registers the workflows on it,
 // and the TestMain starts the executor once — the same lifecycle as
 // production (when the env values are set; the unit tests run without
@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 func needCore(t *testing.T) {
 	t.Helper()
 	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
+		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — the env boot is the e2e job's path")
 	}
 }
 

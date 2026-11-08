@@ -28,9 +28,8 @@ import (
 // PENDING row and no ENQUEUED row on the main queue (the executor
 // claims them; an ENQUEUED row on a frozen queue — worker concurrency 0 —
 // is stable and stays in the baseline) — and returns the live snapshot:
-// the baseline s0 of the tests. The shared suite DB holds runs from the
-// other packages, and the detail tests assert runs while they are still
-// live: their leftover runs settle here.
+// the baseline s0 of the tests — the fresh per-test file starts empty,
+// so the baseline is zero for every test.
 func quiescedLive(t *testing.T) reads.Live {
 	t.Helper()
 	for i := 0; ; i++ {
@@ -78,7 +77,7 @@ func liveDelta(t *testing.T, s0 reads.Live, dRunning, dQueued, dFailed int) {
 
 // A success run enters no box: the three counts are the baseline.
 func TestLiveSuccessRunEntersNoBox(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
@@ -93,7 +92,7 @@ func TestLiveSuccessRunEntersNoBox(t *testing.T) {
 // An error run is in the failed box until the latest run is a success
 // again: a past error with a latest success is the zero contribution.
 func TestLiveErrorRunCountedUntilLatestSuccess(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	ex, err := actions.Enqueue("live-test", "err")
 	if err != nil {
@@ -116,7 +115,7 @@ func TestLiveErrorRunCountedUntilLatestSuccess(t *testing.T) {
 // A running run is in the running box; the cancel of the PENDING run is
 // the failed box (cancelled); the latest success is the baseline again.
 func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	ex, err := actions.Enqueue("live-test", "block")
 	if err != nil {
@@ -144,7 +143,7 @@ func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 // and an ENQUEUED run) is in both boxes: the boxes count the current
 // state of the workflow, not its latest run.
 func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	block, err := actions.Enqueue("live-test", "block")
 	if err != nil {
@@ -187,7 +186,7 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 // are one failed workflow (the failed box keeps the latest run per name)
 // and the latest success is the baseline again.
 func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	ids := make([]string, 3)
 	for i := range ids {
@@ -224,7 +223,7 @@ func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 // (worker concurrency 0 — the executor never claims them) are three
 // queued runs.
 func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	ids := make([]string, 3)
 	for i := range ids {
@@ -255,7 +254,7 @@ func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 // never claims it) is in the queued box; the cancel is the failed box;
 // the latest success on the main queue is the baseline again.
 func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	s0 := quiescedLive(t)
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "live-frozen", "live-test", "ok")
 	if err != nil {

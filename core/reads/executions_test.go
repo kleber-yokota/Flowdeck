@@ -1,7 +1,6 @@
 package reads_test
 
 import (
-	"os"
 	"testing"
 
 	"flowdeck/core/actions"
@@ -10,19 +9,11 @@ import (
 	"flowdeck/core/status"
 )
 
-// TestMain brings the env-driven core up for the tests: the paths graph
-// from the testcore source (the parser fixture) and the executor when the
-// env context exists (the unit tests run without it).
-func TestMain(m *testing.M) {
-	testcore.Setup("../testworkflows")
-	os.Exit(m.Run())
-}
-
-// Executions lists the runs of a workflow, newest first:
-// the run I enqueued is in the list, with its final state (the assertions
-// filter by id — the test database may hold runs from other tests).
+// Executions lists the runs of a workflow, newest first: the run the test
+// enqueued is the one row on the fresh per-test file, with its final
+// state.
 func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	ex, err := actions.Enqueue("live-test", "one")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -34,24 +25,20 @@ func TestExecutionsListsRunsOfWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Executions: %v", err)
 	}
-	found := false
-	for _, e := range list {
-		if e.ID != ex.ID {
-			continue
-		}
-		found = true
-		if e.State != status.Success {
-			t.Fatalf("execution %s state: got %s, want success", e.ID, e.State)
-		}
+	if len(list) != 1 {
+		t.Fatalf("Executions(live-test): got %d runs, want exactly the one enqueued", len(list))
 	}
-	if !found {
-		t.Fatalf("run %s not in Executions(live-test)", ex.ID)
+	if list[0].ID != ex.ID {
+		t.Fatalf("Executions: got run %s, want %s", list[0].ID, ex.ID)
+	}
+	if list[0].State != status.Success {
+		t.Fatalf("execution %s state: got %s, want success", list[0].ID, list[0].State)
 	}
 }
 
 // Executions of a name with no runs is empty (no error).
 func TestExecutionsUnknownWorkflowIsEmpty(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "../testworkflows")
 	list, err := reads.Executions("no-such-workflow")
 	if err != nil {
 		t.Fatalf("Executions: %v", err)

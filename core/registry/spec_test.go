@@ -2,15 +2,21 @@ package registry_test
 
 import (
 	"errors"
+	"os"
 	"testing"
 
+	"flowdeck/core/boot"
 	"flowdeck/core/registry"
 )
 
 // The core exposes the spec of a registered workflow — the input and the
 // steps' default values, parsed from the source at boot (the web renders
-// them on top of the workflow page).
+// them on top of the workflow page). The Spec reads the paths graph, so
+// the test builds it from the testworkflows source (no boot needed).
 func TestSpecOfRegisteredWorkflow(t *testing.T) {
+	if err := boot.SetWorkflowsSource(os.DirFS("../testworkflows")); err != nil {
+		t.Fatalf("set workflows source: %v", err)
+	}
 	spec, err := registry.Spec("fork-test")
 	if err != nil {
 		t.Fatalf("registry.Spec(fork-test): %v", err)

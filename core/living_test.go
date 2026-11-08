@@ -29,7 +29,7 @@ func TestPortLivingNotLaunchedIsError(t *testing.T) {
 // id · running · the RFC 3339 created_at); the suite contract settles it
 // (the inline cancel + the ok fire, fact F2).
 func TestPortLivingRowsTheRunningRun(t *testing.T) {
-	testcore.NeedCore(t)
+	testcore.BootTest(t, "testworkflows")
 	fired, err := actions.Enqueue("live-test", "block")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)

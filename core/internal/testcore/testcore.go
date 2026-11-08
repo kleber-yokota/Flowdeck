@@ -1,17 +1,19 @@
 // Package testcore is the shared setup of the core test binaries: the
-// explicit env boot (the paths graph from the workflows tree on disk, and
-// — when the env values are set — the boot, the test workflows and the
-// executor) and the shared poll helpers. Every core test binary calls
-// Setup from its TestMain; the env-var absence is handled by the NeedCore
-// skip.
+// per-test boot (BootTest — one explicit boot per test, on a fresh sqlite
+// file under the test's TempDir) and the shared poll helpers. Every booted
+// test boots its own core and shuts it down (the t.Cleanup): there is no
+// env boot and no skip — the default state is not-booted.
 package testcore
 
 import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"testing"
 	"time"
+
+	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
@@ -19,37 +21,57 @@ import (
 	"flowdeck/core/testworkflows"
 )
 
-// Setup brings the env-driven core up for the test binary: the paths graph
-// from the testworkflows source (workflowsDir, relative to the test
-// binary's directory), and — when the env values are set — the explicit
-// boot, the test workflows registered on the live context and the
-// executor. The env-var absence is not an error: the NeedCore skip
-// handles it (the unit tests run without it).
-func Setup(workflowsDir string) {
-	if err := boot.SetWorkflowsSource(os.DirFS(workflowsDir)); err != nil {
-		fmt.Fprintln(os.Stderr, "testcore: workflows source:", err)
-		os.Exit(1)
+// BootTest brings the test core up for one test and shuts it down when
+// the test ends: the explicit boot on app flowdeck_test with a fresh
+// sqlite file under the test's TempDir, and the Shutdown in a t.Cleanup
+// (the TempDir removal is the framework's). The argument is generic:
+//   - a string: the workflowsDir (relative to the test binary's
+//     directory) — the paths graph from that source tree plus the full
+//     registration (the ten test workflows and the fixture queues);
+//   - a []string: the names of the test workflows to register (a subset
+//     of the ten — an unknown name fails the test) plus the fixture
+//     queues (the test-core infrastructure); there is no source dir, so
+//     no paths graph.
+//
+// Tests read the live context from the return — no env, no shared DB.
+func BootTest(t *testing.T, dirOrNames any) dbos.Context {
+	t.Helper()
+	if err := boot.Boot(context.Background(), "flowdeck_test",
+		"sqlite:"+path.Join(t.TempDir(), "test.db")); err != nil {
+		t.Fatalf("boot: %v", err)
 	}
-	if appName := os.Getenv("DBOS_APP_NAME"); appName != "" && os.Getenv("DBOS_SYSTEM_DATABASE_URL") != "" {
-		if err := boot.Boot(context.Background(), appName, os.Getenv("DBOS_SYSTEM_DATABASE_URL")); err != nil {
-			fmt.Fprintln(os.Stderr, "testcore: boot:", err)
-			os.Exit(1)
+	c := boot.Ctx()
+	switch v := dirOrNames.(type) {
+	case string:
+		if err := boot.SetWorkflowsSource(os.DirFS(v)); err != nil {
+			t.Fatalf("set workflows source: %v", err)
 		}
-		testworkflows.RegisterTestWorkflows(boot.Ctx())
-		if err := boot.Launch(); err != nil {
-			fmt.Fprintln(os.Stderr, "testcore: launch:", err)
-			os.Exit(1)
-		}
+		testworkflows.RegisterTestWorkflows(c)
+	case []string:
+		registerNamed(t, c, v)
+	default:
+		t.Fatalf("BootTest: unsupported argument %T (want string · the source dir, or []string · the workflow names)", dirOrNames)
 	}
+	if err := boot.Launch(); err != nil {
+		t.Fatalf("launch: %v", err)
+	}
+	t.Cleanup(func() { boot.Shutdown(5 * time.Second) })
+	return boot.Ctx()
 }
 
-// NeedCore skips the test when the env-driven context is absent (the env
-// vars were not exported before the test binary started).
-func NeedCore(t *testing.T) {
+// registerNamed registers the named test workflows (a subset of the ten —
+// an unknown name fails the test) plus the fixture queues (the test-core
+// infrastructure).
+func registerNamed(t *testing.T, c dbos.Context, names []string) {
 	t.Helper()
-	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
+	for _, name := range names {
+		entry, ok := testworkflows.ByName[name]
+		if !ok {
+			t.Fatalf("unknown workflow %q (want a name of the testworkflows fixtures)", name)
+		}
+		entry(c)
 	}
+	testworkflows.RegisterQueues(c)
 }
 
 // PollState polls the badge state until the wanted one (a success stops

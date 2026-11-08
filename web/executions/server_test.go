@@ -70,7 +70,7 @@ func TestMain(m *testing.M) {
 func needCore(t *testing.T) {
 	t.Helper()
 	if boot.Ctx() == nil {
-		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — source .env.test")
+		t.Skip("DBOS env not set (DBOS_APP_NAME + DBOS_SYSTEM_DATABASE_URL) — the env boot is the e2e job's path")
 	}
 }
 
