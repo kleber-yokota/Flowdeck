@@ -20,20 +20,14 @@ docker compose up --build
 ## Testes
 
 Todos os testes com banco rodam em SQLite (o Postgres é só a produção do
-compose): unit · race sem env (boot por teste — um arquivo fresco por
-teste), e o e2e (build tag `e2e`) — o CI roda os três em SQLite (o job
-`unit` roda a camada pura sem env; o job `race` roda a suíte booted com
-`-race`; o job `e2e` roda com o env próprio, um boot compartilhado).
+compose). As suítes são self-booting: cada teste booted boota e desliga o
+seu próprio core (um arquivo fresco por teste) — sem env, nada skipa, sem
+`-p 1` (a definição das suítes: `diagrams/package-map.html#suites`).
 
 ```bash
+# o job `unit` do CI
+go test -count=1 ./...
+
 # booted (race, count=2, shuffled — o job `race` do CI)
 go test -race -count=2 -shuffle=on ./...
-
-# e2e (o job `e2e` do CI)
-DBOS_APP_NAME=flowdeck_e2e \
-DBOS_SYSTEM_DATABASE_URL=sqlite:/tmp/flowdeck-e2e.db \
-  go test -tags e2e -run TestE2E -p 1 ./...
 ```
-
-(`-p 1` no `e2e`: um único boot compartilhado — um único executor poll a
-fila.)
