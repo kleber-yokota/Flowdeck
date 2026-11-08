@@ -20,17 +20,16 @@ import (
 // every workflow whose latest run is an error or a cancelled one is in
 // the failed box; a latest success with no live run is in no box. Every
 // test owns the test-only workflow "live-test" (never a workflows/
-// workflow), starts from the quiesced baseline s0, asserts all three
-// counts at every checkpoint, and ends with live-test's latest run in
-// SUCCESS (start state = end state: the live-test contribution is zero).
+// workflow), asserts the three strict counts at every checkpoint (the
+// fresh per-test file starts empty: the counts are the live-test's own
+// contribution), and ends with live-test's latest run in SUCCESS (the
+// counts return to zero).
 
-// quiescedLive waits for the suite to settle — no in-flight run: no
-// PENDING row and no ENQUEUED row on the main queue (the executor
-// claims them; an ENQUEUED row on a frozen queue — worker concurrency 0 —
-// is stable and stays in the baseline) — and returns the live snapshot:
-// the baseline s0 of the tests — the fresh per-test file starts empty,
-// so the baseline is zero for every test.
-func quiescedLive(t *testing.T) reads.Live {
+// quiesce waits for the test to settle — no in-flight run: no PENDING row
+// and no ENQUEUED row on the main queue (the executor claims them; an
+// ENQUEUED row on a frozen queue — worker concurrency 0 — is stable and is
+// the test's own frozen run in the strict counts).
+func quiesce(t *testing.T) {
 	t.Helper()
 	for i := 0; ; i++ {
 		rows, err := dbos.ListWorkflows(boot.Ctx(),
@@ -48,11 +47,7 @@ func quiescedLive(t *testing.T) reads.Live {
 			}
 		}
 		if inFlight == 0 {
-			live, err := reads.LiveCounts()
-			if err != nil {
-				t.Fatalf("LiveCounts: %v", err)
-			}
-			return live
+			return
 		}
 		if i >= 300 {
 			t.Fatalf("no settled live read: %d in-flight runs", inFlight)
@@ -61,15 +56,16 @@ func quiescedLive(t *testing.T) reads.Live {
 	}
 }
 
-// liveDelta asserts the live counts at a checkpoint: the baseline s0 plus
-// the expected delta of the live-test contribution.
-func liveDelta(t *testing.T, s0 reads.Live, dRunning, dQueued, dFailed int) {
+// liveAssert asserts the live counts at a checkpoint: the three strict
+// counts (the fresh per-test file starts empty — the counts are the
+// live-test's own contribution; no baseline).
+func liveAssert(t *testing.T, running, queued, failed int) {
 	t.Helper()
 	got, err := reads.LiveCounts()
 	if err != nil {
 		t.Fatalf("LiveCounts: %v", err)
 	}
-	want := reads.Live{Running: s0.Running + dRunning, Queued: s0.Queued + dQueued, Failed: s0.Failed + dFailed}
+	want := reads.Live{Running: running, Queued: queued, Failed: failed}
 	if got != want {
 		t.Fatalf("live counts: got %+v, want %+v", got, want)
 	}
@@ -78,7 +74,7 @@ func liveDelta(t *testing.T, s0 reads.Live, dRunning, dQueued, dFailed int) {
 // A success run enters no box: the three counts are the baseline.
 func TestLiveSuccessRunEntersNoBox(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	ex, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -86,14 +82,14 @@ func TestLiveSuccessRunEntersNoBox(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }
 
 // An error run is in the failed box until the latest run is a success
 // again: a past error with a latest success is the zero contribution.
 func TestLiveErrorRunCountedUntilLatestSuccess(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	ex, err := actions.Enqueue("live-test", "err")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -101,7 +97,7 @@ func TestLiveErrorRunCountedUntilLatestSuccess(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
 		t.Fatalf("poll to error: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 1)
+	liveAssert(t, 0, 0, 1)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -109,14 +105,14 @@ func TestLiveErrorRunCountedUntilLatestSuccess(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }
 
 // A running run is in the running box; the cancel of the PENDING run is
 // the failed box (cancelled); the latest success is the baseline again.
 func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	ex, err := actions.Enqueue("live-test", "block")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -124,11 +120,11 @@ func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Running); err != nil {
 		t.Fatalf("poll to running: %v", err)
 	}
-	liveDelta(t, s0, 1, 0, 0)
+	liveAssert(t, 1, 0, 0)
 	if _, err := actions.Cancel(ex.ID); err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 1)
+	liveAssert(t, 0, 0, 1)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -136,7 +132,7 @@ func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }
 
 // A workflow that is running and enqueued at the same time (a PENDING run
@@ -144,7 +140,7 @@ func TestLiveRunningRunCountedUntilCancelled(t *testing.T) {
 // state of the workflow, not its latest run.
 func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	block, err := actions.Enqueue("live-test", "block")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -159,7 +155,7 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 	// The workflow is in the running box and the queued box at the same
 	// time (the latest run is the ENQUEUED one — the boxes do not read it
 	// as the single truth).
-	liveDelta(t, s0, 1, 1, 0)
+	liveAssert(t, 1, 1, 0)
 	if _, err := actions.Cancel(frozen.GetWorkflowID()); err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
@@ -168,7 +164,7 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 	}
 	// The two cancelled runs: one workflow in the failed box (the latest
 	// run is a cancelled one, deduplicated by name).
-	liveDelta(t, s0, 0, 0, 1)
+	liveAssert(t, 0, 0, 1)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -176,7 +172,7 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }
 
 // Firing the same workflow several times counts every run running at
@@ -187,7 +183,7 @@ func TestLiveRunningAndQueuedAtOnceCountBothBoxes(t *testing.T) {
 // and the latest success is the baseline again.
 func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	ids := make([]string, 3)
 	for i := range ids {
 		ex, err := actions.Enqueue("live-test", "block")
@@ -201,13 +197,13 @@ func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 			t.Fatalf("poll to running: %v", err)
 		}
 	}
-	liveDelta(t, s0, 3, 0, 0)
+	liveAssert(t, 3, 0, 0)
 	for _, id := range ids {
 		if _, err := actions.Cancel(id); err != nil {
 			t.Fatalf("Cancel: %v", err)
 		}
 	}
-	liveDelta(t, s0, 0, 0, 1)
+	liveAssert(t, 0, 0, 1)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -215,7 +211,7 @@ func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }
 
 // Firing the same workflow several times counts every run in the queue
@@ -224,7 +220,7 @@ func TestLiveRepeatedEnqueuesCountEveryRunningRun(t *testing.T) {
 // queued runs.
 func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	ids := make([]string, 3)
 	for i := range ids {
 		ex, err := boot.Ctx().Enqueue(boot.Ctx(), "live-frozen", "live-test", "ok")
@@ -233,13 +229,13 @@ func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 		}
 		ids[i] = ex.GetWorkflowID()
 	}
-	liveDelta(t, s0, 0, 3, 0)
+	liveAssert(t, 0, 3, 0)
 	for _, id := range ids {
 		if _, err := actions.Cancel(id); err != nil {
 			t.Fatalf("Cancel: %v", err)
 		}
 	}
-	liveDelta(t, s0, 0, 0, 1)
+	liveAssert(t, 0, 0, 1)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -247,7 +243,7 @@ func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }
 
 // A queued run (on the frozen queue: worker concurrency 0, the executor
@@ -255,7 +251,7 @@ func TestLiveRepeatedEnqueuesCountEveryQueuedRun(t *testing.T) {
 // the latest success on the main queue is the baseline again.
 func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	s0 := quiescedLive(t)
+	quiesce(t)
 	h, err := boot.Ctx().Enqueue(boot.Ctx(), "live-frozen", "live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -268,11 +264,11 @@ func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
 	if st != status.Queued {
 		t.Fatalf("state: got %s, want queued", st)
 	}
-	liveDelta(t, s0, 0, 1, 0)
+	liveAssert(t, 0, 1, 0)
 	if _, err := actions.Cancel(id); err != nil {
 		t.Fatalf("Cancel: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 1)
+	liveAssert(t, 0, 0, 1)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
@@ -280,5 +276,5 @@ func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	liveDelta(t, s0, 0, 0, 0)
+	liveAssert(t, 0, 0, 0)
 }

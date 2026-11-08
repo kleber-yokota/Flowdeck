@@ -30,7 +30,7 @@ import (
 // 100ms poll — no leftover tail).
 func TestLivingNoDedupByWorkflow(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	quiescedLive(t)
+	quiesce(t)
 	fireIDs := make([]string, 2)
 	for i := range fireIDs {
 		ex, err := actions.Enqueue("live-test", "block")
@@ -88,7 +88,7 @@ func TestLivingNoDedupByWorkflow(t *testing.T) {
 // runs are rows); the closing success is the suite contract.
 func TestLivingTerminalRunsAbsent(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
-	quiescedLive(t)
+	quiesce(t)
 	ok, err := actions.Enqueue("live-test", "ok")
 	if err != nil {
 		t.Fatalf("Enqueue: %v", err)
