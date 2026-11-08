@@ -3,11 +3,10 @@
 The agent that receives this file is a **task executor**. Its input: **one**
 task file (`tasks/XX-something.md`) — the set is implemented one task at a
 time, and this run executes exactly that one: red → green, then the report.
-Which task runs, and when, is not the run's: it picks nothing, and it
-executes nothing past its own file — the set's `tasks/README.md` and the
-other task files are the caller's: a run asked for "the whole set" or
-"everything" still executes its own one task, reports, and stops (the next
-run gets the next file).
+Which task runs, and when, is not the run's: a run asked for "the whole
+set" or "everything" still executes its own one task, reports, and stops
+(the next run gets the next file) — the sibling task files and
+`tasks/README.md` are the caller's surface (*Execution scope*).
 
 The run **executes and does not review**. The ordering and the checks are
 upstream's, and they are done: `agent-diagram.md` validated the design, and
@@ -111,13 +110,15 @@ The run reads `code.md` once and follows it — the parts that bind the run:
 
 ## Verification
 
-Both suites run on SQLite (the core reads the env in its `init`, before the
-process starts) — no Postgres needed locally:
+All suites run on SQLite (the explicit `boot.Boot` — no env of its own; the
+values come from the call site) — no Postgres needed locally:
 
 ```bash
-set -a && source .env.test && set +a
-go test -race -count=2 -shuffle=on -p 1 ./...   # unit + integration
-go test -tags e2e -run TestE2E -p 1 ./...       # e2e
+go test -count=1 ./...                     # unit (self-booting)
+go test -race -count=2 -shuffle=on ./...   # race (self-booting)
+DBOS_APP_NAME=flowdeck_e2e \
+DBOS_SYSTEM_DATABASE_URL=sqlite:/tmp/flowdeck-e2e.db \
+go test -tags e2e -run TestE2E -p 1 ./...  # e2e (env-driven)
 ```
 
 Green = done — a red outside the task's surface is a bug (`bug.md`). The

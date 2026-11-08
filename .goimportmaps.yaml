@@ -41,15 +41,15 @@ forbidden:
 # Coupling thresholds for the metrics SIGNAL (`goimportmaps ./... --metrics`).
 # The signal never fails; it flags packages drifting past these lines so the
 # agent sees a fan-out or instability drift before it becomes a god package.
-# The max_* lines are the measured baseline (2026-11-02): today's heaviest
+# The max_* lines are the measured baseline (2026-11-08): today's heaviest
 # package sits exactly on its line — growth beyond it flags, the baseline
 # itself stays green.
 metrics:
   enabled: true
   coupling:
     max_efferent: 16      # baseline: main (16) — the boot wiring (flag · env · boot · core · web · workflows)
-    max_afferent: 18      # baseline: core/boot (18) — the subpackages hang off it; dbos (17)
-    max_instability: 1.0  # main and the cmd/ tools are structurally 1.0
-    warn_efferent: 11     # today's hotspot: core/boot · web/internal/webtest · web/render (11)
-    warn_afferent: 9      # today's second hub: workflows/steps (9)
-    warn_instability: 0.9 # today's hotspot: workflows (0.92)
+    max_afferent: 19      # baseline: dbos (19) — the workflows + core subpackages register and boot off it
+    max_instability: 1.0  # main · the cmd/ tools · the test-only packages (testcore · webtest) are structurally 1.0
+    warn_efferent: 12     # today's hotspot: web/catalog · workflows (12)
+    warn_afferent: 8      # today's second hub: workflows/steps (8)
+    warn_instability: 0.9 # today's hotspot: workflows · web/catalog (0.92)
