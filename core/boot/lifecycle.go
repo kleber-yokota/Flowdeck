@@ -1,5 +1,6 @@
 // Package boot is the DBOS root of the core: the process-wide singleton
-// that owns the DBOS context and the single queue — the explicit Boot
+// that owns the DBOS context and the queues (the main and the serial) —
+// the explicit Boot
 // (Boot(ctx, appName, databaseURL), the error returned to the caller),
 // Launch (the executor, the queue registration, the registry
 // verification), Shutdown, the readiness contact (Ready) and Ctx (the
@@ -27,9 +28,15 @@ import (
 // launched.
 var ErrNotLaunched = errors.New("core: not launched")
 
-// QueueName is the single DBOS queue: Launch registers it, and every
-// dispatch (Enqueue) and resume (Resume) goes through it.
+// QueueName is the main DBOS queue: Launch registers it (unlimited
+// concurrency), and the dispatches (Enqueue) and resumes (Resume) of the
+// non-serial workflows go through it.
 const QueueName = "flowdeck"
+
+// SerialQueueName is the serial DBOS queue: Launch registers it with
+// concurrency 1, and the dispatches and resumes of the workflows that
+// must run one at a time (the serial dispatches) go through it.
+const SerialQueueName = "serial"
 
 // coreState is the DBOS component of this package — the process-wide
 // singleton: the DBOS context, the boot/launch flags and the path graph
@@ -98,11 +105,16 @@ func Launch() error {
 	if theCore.launched {
 		return errors.New("core: Launch already called (singleton — one executor)")
 	}
-	// The single queue every dispatch goes through. Registering it (before
-	// Launch) is what makes this process listen to it: the DBOS executor
-	// started below polls the queue and runs the claimed jobs.
+	// The queues every dispatch goes through: the main queue (unlimited
+	// concurrency) and the serial queue (concurrency 1 — the workflows
+	// that must run one at a time). Registering them (before Launch) is
+	// what makes this process listen to them: the DBOS executor started
+	// below polls each queue and runs the claimed jobs.
 	if _, err := dbos.RegisterQueue(theCore.dbosCtx, QueueName); err != nil {
 		return fmt.Errorf("core: register queue: %w", err)
+	}
+	if _, err := dbos.RegisterQueue(theCore.dbosCtx, SerialQueueName, dbos.WithWorkerConcurrency(1)); err != nil {
+		return fmt.Errorf("core: register serial queue: %w", err)
 	}
 	if err := dbos.Launch(theCore.dbosCtx); err != nil {
 		return fmt.Errorf("dbos launch: %w", err)

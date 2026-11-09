@@ -7,7 +7,7 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 | page | covers |
 |---|---|
 | `core/README.md` | the Port (the contract) · fan-in · the web never touches DBOS |
-| `core/actions/README.md` | Enqueue · Resume · Cancel · the guards · the single queue · the ACK · recovery attempts (`WithMaxRecoveryAttempts` · `recovery_attempts`) · rewind cut |
+| `core/actions/README.md` | Enqueue · Resume · Cancel · the guards · the queue selection (main · serial) · the ACK · recovery attempts (`WithMaxRecoveryAttempts` · `recovery_attempts`) · rewind cut |
 | `core/boot/README.md` | Launch · Shutdown · Ready · `ErrNotLaunched` · the explicit Boot · `SetWorkflowsSource` · `warnUnregistered` · the paths |
 | `core/registry/README.md` | List (the registered workflows) · Spec · `SpecOf` · `ErrUnknownWorkflow` · the empty state |
 | `core/reads/README.md` | Executions · Status (MapState) · Steps (the wait-row names · the child rows) · Detail (the attempts mapping) · Live · `ErrUnknownExecution` |

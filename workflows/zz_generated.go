@@ -19,6 +19,7 @@ import (
 	"flowdeck/workflows/loop"
 	"flowdeck/workflows/pause"
 	"flowdeck/workflows/pipeline"
+	"flowdeck/workflows/queue"
 	"flowdeck/workflows/schedule"
 )
 
@@ -36,6 +37,7 @@ var All []func(dbos.Context) = []func(dbos.Context){
 	loop.Register,
 	pause.Register,
 	pipeline.Register,
+	queue.Register,
 	schedule.Register,
 }
 
