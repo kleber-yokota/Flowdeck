@@ -80,6 +80,11 @@ type Port struct {
 	// (like every other read). The mirror of Living (the ENQUEUED ∪ DELAYED
 	// bucket).
 	Queued func() ([]reads.LiveRun, error)
+	// Failed — one row per failed workflow (the latest run error ∪
+	// cancelled), with the error message (the batched error payload) —
+	// core/reads/failed.go. Not up → boot.ErrNotLaunched (like every other
+	// read).
+	Failed func() ([]reads.FailedRun, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -104,5 +109,6 @@ func NewPort() Port {
 		Live:       reads.LiveCounts,
 		Living:     reads.Living,
 		Queued:     reads.Queued,
+		Failed:     reads.Failed,
 	}
 }
