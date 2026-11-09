@@ -75,6 +75,11 @@ type Port struct {
 	// workflow name), the SDK's desc order, not up → boot.ErrNotLaunched
 	// (like every other read).
 	Living func() ([]reads.LiveRun, error)
+	// Queued — the queued list: one row per queued run (no dedup by
+	// workflow name), the SDK's desc order, not up → boot.ErrNotLaunched
+	// (like every other read). The mirror of Living (the ENQUEUED ∪ DELAYED
+	// bucket).
+	Queued func() ([]reads.LiveRun, error)
 }
 
 // NewPort returns the port wired to the live core instance. The graph is
@@ -98,5 +103,6 @@ func NewPort() Port {
 		Cancel:     actions.Cancel,
 		Live:       reads.LiveCounts,
 		Living:     reads.Living,
+		Queued:     reads.Queued,
 	}
 }

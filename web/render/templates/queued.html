@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  {{template "head.html" .}}
+</head>
+<body>
+  <main class="frame">
+    <p class="cmd"><a class="back" href="/">← /</a></p>
+    <p class="cmd">flowdeck queued</p>
+    <div class="table-head">workflow · id · queued since · status · wait</div>
+    <div id="queued-list" hx-get="/queued/list" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
+    <p class="note">atualização a cada 5s · cada linha → a página da execução</p>
+  </main>
+</body>
+</html>

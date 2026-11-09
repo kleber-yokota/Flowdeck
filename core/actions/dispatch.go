@@ -35,11 +35,29 @@ func Enqueue(name string, payload any) (reads.Execution, error) {
 	return reads.Execution{}, fmt.Errorf("%w: %s", registry.ErrUnknownWorkflow, name)
 }
 
+// serial is the name → serial-queue map (the dispatch table): the
+// workflows that must run one at a time — their dispatches and resumes go
+// through the serial queue (concurrency 1, boot.SerialQueueName), the
+// rest go through the main queue.
+var serial = map[string]bool{
+	"queue": true,
+}
+
+// queueNameFor picks the dispatch's queue by workflow name: the serial
+// queue (concurrency 1) for the serial dispatches, the main queue for
+// the rest.
+func queueNameFor(name string) string {
+	if serial[name] {
+		return boot.SerialQueueName
+	}
+	return boot.QueueName
+}
+
 // dispatch puts payload on the queue under name and returns the new
 // execution (id + state + created_at) — the dispatch ACK: the web renders
 // the "queued" row with it, and nothing is executed by the webserver.
 func dispatch(ctx dbos.Context, name string, payload any) (reads.Execution, error) {
-	handle, err := ctx.Enqueue(ctx, boot.QueueName, name, payload)
+	handle, err := ctx.Enqueue(ctx, queueNameFor(name), name, payload)
 	if err != nil {
 		return reads.Execution{}, fmt.Errorf("core: enqueue %s: %w", name, err)
 	}

@@ -21,25 +21,25 @@ var ErrNotResumable = errors.New("core: run cannot be resumed")
 // the last completed step); the failed run is rewound — the SDK deletes
 // the step rows from the first failed row onward (the cut), keeps the
 // stored input, resets recovery_attempts, and re-enqueues the same id on
-// the same queue (the SDK resume is a silent no-op on ERROR rows — the
-// resume SQL excludes SUCCESS and ERROR). The ACK is the row read back:
-// the same id, now enqueued again.
+// the dispatch's queue (the same queue selection: queueNameFor — the SDK
+// resume is a silent no-op on ERROR rows, the resume SQL excludes SUCCESS
+// and ERROR). The ACK is the row read back: the same id, now enqueued
+// again.
 func Resume(workflowID string) (reads.Execution, error) {
 	c, err := boot.CtxOrErr()
 	if err != nil {
 		return reads.Execution{}, err
 	}
-	st, err := reads.Status(workflowID)
+	row, st, err := resumableRow(c, workflowID)
 	if err != nil {
 		return reads.Execution{}, err
 	}
-	if st != status.Error && st != status.Cancelled {
-		return reads.Execution{}, fmt.Errorf("%w: state %s", ErrNotResumable, st)
-	}
 	// The cancelled row: the SDK resume re-enqueues it (its SQL re-enqueues
-	// CANCELLED rows) — it resumes after the last completed step.
+	// CANCELLED rows) — it resumes after the last completed step. The
+	// resume re-enqueues on the dispatch's queue (the same queue
+	// selection as the dispatch).
 	if st == status.Cancelled {
-		if _, err := dbos.ResumeWorkflow[any](c, workflowID, dbos.WithResumeQueue(boot.QueueName)); err != nil {
+		if _, err := dbos.ResumeWorkflow[any](c, workflowID, dbos.WithResumeQueue(queueNameFor(row.Name))); err != nil {
 			return reads.Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
 		}
 		return resumeAck(c, workflowID)
@@ -50,10 +50,32 @@ func Resume(workflowID string) (reads.Execution, error) {
 	if err != nil {
 		return reads.Execution{}, err
 	}
-	if _, err := dbos.RewindWorkflow[any](c, workflowID, dbos.WithRewindQueue(boot.QueueName), dbos.WithRewindStartStep(cut)); err != nil {
+	if _, err := dbos.RewindWorkflow[any](c, workflowID, dbos.WithRewindQueue(queueNameFor(row.Name)), dbos.WithRewindStartStep(cut)); err != nil {
 		return reads.Execution{}, fmt.Errorf("core: resume %s: %w", workflowID, err)
 	}
 	return resumeAck(c, workflowID)
+}
+
+// resumableRow reads the run's status row and applies the resume guard:
+// the row and its UI state, or the guard error (ErrUnknownExecution when
+// the id is not known, ErrNotResumable when the run is not failed or
+// cancelled).
+func resumableRow(c dbos.Context, workflowID string) (dbos.WorkflowStatus, status.State, error) {
+	statuses, err := reads.ListByID(c, workflowID)
+	if err != nil {
+		return dbos.WorkflowStatus{}, "", fmt.Errorf("core: resume %s: %w", workflowID, err)
+	}
+	if len(statuses) == 0 {
+		return dbos.WorkflowStatus{}, "", reads.ErrUnknownExecution
+	}
+	st, err := reads.MapState(statuses[0].Status)
+	if err != nil {
+		return dbos.WorkflowStatus{}, "", err
+	}
+	if st != status.Error && st != status.Cancelled {
+		return dbos.WorkflowStatus{}, "", fmt.Errorf("%w: state %s", ErrNotResumable, st)
+	}
+	return statuses[0], st, nil
 }
 
 // rewindCut is the 0-based index of the first failed step row (the rows of
