@@ -177,6 +177,10 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
+#failed-list .exec-row {
+  grid-template-columns: 110px minmax(0, 1fr) 130px 110px minmax(0, 1fr);
+}
+
 .wf-name { color: var(--ink); }
 .wf-name:hover { color: var(--accent); }
 .wf-id { color: var(--steel); }
@@ -184,7 +188,17 @@ body {
 .ts { color: var(--soft); }
 .status { letter-spacing: 0.05em; }
 .status.running { color: var(--running); }
+.status.error { color: var(--error); }
+.status.cancelled { color: var(--cancelled); }
 .elapsed { color: var(--running); }
+
+.message {
+  color: var(--soft);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .note {
   color: var(--soft);

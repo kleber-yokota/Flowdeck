@@ -32,6 +32,12 @@ func Register(mux *http.ServeMux, p core.Port) {
 	mux.HandleFunc("GET /queued/list", func(w http.ResponseWriter, _ *http.Request) {
 		handleQueuedList(w, p)
 	})
+	mux.HandleFunc("GET /failed", func(w http.ResponseWriter, _ *http.Request) {
+		handleFailedPage(w)
+	})
+	mux.HandleFunc("GET /failed/list", func(w http.ResponseWriter, r *http.Request) {
+		handleFailedList(w, r, p)
+	})
 	mux.HandleFunc("GET /workflows/{name}", func(w http.ResponseWriter, r *http.Request) {
 		handleWorkflowPage(w, r, p)
 	})
