@@ -46,13 +46,41 @@ func Failed() ([]FailedRun, error) {
 	if err != nil {
 		return nil, fmt.Errorf("core: failed: %w", err)
 	}
+	return failedRows(c, statuses)
+}
+
+// failedRows keeps the first row per name (the latest run · F1) and
+// attaches the error rows' messages from the batched error query (the
+// error-row ids · LoadOutput(true) · F2 · F9; the cancelled rows have no
+// message).
+func failedRows(c dbos.Context, statuses []dbos.WorkflowStatus) ([]FailedRun, error) {
+	runs, errorIDs, err := collectFailed(statuses)
+	if err != nil {
+		return nil, err
+	}
+	if len(errorIDs) == 0 {
+		return runs, nil
+	}
+	msgs, err := errorMessages(c, errorIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range runs {
+		runs[i].Message = msgs[runs[i].ID]
+	}
+	return runs, nil
+}
+
+// collectFailed keeps the first row per name (the latest run · F1) and
+// gathers the error-row ids for the batched error query.
+func collectFailed(statuses []dbos.WorkflowStatus) ([]FailedRun, []string, error) {
 	var runs []FailedRun
 	seen := map[string]bool{}
 	var errorIDs []string
 	for _, s := range statuses {
 		st, err := MapState(s.Status)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if seen[s.Name] {
 			continue // first row per name = the latest run (F1)
@@ -72,14 +100,15 @@ func Failed() ([]FailedRun, error) {
 		}
 		runs = append(runs, run)
 	}
-	if len(errorIDs) == 0 {
-		return runs, nil
-	}
-	// The batched error payload: the list query's s.Error is nil without
-	// LoadOutput(true) (F2) — the message comes from the error-row ids
-	// only (the cancelled rows have no message · F9).
+	return runs, errorIDs, nil
+}
+
+// errorMessages is the batched error payload: the list query's s.Error is
+// nil without LoadOutput(true) (F2) — the message comes from the error-row
+// ids only (the cancelled rows have no message · F9).
+func errorMessages(c dbos.Context, ids []string) (map[string]string, error) {
 	errs, err := dbos.ListWorkflows(c,
-		dbos.WithFilterWorkflowIDs(errorIDs...),
+		dbos.WithFilterWorkflowIDs(ids...),
 		dbos.WithFilterLoadInput(false),
 		dbos.WithFilterLoadOutput(true),
 	)
@@ -92,8 +121,5 @@ func Failed() ([]FailedRun, error) {
 			msgs[s.ID] = s.Error.Error()
 		}
 	}
-	for i := range runs {
-		runs[i].Message = msgs[runs[i].ID]
-	}
-	return runs, nil
+	return msgs, nil
 }
