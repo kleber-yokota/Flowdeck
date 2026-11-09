@@ -13,6 +13,7 @@ The read side of the core: `Executions` (list the runs of a workflow), `Status` 
 - `ErrUnknownExecution` is the 404 twin of a read for an id the core does not know. *(evidence: `status.go` · `web/render/render.go · Fail`)*
 - The live read: the running box counts the runs running right now and the queued box the runs in the queue right now (firing the same workflow several times counts each run — no deduplication by workflow); the failed box counts the workflows whose latest run is error ∪ cancelled · a latest success with no live run in no box · one `ListWorkflows` (`WithFilterSortDesc` · `LoadInput(false)` · `LoadOutput(false)`). *(evidence: `live.go · LiveCounts`)*
 - The running-runs read: `Living` returns one row per running run (`LiveRun`: `Name` · `ID` · `State` · `CreatedAt` RFC3339) — no dedup by workflow name (two fires of the same workflow = two rows) · the SDK's desc order (newest first · no re-sort) · `State` is always `running` (the list filters to it) · not up → `boot.ErrNotLaunched` (the guard, like every other read). *(evidence: `living.go · LiveRun` · `Living`)*
+- The queued-runs read: `Queued` returns one row per queued run (`LiveRun`: `Name` · `ID` · `State` · `CreatedAt` RFC3339) — `State` is always `queued` (the list filters to it: `ENQUEUED` ∪ `DELAYED`) · no dedup by workflow name · the SDK's desc order · not up → `boot.ErrNotLaunched` (the guard, like every other read). *(evidence: `queued.go · Queued` · `queued_test.go`)*
 
 ## Facts (validated runtime)
 
