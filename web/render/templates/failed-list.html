@@ -1,0 +1,18 @@
+{{if .Total}}
+{{range .Rows}}
+<div class="exec-row">
+  <span class="wf-name">{{ .Name }}</span>
+  <a class="wf-id" href="/executions/{{ .ID | urlquery }}">{{ .ID }}</a>
+  <span class="ts">{{ .TS }}</span>
+  <span class="status {{ .Status }}">{{ .Status }}</span>
+  <span class="message">{{ .Message }}</span>
+</div>
+{{end}}
+<div class="pager">
+  {{- if .Prev }}<a href="/failed?page={{ .Prev }}" hx-get="/failed/list?page={{ .Prev }}" hx-target="#failed-list">prev</a>{{ end }}
+  <span class="info">{{ .Start }}–{{ .End }} de {{ .Total }}</span>
+  {{- if .Next }}<a href="/failed?page={{ .Next }}" hx-get="/failed/list?page={{ .Next }}" hx-target="#failed-list">next</a>{{ end }}
+</div>
+{{else}}
+<p class="empty">no failed runs</p>
+{{end}}
