@@ -9,3 +9,4 @@ The HTMX presentation layer of FlowDeck: the router (the catalog routes and the 
 - The healthz mirrors the core: 200 when ready, 503 when it is not (the container healthcheck uses it). *(evidence: `health.go · handleHealthz`)*
 - Middlewares: `withRecovery` turns a handler panic into a logged 500; `withRequestLog` logs method · path · status · duration. *(evidence: `middleware.go`)*
 - The static assets (vendored HTMX + stylesheet) are embedded and served as-is — no CDN at runtime. The templates live in `web/render` (their own embed). *(evidence: `web.go · staticFS` · `render/render.go · init`)*
+- The stylesheet paints every class the graph emitters emit — every painted element of the block-DAG and executed-path svgs carries an explicit fill or stroke, no browser default (an unstyled class renders as a black box or an invisible line). *(evidence: `static/style.css · the graph rules` · `graph_css_test.go`)*

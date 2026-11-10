@@ -146,6 +146,128 @@ body {
   font-size: 0.75rem;
 }
 
+/* The workflow console (the split: the runlines on the left, the graph on the right) */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 2rem;
+}
+
+.split-left {
+  min-width: 0;
+}
+
+.graph-side {
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 1.5rem;
+}
+
+/* The source breadcrumb (the dir span, only when present, + the /file span) */
+.filepath {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  margin: 0 0 1.5rem;
+}
+
+.filepath .dir { color: var(--steel); }
+.filepath .file { color: var(--accent); }
+
+/* The runline dispatch (the form as a command line) */
+.runline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.prompt { color: var(--accent); }
+.runline .param { color: var(--soft); }
+
+.runline input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0.25rem 0.5rem;
+}
+
+.run {
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.run:hover { border-color: var(--accent); color: var(--accent); }
+
+/* The execrow (the runline row: badge · id · elapsed · step · exit · actions) */
+.exec-row.wf {
+  grid-template-columns: 110px minmax(0, 1fr) 80px 80px minmax(0, 1fr) auto;
+}
+
+.exec-row.wf .step,
+.exec-row.wf .exit {
+  color: var(--soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exec-row.wf .actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* The graph side (the svg + the legend) */
+.graph {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+/* The possible-paths graph (the block-DAG svg — the v6.3 mockup styling:
+   the level outlines, the boxes, the kind symbols, the edges) */
+.block-graph { display: block; width: 100%; height: auto; }
+.g-block { fill: none; stroke-width: 1.5; stroke-opacity: 0.7; }
+.g-block.l0 { stroke: color-mix(in srgb, var(--accent) 45%, transparent); }
+.g-block.l1 { stroke: var(--line-2); }
+.g-block.l2 { stroke: var(--steel); }
+.g-edge { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
+.g-arrow { fill: var(--soft); fill-opacity: 0.55; }
+.g-node { fill: var(--panel); stroke: var(--steel); stroke-opacity: 0.35; }
+.g-text { font-family: ui-monospace, "Geist Mono", monospace; font-size: 12px; fill: var(--ink); }
+.loop-symbol path { stroke: var(--steel); stroke-opacity: 0.55; fill: none; }
+.loop-symbol polygon { fill: var(--steel); fill-opacity: 0.55; }
+.child-ring { fill: none; stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 1.5; }
+.child-dot { fill: var(--soft); fill-opacity: 0.55; }
+.wait-symbol circle { fill: var(--soft); fill-opacity: 0.55; }
+.async-symbol path { stroke: var(--soft); stroke-opacity: 0.55; stroke-width: 2; }
+/* the executed path: the state in the box stroke · the tail dashed (unknown) */
+.g-node.queued { stroke: var(--queued); stroke-opacity: 0.8; }
+.g-node.running { stroke: var(--running); stroke-opacity: 0.8; }
+.g-node.success { stroke: var(--success); stroke-opacity: 0.8; }
+.g-node.error { stroke: var(--error); stroke-opacity: 0.8; }
+.g-node.cancelled { stroke: var(--cancelled); stroke-opacity: 0.8; }
+.g-node.tail { stroke: var(--soft); stroke-opacity: 0.55; stroke-dasharray: 4 3; fill: none; }
+.g-text.tail { fill: var(--soft); }
+
+.legend {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.65rem;
+  color: var(--soft);
+  margin-top: 0.5rem;
+}
+
 /* The hint (the poll and the page size) */
 .hint {
   font-family: ui-monospace, "Geist Mono", monospace;
