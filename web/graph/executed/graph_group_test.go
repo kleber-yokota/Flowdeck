@@ -22,20 +22,20 @@ func TestGroupPathPlainStepsAreOneBoxEach(t *testing.T) {
 	}
 	g := groupPath(steps)
 	if len(g) != 1 || len(g[0].Children) != 2 {
-		t.Fatalf("plain: want the chain of two nodes, got %v", g)
+		t.Errorf("plain: want the chain of two nodes, got %v", g)
 	}
 	if g[0].Step != "fetch" || g[0].Children[0].Step != "parse" {
-		t.Fatalf("plain: want fetch → parse, got %q → %q", g[0].Step, g[0].Children[0].Step)
+		t.Errorf("plain: want fetch → parse, got %q → %q", g[0].Step, g[0].Children[0].Step)
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if n := strings.Count(svg, `<rect class="g-node`); n != 2 {
-		t.Fatalf("plain: got %d boxes, want 2:\n%s", n, svg)
+		t.Errorf("plain: got %d boxes, want 2:\n%s", n, svg)
 	}
 	if !strings.Contains(svg, `height="48.0"`) {
-		t.Fatalf("plain: want the 48px boxes:\n%s", svg)
+		t.Errorf("plain: want the 48px boxes:\n%s", svg)
 	}
 	if !strings.Contains(svg, `>fetch</text>`) || !strings.Contains(svg, `>parse</text>`) {
-		t.Fatalf("plain: want the name labels:\n%s", svg)
+		t.Errorf("plain: want the name labels:\n%s", svg)
 	}
 }
 
@@ -53,18 +53,18 @@ func TestGroupPathOverlapIsAParallelGroup(t *testing.T) {
 	g := groupPath(steps)
 	// fetch → (the invisible group node) → {alpha, beta}
 	if len(g) != 1 || g[0].Step != "fetch" || len(g[0].Children) != 1 {
-		t.Fatalf("parallel: want fetch above the group, got %v", g)
+		t.Errorf("parallel: want fetch above the group, got %v", g)
 	}
 	grp := g[0].Children[0]
 	if grp.Step != "" || len(grp.Children) != 2 {
-		t.Fatalf("parallel: want the group node with two members, got %+v", grp)
+		t.Errorf("parallel: want the group node with two members, got %+v", grp)
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if !strings.Contains(svg, `>alpha</text>`) || !strings.Contains(svg, `>beta</text>`) {
-		t.Fatalf("parallel: want both member boxes:\n%s", svg)
+		t.Errorf("parallel: want both member boxes:\n%s", svg)
 	}
 	if !strings.Contains(svg, `class="async-symbol"`) {
-		t.Fatalf("parallel: want the ∥ mark (async-symbol):\n%s", svg)
+		t.Errorf("parallel: want the ∥ mark (async-symbol):\n%s", svg)
 	}
 }
 
@@ -83,16 +83,16 @@ func TestGroupPathFanoutWaitRowIsTheContinuation(t *testing.T) {
 	}
 	g := groupPath(steps)
 	if len(g) != 1 || g[0].Step != "" || len(g[0].Children) != 2 {
-		t.Fatalf("fanout: want the group node root with two members, got %v", g)
+		t.Errorf("fanout: want the group node root with two members, got %v", g)
 	}
 	if g[0].Children[0].Step != "alpha" || g[0].Children[1].Step != "beta" {
-		t.Fatalf("fanout: want alpha and beta as the members, got %q and %q", g[0].Children[0].Step, g[0].Children[1].Step)
+		t.Errorf("fanout: want alpha and beta as the members, got %q and %q", g[0].Children[0].Step, g[0].Children[1].Step)
 	}
 	beta := g[0].Children[1]
 	if len(beta.Children) != 2 || beta.Children[0].Step != "DBOS.select" {
-		t.Fatalf("fanout: want the select as the continuation below the group, got %+v", beta.Children)
+		t.Errorf("fanout: want the select as the continuation below the group, got %+v", beta.Children)
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if !strings.Contains(svg, `class="async-symbol"`) {
 		t.Errorf("fanout: want the ∥ mark between alpha and beta:\n%s", svg)
 	}
@@ -113,14 +113,14 @@ func TestGroupPathRepeatedNameIsALoop(t *testing.T) {
 	}
 	g := groupPath(steps)
 	if len(g) != 1 || g[0].Step != "spin ×3" {
-		t.Fatalf("loop: want the single loop node, got %v", g)
+		t.Errorf("loop: want the single loop node, got %v", g)
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if !strings.Contains(svg, `loop-symbol`) {
-		t.Fatalf("loop: want the loop arc:\n%s", svg)
+		t.Errorf("loop: want the loop arc:\n%s", svg)
 	}
 	if !strings.Contains(svg, `>spin ×3</text>`) {
-		t.Fatalf("loop: want the ×3 count:\n%s", svg)
+		t.Errorf("loop: want the ×3 count:\n%s", svg)
 	}
 }
 
@@ -136,14 +136,14 @@ func TestGroupPathCollapsesLargeGroups(t *testing.T) {
 	}
 	g := groupPath(steps)
 	if len(g) != 1 || g[0].Step != "×5" {
-		t.Fatalf("collapse: want the single collapsed node, got %v", g)
+		t.Errorf("collapse: want the single collapsed node, got %v", g)
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if n := strings.Count(svg, `<rect class="g-node`); n != 1 {
-		t.Fatalf("collapse: got %d boxes, want 1:\n%s", n, svg)
+		t.Errorf("collapse: got %d boxes, want 1:\n%s", n, svg)
 	}
 	if !strings.Contains(svg, `>×5</text>`) {
-		t.Fatalf("collapse: want the ×5 annotation:\n%s", svg)
+		t.Errorf("collapse: want the ×5 annotation:\n%s", svg)
 	}
 	title := boxTitle(t, svg)
 	for _, name := range names {
@@ -160,15 +160,15 @@ func TestGroupPathChildBoxCarriesTheChildSymbol(t *testing.T) {
 	steps := []reads.Step{
 		{Name: "DBOS.enqueue", Kind: reads.KindChild, ChildID: "c1", ChildName: "buy", ChildState: status.Queued, State: status.Success},
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if !strings.Contains(svg, `class="child-symbol"`) {
-		t.Fatalf("child box: want the child symbol:\n%s", svg)
+		t.Errorf("child box: want the child symbol:\n%s", svg)
 	}
 	if !strings.Contains(svg, `>buy</text>`) {
-		t.Fatalf("child box: want the child name:\n%s", svg)
+		t.Errorf("child box: want the child name:\n%s", svg)
 	}
 	if !strings.Contains(svg, `class="g-node queued"`) {
-		t.Fatalf("child box: want the child's live badge:\n%s", svg)
+		t.Errorf("child box: want the child's live badge:\n%s", svg)
 	}
 }
 
@@ -178,12 +178,12 @@ func TestGroupPathWaitBoxCarriesTheWaitSymbol(t *testing.T) {
 	steps := []reads.Step{
 		{Name: "DBOS.select", Kind: reads.KindWait, State: status.Success},
 	}
-	svg := string(ExecutedPathToSVG(steps))
+	svg := string(ExecutedPathToSVG(steps, false))
 	if !strings.Contains(svg, `class="wait-symbol"`) {
-		t.Fatalf("wait box: want the wait symbol:\n%s", svg)
+		t.Errorf("wait box: want the wait symbol:\n%s", svg)
 	}
 	if !strings.Contains(svg, `>DBOS.select</text>`) {
-		t.Fatalf("wait box: want the row name:\n%s", svg)
+		t.Errorf("wait box: want the row name:\n%s", svg)
 	}
 }
 
@@ -191,12 +191,12 @@ func boxTitle(t *testing.T, svg string) string {
 	t.Helper()
 	i := strings.Index(svg, `<title>`)
 	if i < 0 {
-		t.Fatalf("no <title> in:\n%s", svg)
+		t.Errorf("no <title> in:\n%s", svg)
 	}
 	i += len(`<title>`)
 	j := strings.Index(svg[i:], `</title>`)
 	if j < 0 {
-		t.Fatalf("unterminated <title>: %s", svg)
+		t.Errorf("unterminated <title>: %s", svg)
 	}
 	return svg[i : i+j]
 }

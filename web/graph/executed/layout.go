@@ -22,6 +22,7 @@ type graphLayout struct {
 type graphNode struct {
 	step     string
 	state    string  // executed-path state (success/error); empty on possible paths
+	tail     bool    // the dashed tail of a live run
 	x, y, w  float64 // x/y are the node's center
 	children []graphNode
 	kind     coregraph.NodeKind // the glyph kind (step · child · wait)
@@ -137,6 +138,7 @@ func (s *placeState) placeNode(n pathNode, depth int) graphNode {
 	node := graphNode{
 		step:  n.Step,
 		state: n.State,
+		tail:  n.Tail,
 		w:     graphshared.NodeBoxW(n.Step, n.Kind),
 		kind:  n.Kind,
 		loop:  n.Loop,

@@ -293,5 +293,5 @@ func executedSVGForRun(t *testing.T, p core.Port, id string) string {
 		t.Errorf("steps %s: %v", id, err)
 		return ""
 	}
-	return string(executed.ExecutedPathToSVG(path.Steps))
+	return string(executed.ExecutedPathToSVG(path.Steps, false))
 }

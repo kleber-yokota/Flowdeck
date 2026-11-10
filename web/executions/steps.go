@@ -24,7 +24,7 @@ func newStepsView(workflowID string, path reads.RunPath) stepsView {
 	return stepsView{
 		WorkflowID: workflowID,
 		Terminal:   path.State.Terminal(),
-		Graph:      executed.ExecutedPathToSVG(path.Steps),
+		Graph:      executed.ExecutedPathToSVG(path.Steps, !path.State.Terminal()),
 	}
 }
 

@@ -40,14 +40,17 @@ func (g *graphLayout) svgEdge(b *strings.Builder, e [2]graphNode) {
 }
 
 // svgNode emits one box: the rect (the collapse group carries the member
-// list in <title>), the child/wait symbol, the loop arc, and the label
-// (centered in the text zone when the symbol zone is present).
+// list in <title>; the live tail is the dashed tail box — no state
+// class), the child/wait symbol, the loop arc, and the label (centered in
+// the text zone when the symbol zone is present).
 func (g *graphLayout) svgNode(b *strings.Builder, n graphNode) {
 	if n.step == "" {
 		return // the invisible group and the terminal marker: no box
 	}
 	cls := "g-node"
-	if n.state != "" {
+	if n.tail {
+		cls += " tail"
+	} else if n.state != "" {
 		cls += " " + n.state
 	}
 	if n.title != "" {
@@ -67,8 +70,12 @@ func (g *graphLayout) svgNode(b *strings.Builder, n graphNode) {
 	if n.kind == coregraph.NodeChild || n.kind == coregraph.NodeWait {
 		labelX = n.x - graphshared.GraphSymW/2 // center the label in the text zone
 	}
-	fmt.Fprintf(b, `<text class="g-text" x="%s" y="%s" text-anchor="middle">%s</text>`,
-		graphshared.Num(labelX), graphshared.Num(n.y+5), template.HTMLEscapeString(n.step))
+	textCls := "g-text"
+	if n.tail {
+		textCls += " tail"
+	}
+	fmt.Fprintf(b, `<text class="%s" x="%s" y="%s" text-anchor="middle">%s</text>`,
+		textCls, graphshared.Num(labelX), graphshared.Num(n.y+5), template.HTMLEscapeString(n.step))
 }
 
 // svgSymbol emits the box's glyph: the child symbol (◉: ring + dot) or the
