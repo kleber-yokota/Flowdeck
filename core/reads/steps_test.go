@@ -106,6 +106,7 @@ func TestStepDetailOfCompletedStep(t *testing.T) {
 		t.Errorf("Error: got %q, want empty", d.Error)
 	}
 }
+
 // A failed step carries its error and no output (the fixture's pinned
 // error text, fact.md row 7).
 func TestStepDetailOfFailedStep(t *testing.T) {
@@ -128,6 +129,7 @@ func TestStepDetailOfFailedStep(t *testing.T) {
 		t.Errorf("Output: got %q, want empty", d.Output)
 	}
 }
+
 // A run the core does not know errors with ErrUnknownExecution (the web
 // maps it to a 404) — the unknown id of the step-detail read.
 func TestStepDetailUnknownExecution(t *testing.T) {
@@ -136,6 +138,7 @@ func TestStepDetailUnknownExecution(t *testing.T) {
 		t.Errorf("StepDetailOf unknown: got %v, want ErrUnknownExecution", err)
 	}
 }
+
 // A step name the run never executed is a wrapped error (no sentinel —
 // the web's Fail maps it to the 500 default).
 func TestStepDetailUnknownStep(t *testing.T) {
