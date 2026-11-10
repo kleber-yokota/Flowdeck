@@ -68,7 +68,7 @@ func liveAssert(t *testing.T, running, queued, failed int) {
 	}
 	want := board.Live{Running: running, Queued: queued, Failed: failed}
 	if got != want {
-		t.Fatalf("live counts: got %+v, want %+v", got, want)
+		t.Errorf("live counts: got %+v, want %+v", got, want)
 	}
 }
 
@@ -263,7 +263,7 @@ func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
 		t.Fatalf("Status: %v", err)
 	}
 	if st != status.Queued {
-		t.Fatalf("state: got %s, want queued", st)
+		t.Errorf("state: got %s, want queued", st)
 	}
 	liveAssert(t, 0, 1, 0)
 	if _, err := actions.Cancel(id); err != nil {

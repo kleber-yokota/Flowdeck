@@ -50,10 +50,10 @@ func TestQueuedNoDedupByWorkflow(t *testing.T) {
 	}
 	for _, r := range runs {
 		if r.Name != "live-test" {
-			t.Fatalf("row name: got %q, want live-test", r.Name)
+			t.Errorf("row name: got %q, want live-test", r.Name)
 		}
 		if r.State != "queued" {
-			t.Fatalf("row state: got %q, want queued", r.State)
+			t.Errorf("row state: got %q, want queued", r.State)
 		}
 	}
 	have := map[string]bool{runs[0].ID: true, runs[1].ID: true}
@@ -138,7 +138,7 @@ func absentFromQueued(t *testing.T, id string) {
 	}
 	for _, r := range runs {
 		if r.ID == id {
-			t.Fatalf("the terminal run %s is a row of the queued runs", id)
+			t.Errorf("the terminal run %s is a row of the queued runs", id)
 		}
 	}
 }
