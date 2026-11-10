@@ -3,6 +3,7 @@ package executions
 import (
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -10,14 +11,15 @@ import (
 	"flowdeck/web/internal/webtest"
 )
 
-// The detail page (the execution page) renders real runs (the booted core,
-// no stubs): the badge, the input values, the retries row, the executed
-// path, the children list, the error and the failed step on failure, and
-// the cancel / resume buttons of the live / failed / cancelled runs.
+// The execution page (v6.3) renders real runs (the booted core, no stubs):
+// the badge and the split fragment (the meta row, the actions, the step
+// log with the child blocks and the dashed tail, and the sticky executed
+// path) — no failure section (the state is on the badge, the failed step
+// is highlighted in the log).
 
 // The detail page of a live run (running — the block-test run) offers the
-// Cancel button and polls (the badge and the executed path are live);
-// the retries row is 0 (nothing failed yet).
+// Cancel button and polls (the badge and the split are live); the retries
+// count is 0 (nothing failed yet).
 func TestExecutionDetailLivePollsBadgeAndSteps(t *testing.T) {
 	srv := bootedTestServer(t)
 
@@ -25,7 +27,7 @@ func TestExecutionDetailLivePollsBadgeAndSteps(t *testing.T) {
 
 	code, body := webtest.Get(t, srv.URL+"/executions/"+id)
 	if code != http.StatusOK {
-		t.Fatalf("detail: %d", code)
+		t.Errorf("detail: %d", code)
 	}
 	for _, want := range []string{
 		`hx-get="/status/` + id + `"`,
@@ -45,8 +47,8 @@ func TestExecutionDetailLivePollsBadgeAndSteps(t *testing.T) {
 
 // The detail page of a success run (live-test, the default mode) is
 // terminal: the static success badge (no 2s poll — the poll stops), the
-// executed path is static and shows the step that ran, and there is no
-// retry row, no cancel and no resume.
+// split is static and shows the step that ran, and there is no retry row,
+// no cancel and no resume.
 func TestExecutionDetailSuccessIsTerminal(t *testing.T) {
 	srv := bootedTestServer(t)
 
@@ -63,7 +65,7 @@ func TestExecutionDetailSuccessIsTerminal(t *testing.T) {
 	}
 	for _, no := range []string{
 		`hx-get="/status/`,
-		`hx-get="/executions/` + id + `/steps`,
+		`hx-get="/executions/" + id + "/steps"`,
 		`hx-post="/cancel/`,
 		`hx-post="/resume/`,
 		"retry 1",
@@ -76,11 +78,32 @@ func TestExecutionDetailSuccessIsTerminal(t *testing.T) {
 	}
 }
 
-// The detail page of a failed run (the failing-test run — the step always
-// fails): the error badge (terminal), the error and the failed step, and
-// the Resume button. The first-attempt failure has no recovered retries —
-// the error badge is the last attempt, not a row.
-func TestExecutionDetailFailureHasErrorAndResume(t *testing.T) {
+// The meta row of a success run: a live-test dispatch with the mode input
+// renders the meta row with the input cell as name=value (fact 10: the
+// live-test input is named `mode`).
+func TestExecutionDetailShowsMetaRow(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	ack := webtest.Ack(t, srv.URL, "live-test", url.Values{"mode": {"FlowDeck"}})
+	id := webtest.ExecutionID(t, ack)
+	body := webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
+	for _, want := range []string{
+		`class="meta"`,
+		"mode=FlowDeck",
+		"retries: 0",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page does not contain %q: %s", want, body)
+		}
+	}
+}
+
+// A failed run (the failing-test run — the step always fails) has no
+// failure section: the state is on the badge, the failed step is
+// highlighted in the log (a row with the `state error` class), and the
+// Resume button is in the actions. The first-attempt failure has no
+// recovered retries — the meta shows the count only.
+func TestExecutionDetailFailureNoSectionResumeInLog(t *testing.T) {
 	srv := bootedTestServer(t)
 
 	ack := webtest.Dispatch(t, srv.URL, "failing-test", nil)
@@ -88,69 +111,67 @@ func TestExecutionDetailFailureHasErrorAndResume(t *testing.T) {
 	body := webtest.Detail(t, srv.URL, id, `class="badge error terminal"`)
 	for _, want := range []string{
 		`class="badge error terminal"`,
-		"retries: 0",
-		"boom: step failed",
-		`<code>boom-step</code>`,
+		"boom-step",
+		`class="state error"`,
 		`hx-post="/resume/` + id + `"`,
+		"retries: 0",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q: %s", want, body)
 		}
+	}
+	if strings.Contains(body, `class="failure"`) {
+		t.Errorf("the failure section is gone — the page must not contain it: %s", body)
 	}
 	if strings.Contains(body, "retry 1") {
-		t.Errorf("the error badge is the last attempt — no retries row: %s", body)
+		t.Errorf("the meta shows the count only — no attempts rows: %s", body)
 	}
 }
 
-// The input values render as code + the value (the struct-test run:
-// Name + StartDate posted, Count defaulted to the zero value).
-func TestExecutionDetailShowsInputValues(t *testing.T) {
+// The child block under its launching step (the child-test run — the
+// parent of the inner-test dispatch): the child's id as a deep link to
+// /executions/{child-id}, the child's badge, and the child's step line
+// (fact 10: the child's one step is named `inner`).
+func TestExecutionDetailChildBlockUnderLaunchingStep(t *testing.T) {
 	srv := bootedTestServer(t)
 
-	ack := webtest.Ack(t, srv.URL, "struct-test", url.Values{
-		"Name":      {"Ada"},
-		"StartDate": {"2026-02-01"},
-	})
-	id := webtest.ExecutionID(t, ack)
+	id := webtest.ExecutionID(t, webtest.Ack(t, srv.URL, "child-test", nil))
 	body := webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
 	for _, want := range []string{
-		"<code>Name</code>: Ada",
-		"<code>StartDate</code>: 2026-02-01",
-		"<code>Count</code>: 0",
+		`class="child-run"`,
+		`class="wf-id"`,
+		`class="badge success terminal"`,
+		">inner<",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q: %s", want, body)
 		}
 	}
+	if m := regexp.MustCompile(`/executions/([0-9a-f-]{36})`).FindString(body); m == "" {
+		t.Errorf("page missing the child deep link: %s", body)
+	}
 }
 
-// The children list renders for the child-test run (the parent of the
-// inner-test child dispatch); a run without children renders no list.
-func TestExecutionDetailChildrenList(t *testing.T) {
-	t.Run("child dispatch lists the child", func(t *testing.T) {
-		srv := bootedTestServer(t)
+// The live run shows the tail: the log's dashed tail row (the cursor ▌)
+// and the path svg's dashed tail box.
+func TestExecutionDetailLiveShowsTail(t *testing.T) {
+	srv := bootedTestServer(t)
 
-		id := webtest.ExecutionID(t, webtest.Ack(t, srv.URL, "child-test", nil))
-		body := webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
-		for _, want := range []string{
-			`<section class="children-section">`,
-			`<a href="/executions/`,
-			">inner-test</a>",
-		} {
-			if !strings.Contains(body, want) {
-				t.Errorf("page does not contain %q: %s", want, body)
-			}
-		}
-	})
-	t.Run("no children renders no list", func(t *testing.T) {
-		srv := bootedTestServer(t)
+	id := blockRun(t, srv)
 
-		id := webtest.ExecutionID(t, webtest.Ack(t, srv.URL, "live-test", nil))
-		body := webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
-		if strings.Contains(body, `children-section`) {
-			t.Errorf("page must not list children: %s", body)
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id)
+	if code != http.StatusOK {
+		t.Errorf("detail: %d", code)
+	}
+	for _, want := range []string{
+		`class="tail-line"`,
+		"▌",
+		`class="g-node tail"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page does not contain %q: %s", want, body)
 		}
-	})
+	}
 }
 
 // An execution the core does not know is a clean 404.
@@ -158,7 +179,7 @@ func TestExecutionDetailUnknownIs404(t *testing.T) {
 	srv := bootedTestServer(t)
 
 	if code, _ := webtest.Get(t, srv.URL+"/executions/00000000-0000-0000-0000-000000000000"); code != http.StatusNotFound {
-		t.Fatalf("detail: got %d want %d", code, http.StatusNotFound)
+		t.Errorf("detail: got %d want %d", code, http.StatusNotFound)
 	}
 }
 
@@ -167,22 +188,6 @@ func TestExecutionDetailCoreDownIs503(t *testing.T) {
 	srv := testServer(t, core.NewPort())
 
 	if code, _ := webtest.Get(t, srv.URL+"/executions/abc"); code != http.StatusServiceUnavailable {
-		t.Fatalf("detail: got %d want %d", code, http.StatusServiceUnavailable)
-	}
-}
-
-// retriesFor: the attempts − 1 rows (the last attempt is the badge).
-func TestRetriesFor(t *testing.T) {
-	if got := retriesFor(1); len(got) != 0 {
-		t.Errorf("retriesFor(1): got %v, want none", got)
-	}
-	got := retriesFor(3)
-	if len(got) != 2 {
-		t.Fatalf("retriesFor(3): got %d rows, want 2", len(got))
-	}
-	for i, want := range []int{1, 2} {
-		if got[i].Number != want || got[i].Label != "failed (recovered)" || got[i].Class != "recovered" {
-			t.Errorf("retriesFor(3)[%d]: got %+v", i, got[i])
-		}
+		t.Errorf("detail: got %d want %d", code, http.StatusServiceUnavailable)
 	}
 }

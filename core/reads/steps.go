@@ -181,3 +181,71 @@ func stepRows(c dbos.Context, rows []dbos.StepInfo) ([]Step, error) {
 	}
 	return steps, nil
 }
+
+// StepDetail is the read model of one step row of a run (STEP 1 — the
+// expand fragment's read): the stored output of the step (the JSON text
+// of its result — a string result arrives quoted) and, for a failed
+// step, its error (no output: the step did not return).
+type StepDetail struct {
+	Output string
+	Error  string
+}
+
+// StepDetailOf reads the stored output or the error of one step of a run
+// by name (STEP 1, GET /executions/{id}/steps/{step}): one per-run
+// GetWorkflowSteps with LoadOutput(true) (the output text needs it —
+// fact 6), the row resolved by name (a repeated name — a loop iteration
+// — is the last row). An unknown run is ErrUnknownExecution; a step the
+// run never executed is a wrapped error (no new sentinel — the web's
+// Fail maps it to its 500 default).
+func StepDetailOf(workflowID, step string) (StepDetail, error) {
+	c, err := boot.CtxOrErr()
+	if err != nil {
+		return StepDetail{}, err
+	}
+	statuses, err := ListByID(c, workflowID)
+	if err != nil {
+		return StepDetail{}, fmt.Errorf("core: step %s in %s: %w", step, workflowID, err)
+	}
+	if len(statuses) == 0 {
+		return StepDetail{}, ErrUnknownExecution
+	}
+	rows, err := dbos.GetWorkflowSteps(c, workflowID, dbos.WithStepsLoadOutput(true))
+	if err != nil {
+		return StepDetail{}, fmt.Errorf("core: step %s in %s: %w", step, workflowID, err)
+	}
+	found, ok := stepRowBy(rows, step)
+	if !ok {
+		return StepDetail{}, fmt.Errorf("core: step %q not found in run %s", step, workflowID)
+	}
+	return stepDetailFrom(found), nil
+}
+
+// stepRowBy resolves the run's step rows by name (a repeated name — a loop
+// iteration — is the last row).
+func stepRowBy(rows []dbos.StepInfo, name string) (*dbos.StepInfo, bool) {
+	var found *dbos.StepInfo
+	for i := range rows {
+		if rows[i].StepName == name {
+			found = &rows[i]
+		}
+	}
+	return found, found != nil
+}
+
+// stepDetailFrom maps one step row to the read model: a failed step
+// exposes its error, not its output (the SDK stores the JSON text "" for a
+// step that did not return — fact 14, an artifact, not displayable
+// output); otherwise the stored output (the JSON text — a string result
+// arrives quoted).
+func stepDetailFrom(row *dbos.StepInfo) StepDetail {
+	d := StepDetail{}
+	if row.Error != nil {
+		d.Error = row.Error.Error()
+		return d
+	}
+	if s, ok := jsonText(row.Output); ok {
+		d.Output = s
+	}
+	return d
+}

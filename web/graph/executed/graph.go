@@ -24,6 +24,7 @@ import (
 type pathNode struct {
 	Step     string
 	Terminal bool
+	Tail     bool // the dashed tail of a live run
 	Children []pathNode
 	State    string
 	Kind     coregraph.NodeKind // the glyph kind: step · child · wait
@@ -245,8 +246,44 @@ func stepNode(s reads.Step) pathNode {
 // groups of more than 4 members collapse into one annotated box. It is
 // separate from the boot map: the path comes from Postgres, the map from
 // the code.
-func ExecutedPathToSVG(steps []reads.Step) template.HTML {
-	g := newGraphLayout(groupPath(steps))
+func ExecutedPathToSVG(steps []reads.Step, tail bool) template.HTML {
+	roots := groupPath(steps)
+	if tail {
+		roots = withTail(roots)
+	}
+	g := newGraphLayout(roots)
 	g.label = "executed path"
 	return template.HTML(g.svg())
+}
+
+// withTail hangs the dashed tail box after the last box of the chain — the
+// only "in progress" marker of a live run. A path with no box is just the
+// tail box (the run just started).
+func withTail(roots []pathNode) []pathNode {
+	if len(roots) == 0 {
+		return []pathNode{{Step: "…", Tail: true}}
+	}
+	end := chainEnd{}
+	for i := range roots {
+		findChainEnd(&roots[i], &end)
+	}
+	end.box.Children = append(end.box.Children, pathNode{Step: "…", Tail: true})
+	return roots
+}
+
+// chainEnd holds the deepest visible box of the chain.
+type chainEnd struct {
+	box   *pathNode
+	found bool
+}
+
+// findChainEnd locates the deepest visible box of the chain — the box whose
+// children are the terminal marker alone.
+func findChainEnd(n *pathNode, end *chainEnd) {
+	if !end.found && n.Step != "" && len(n.Children) == 1 && isTerminal(n.Children[0]) {
+		end.box, end.found = n, true
+	}
+	for i := range n.Children {
+		findChainEnd(&n.Children[i], end)
+	}
 }
