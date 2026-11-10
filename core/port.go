@@ -29,8 +29,10 @@ type Port struct {
 	// input and the steps' default values — the web renders the form on
 	// top of the workflow page.
 	Spec func(name string) (graph.Spec, error)
-	// Executions lists the runs of a workflow (phase 3, LIST).
-	Executions func(name string) ([]reads.Execution, error)
+	// Executions lists one page of the runs of a workflow (phase 3, LIST →
+	// the console): limit rows from the offset (before), newest first, and
+	// the HasMore flag (the pager — no total).
+	Executions func(name string, limit int, before int) (reads.ExecutionPage, error)
 
 	// Dispatch: start a run.
 	// Enqueue dispatches a registered workflow with the clean input
