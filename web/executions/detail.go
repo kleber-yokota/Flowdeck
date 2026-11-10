@@ -5,6 +5,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/reads"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/render"
 )
 
@@ -15,7 +16,7 @@ import (
 // failure — the error and the failed step.
 type executionDetail struct {
 	reads.ExecutionDetail
-	Badge    Badge
+	Badge    badge.Badge
 	Retries  []retry
 	Steps    stepsView
 	Children []childView
@@ -73,7 +74,7 @@ func handleExecutionDetail(w http.ResponseWriter, r *http.Request, p core.Port) 
 	}
 	render.Page(w, "execution-detail.html", executionDetail{
 		ExecutionDetail: d.ExecutionDetail,
-		Badge:           BadgeFor(id, d.ExecutionDetail.State),
+		Badge:           badge.BadgeFor(id, d.ExecutionDetail.State),
 		Retries:         retriesFor(d.Attempts),
 		Steps:           newStepsView(id, d.RunPath),
 		Children:        childViews(d.ExecutionDetail.Children),

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/executions/badge"
 )
 
 // Register wires the execution routes onto the mux: the dispatch (POST
@@ -14,7 +15,7 @@ func Register(mux *http.ServeMux, p core.Port) {
 		handleRunDispatch(w, r, p)
 	})
 	mux.HandleFunc("GET /status/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleBadge(w, r, p)
+		badge.HandleBadge(w, r, p)
 	})
 	mux.HandleFunc("GET /executions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		handleExecutionDetail(w, r, p)

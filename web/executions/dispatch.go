@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/render"
 )
 
@@ -33,7 +34,7 @@ func handleRunDispatch(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Fail(w, "enqueue", err)
 		return
 	}
-	render.Partial(w, "execution.html", Row(ex))
+	render.Partial(w, "execution.html", badge.Row(ex))
 }
 
 // formValues reads the form values posted to the dispatch (an empty POST

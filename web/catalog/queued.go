@@ -7,6 +7,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/reads"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/render"
 )
 
@@ -64,7 +65,7 @@ func queuedRows(runs []reads.LiveRun, now time.Time) ([]queuedRow, error) {
 			Name:    run.Name,
 			ID:      run.ID,
 			Started: created.Format("15:04"),
-			Elapsed: elapsedLabel(now.Sub(created)),
+			Elapsed: badge.ElapsedLabel(now.Sub(created)),
 		})
 	}
 	return rows, nil

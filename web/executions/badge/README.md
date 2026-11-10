@@ -1,0 +1,6 @@
+# web/executions/badge
+The badge of a run: the 2s poll fragment (`GET /status/{id}`) and the badge/row models (`Badge` · `Row` · `ElapsedLabel`) shared by the execution routes and `web/catalog` (the catalog reads the state through the models — it never imports `core/status` in production).
+## Rules (decisions · pinned values)
+- The badge is the state's class + label (`queued` · `running` · `success` · `error` · `cancelled`) and the terminal flag — the live states carry `hx-trigger="every 2s"` · `hx-swap outerHTML` (the fragment is swapped whole); the terminal badge is static (the poll stops). The badge is the single root `<span id="badge-{id}">` — the cancel and resume buttons target it (`hx-swap outerHTML`), so the row's other cells stay until the page reloads. *(evidence: `badge.go · BadgeFor` · `HandleBadge` · `templates/badge.html` · `cancel.go` · `resume.go`)*
+- The `Row` view is the runline row: the embedded `Badge` + `Elapsed` · `Step` · `Exit` + `Cancelable` · `Resumeable` — the dispatch ACK and the workflow page's rows share it. *(evidence: `badge.go · Row` · `BadgeFor` · `dispatch.go`)*
+- `ElapsedLabel` — the elapsed format (moved from `web/catalog`): `<60s` `"42s"` · `≥60s` `"%dm %02ds"` (the catalog's runnings/queued rows use it). *(evidence: `badge.go · ElapsedLabel` · `catalog/runnings.go` · `catalog/queued.go`)*

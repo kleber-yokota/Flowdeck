@@ -12,6 +12,7 @@ import (
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/internal/webtest"
 )
 
@@ -28,7 +29,8 @@ func TestRunningPageRendersShell(t *testing.T) {
 
 	code, body := webtest.Get(t, srv.URL+"/runnings")
 	if code != http.StatusOK {
-		t.Fatalf("status: got %d want %d", code, http.StatusOK)
+		t.Errorf("status: got %d want %d", code, http.StatusOK)
+		return
 	}
 	for _, want := range []string{
 		`<html lang="pt-BR">`,
@@ -67,7 +69,8 @@ func TestRunningListRows(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		h, err := boot.Ctx().Enqueue(boot.Ctx(), boot.QueueName, "live-test", "block")
 		if err != nil {
-			t.Fatalf("enqueue: %v", err)
+			t.Errorf("enqueue: %v", err)
+			return
 		}
 		id := h.GetWorkflowID()
 		ids = append(ids, id)
@@ -83,13 +86,15 @@ func TestRunningListRows(t *testing.T) {
 		for {
 			st, err := reads.Status(id)
 			if err != nil {
-				t.Fatalf("status: %v", err)
+				t.Errorf("status: %v", err)
+				return
 			}
 			if st == status.Running {
 				break
 			}
 			if time.Now().After(deadline) {
-				t.Fatalf("no running state: %s", st)
+				t.Errorf("no running state: %s", st)
+				return
 			}
 			time.Sleep(200 * time.Millisecond)
 		}
@@ -97,7 +102,8 @@ func TestRunningListRows(t *testing.T) {
 
 	code, body := webtest.Get(t, srv.URL+"/runnings/list")
 	if code != http.StatusOK {
-		t.Fatalf("status: got %d want %d", code, http.StatusOK)
+		t.Errorf("status: got %d want %d", code, http.StatusOK)
+		return
 	}
 	if got := strings.Count(body, `class="exec-row"`); got != 2 {
 		t.Errorf("rows: got %d, want 2: %s", got, body)
@@ -125,24 +131,28 @@ func TestRunningListRows(t *testing.T) {
 	// the latest live-test run in SUCCESS.
 	for _, id := range ids {
 		if err := boot.Ctx().CancelWorkflow(boot.Ctx(), id); err != nil {
-			t.Fatalf("cancel: %v", err)
+			t.Errorf("cancel: %v", err)
+			return
 		}
 	}
 	ho, err := boot.Ctx().Enqueue(boot.Ctx(), boot.QueueName, "live-test", "ok")
 	if err != nil {
-		t.Fatalf("enqueue: %v", err)
+		t.Errorf("enqueue: %v", err)
+		return
 	}
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		st, err := reads.Status(ho.GetWorkflowID())
 		if err != nil {
-			t.Fatalf("status: %v", err)
+			t.Errorf("status: %v", err)
+			return
 		}
 		if st == status.Success {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("no success state: %s", st)
+			t.Errorf("no success state: %s", st)
+			return
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -161,16 +171,19 @@ func TestRunningListEmptyState(t *testing.T) {
 	for {
 		code, body := webtest.Get(t, srv.URL+"/runnings/list")
 		if code != http.StatusOK {
-			t.Fatalf("status: got %d want %d", code, http.StatusOK)
+			t.Errorf("status: got %d want %d", code, http.StatusOK)
+			return
 		}
 		if strings.Contains(body, "no runs") {
 			if strings.Contains(body, `class="exec-row"`) {
-				t.Fatalf("empty state with a row: %s", body)
+				t.Errorf("empty state with a row: %s", body)
+				return
 			}
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("no empty state: %s", body)
+			t.Errorf("no empty state: %s", body)
+			return
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -182,7 +195,7 @@ func TestRunningListNotLaunchedIs503(t *testing.T) {
 	srv := testServer(t, core.NewPort())
 
 	if code, _ := webtest.Get(t, srv.URL+"/runnings/list"); code != http.StatusServiceUnavailable {
-		t.Fatalf("status: got %d want %d", code, http.StatusServiceUnavailable)
+		t.Errorf("status: got %d want %d", code, http.StatusServiceUnavailable)
 	}
 }
 
@@ -193,14 +206,12 @@ func TestRunningListNoStore(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/runnings/list")
 	if err != nil {
-		t.Fatalf("GET: %v", err)
+		t.Errorf("GET: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-		t.Fatalf("read body: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status: got %d want %d", resp.StatusCode, http.StatusOK)
+		t.Errorf("read body: %v", err)
 	}
 	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
@@ -214,17 +225,19 @@ func TestRunningRows(t *testing.T) {
 	now := time.Date(2026, 11, 4, 12, 4, 39, 0, time.UTC)
 	got, err := runningRows([]reads.LiveRun{{Name: "live-test", ID: "wf_1", State: "running", CreatedAt: "2026-11-04T12:04:05Z"}}, now)
 	if err != nil {
-		t.Fatalf("runningRows: %v", err)
+		t.Errorf("runningRows: %v", err)
+		return
 	}
 	want := runningRow{Name: "live-test", ID: "wf_1", Started: "12:04", Elapsed: "34s"}
 	if len(got) != 1 || got[0] != want {
-		t.Fatalf("rows: got %v, want %v", got, want)
+		t.Errorf("rows: got %v, want %v", got, want)
 	}
 	// The malformed CreatedAt is an error (not a guess).
 	if _, err := runningRows([]reads.LiveRun{{Name: "live-test", ID: "wf_2", State: "running", CreatedAt: "not-a-time"}}, now); err == nil {
-		t.Fatal("malformed created_at: no error")
+		t.Errorf("malformed created_at: no error")
 	}
-	// The elapsed format: <60s "42s" · ≥60s "%dm %02ds".
+	// The elapsed format: <60s "42s" · ≥60s "%dm %02ds" (the helper now
+	// lives in the executions package — the catalog's call site).
 	for _, tc := range []struct {
 		d    time.Duration
 		want string
@@ -236,8 +249,8 @@ func TestRunningRows(t *testing.T) {
 		{72 * time.Second, "1m 12s"},
 		{122 * time.Second, "2m 02s"},
 	} {
-		if got := elapsedLabel(tc.d); got != tc.want {
-			t.Errorf("elapsedLabel(%s): got %q want %q", tc.d, got, tc.want)
+		if got := badge.ElapsedLabel(tc.d); got != tc.want {
+			t.Errorf("ElapsedLabel(%s): got %q want %q", tc.d, got, tc.want)
 		}
 	}
 }

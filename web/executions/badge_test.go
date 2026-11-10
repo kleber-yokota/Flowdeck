@@ -12,6 +12,7 @@ import (
 	"flowdeck/core"
 	"flowdeck/core/boot"
 	"flowdeck/core/status"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/internal/webtest"
 )
 
@@ -41,7 +42,8 @@ func TestStatusBadgeRendersState(t *testing.T) {
 			id := runInState(t, srv, state)
 			_, frag := webtest.Get(t, srv.URL+"/status/"+id)
 			if !strings.Contains(frag, want) {
-				t.Fatalf("fragment does not contain %q: %q", want, frag)
+				t.Errorf("fragment does not contain %q: %q", want, frag)
+				return
 			}
 			// Live badges poll and are swapped whole (outerHTML) — the old
 			// badge element never wraps the new one. Terminal badges drop
@@ -60,8 +62,9 @@ func TestStatusBadgeRendersState(t *testing.T) {
 			// replaces the old badge element entirely. If the fragment were
 			// not a single root element, the new badge would be nested
 			// inside the old one and the old state's outline would stay
-			// visible — the "silhouette" bug.
-			if !strings.HasPrefix(frag, `<span class="badge`) || !strings.HasSuffix(frag, `</span>`) {
+			// visible — the "silhouette" bug. The id attribute is the
+			// first attribute (the cancel and resume buttons target it).
+			if !strings.HasPrefix(frag, `<span id="badge-`) || !strings.HasSuffix(frag, `</span>`) {
 				t.Errorf("fragment is not a single span root: %q", frag)
 			}
 		})
@@ -80,7 +83,8 @@ func runInState(t *testing.T, srv *httptest.Server, state status.State) string {
 		// ENQUEUED.
 		h, err := boot.Ctx().Enqueue(boot.Ctx(), "frozen", "noinput-test", nil)
 		if err != nil {
-			t.Fatalf("enqueue: %v", err)
+			t.Errorf("enqueue: %v", err)
+			return ""
 		}
 		return h.GetWorkflowID()
 	case status.Running:
@@ -105,7 +109,7 @@ func runInState(t *testing.T, srv *httptest.Server, state status.State) string {
 		webtest.Detail(t, srv.URL, id, `class="badge cancelled terminal"`)
 		return id
 	default:
-		t.Fatalf("state %s is not a fixture state", state)
+		t.Errorf("state %s is not a fixture state", state)
 		return ""
 	}
 }
@@ -123,7 +127,7 @@ func TestBadgeForStates(t *testing.T) {
 		status.Error:     {"error", "Error", true},
 		status.Cancelled: {"cancelled", "Cancelled", true},
 	} {
-		b := BadgeFor("id-"+string(st), st)
+		b := badge.BadgeFor("id-"+string(st), st)
 		if b.Class != want.class || b.Label != want.label || b.Terminal != want.terminal {
 			t.Errorf("BadgeFor(%s): got %q %q %v, want %q %q %v", st, b.Class, b.Label, b.Terminal, want.class, want.label, want.terminal)
 		}
@@ -136,11 +140,12 @@ func cancelRun(t *testing.T, srv *httptest.Server, id string) {
 	t.Helper()
 	resp, err := webtest.Post(t, srv.URL+"/cancel/"+id)
 	if err != nil {
-		t.Fatalf("cancel %s: %v", id, err)
+		t.Errorf("cancel %s: %v", id, err)
+		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("cancel %s: %d", id, resp.StatusCode)
+		t.Errorf("cancel %s: %d", id, resp.StatusCode)
 	}
 }
 
@@ -152,7 +157,8 @@ func pollFragment(t *testing.T, srv *httptest.Server, id, want string) string {
 	_, frag := webtest.Get(t, srv.URL+"/status/"+id)
 	for !strings.Contains(frag, want) {
 		if time.Now().After(deadline) {
-			t.Fatalf("status %s: no %q: %s", id, want, frag)
+			t.Errorf("status %s: no %q: %s", id, want, frag)
+			return ""
 		}
 		time.Sleep(200 * time.Millisecond)
 		_, frag = webtest.Get(t, srv.URL+"/status/"+id)
@@ -169,11 +175,12 @@ func TestStatusBadgeNoStore(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/status/" + id)
 	if err != nil {
-		t.Fatalf("GET: %v", err)
+		t.Errorf("GET: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-		t.Fatalf("read body: %v", err)
+		t.Errorf("read body: %v", err)
 	}
 	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
@@ -185,7 +192,7 @@ func TestStatusUnknownExecutionIs404(t *testing.T) {
 	srv := bootedTestServer(t)
 
 	if code, _ := webtest.Get(t, srv.URL+"/status/00000000-0000-0000-0000-000000000000"); code != http.StatusNotFound {
-		t.Fatalf("status: got %d want %d", code, http.StatusNotFound)
+		t.Errorf("status: got %d want %d", code, http.StatusNotFound)
 	}
 }
 
@@ -194,6 +201,6 @@ func TestStatusCoreDownIs503(t *testing.T) {
 	srv := testServer(t, core.NewPort())
 
 	if code, _ := webtest.Get(t, srv.URL+"/status/abc"); code != http.StatusServiceUnavailable {
-		t.Fatalf("status: got %d want %d", code, http.StatusServiceUnavailable)
+		t.Errorf("status: got %d want %d", code, http.StatusServiceUnavailable)
 	}
 }
