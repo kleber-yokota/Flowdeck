@@ -28,17 +28,19 @@ unrelated things can't be routed to.
 
 **The separation metric (routing precision of the page index).** A folder
 is a page; `index.md` routes a task to the pages whose `covers` intersect
-its touch set. A folder is correctly separated when that routing is
-precise: its `covers` set names one set of intentions, and no backticked
-`covers` key appears in two pages. A `covers` entry names the intention,
-never a pinned value — a number in the index duplicates the code (the poll
-interval, a line limit) and goes stale when the code changes; the value
-belongs in the page's evidence. Two signals drive the split — the page
-is **too broad** (`covers` no longer names one set: a task touching part
-of the folder loads the rest) → split into subfolders, each naming one
-set; or the routing is **ambiguous** (a backticked `covers` key appears in
-two pages) → move the intention to the one page that owns it. The load-cost
-guard is the folder twin of the 300-line rule: a page must be loadable in
+its touch set. Correct separation is checkable: one `covers` set per page,
+and no backticked `covers` key in two pages. Two signals drive the split:
+
+- **Too broad** — `covers` no longer names one set of intentions (a task
+  touching part of the folder loads the rest) → split into subfolders,
+  each naming one set.
+- **Ambiguous** — a backticked `covers` key appears in two pages → move
+  the intention to the one page that owns it.
+
+A `covers` entry names the intention, never a pinned value — a number in
+the index duplicates the code (the poll interval, a line limit) and goes
+stale; the value belongs in the page's evidence. The load-cost guard is
+the folder twin of the 300-line rule: a page must be loadable in
 isolation. The metric says *when* to split; the grain (principle 3) says
 *where*. Measured by `scripts/page-index-metric.py`.
 
@@ -49,8 +51,9 @@ isolation. The metric says *when* to split; the grain (principle 3) says
    cycle-free. Every package edge is a permanent tax: it is read by every
    future change and by every doc line that describes it. Files inside a
    package are rearranged for free — a combine or a split changes nothing
-   outside the package. Split files freely; create packages reluctantly —
-   a refactor may still draw, move, or redraw one (step 6). A package
+   outside the package. Split files freely; create a package only on its
+   grain (principle 3) — a refactor may still draw, move, or redraw one
+   (step 6). A package
    split into subfolders groups them by purpose — the conversation each
    subfolder owns (an execution, a catalog, a boot) — never by technical
    role (controller, service, model): the top-level package is the
@@ -140,6 +143,11 @@ Rules:
   on the booted core (SQLite · the `testworkflows` fixtures); the state a
   test needs is a real run (an enqueue, a cancel, the `err` mode). The
   not-launched port (`core.NewPort()`) proves the core-down path.
+- **A fresh DB per test** — the harness clears the database between tests:
+  each test boots its own sqlite file (`testcore.BootTest` on a
+  `t.TempDir()` — fresh per test, auto-removed), never a shared one. A test's
+  runs must never leak into another test's page or read; no test may rely
+  on — or clean up — another test's rows.
 - **Negative space.** The set of states a contract must never hold. The
   term is from the art: the empty space around a figure pins the figure's
   shape — the negative defines the positive. In code the same: a contract
@@ -183,34 +191,31 @@ way tests are the first line of the correctness budget.
 ## The decision procedure (per change)
 
 1. Which package owns this behavior? If none, that is a design decision —
-   stop and decide it; do not invent a folder. Name the module split, don't
-   infer it: a new package appears when a second consumer of the contract
-   appears (a new import edge with its own needs), not when a file holds two
-   responsibilities — intent splits are file splits (principle 1 · one file,
-   one intention · the 300-line rule). Before any draw, read the reference
-   DAG of the cluster: a pair of files that references each other is not
-   drawable — the cycle break (step 6) is the preceding green step, and the
-   draw is the one that follows it.
+   stop, name the split, and decide it (the package grain: principle 3);
+   do not invent a folder. Before any draw, read the reference DAG of the
+   cluster: a pair of files that references each other is not drawable —
+   the cycle break (step 6) is the preceding green step, and the draw is
+   the one that follows it.
 2. Does an existing file own it? Extend the file.
 3. No file owns it? Create a file named for the behavior + its test.
 4. A file now holds two responsibilities? Split it — as its own green step.
 5. Does the index know where this lives? Update it — as the last step of the
    same change.
-6. An explicit refactor is a structure change: it combines and splits
-   files, breaks mutual file references (the shared part is extracted to
-   its owner, so references stay unidirectional), draws or moves folders
-   and subfolders (packages), redraws or moves boundaries (a package edge,
-   the Port surface, a read model), and improves performance (a batched
-   query, a state that rides on the read).
+6. An explicit refactor is a structure change — do it as green steps
+   (principle 6), checkable on its own terms: each draw, break, and move
+   names the intention it serves, and every break point (call sites,
+   tests, the map) is repaired in the same green sequence — a break left
+   unfixed is debt, not green. The goal is the improvement, not the move.
+   What it may do: combine and split files · break mutual file references
+   (the shared part goes to its owner, so references stay unidirectional) ·
+   draw or move folders and subfolders (packages) · redraw or move
+   boundaries (a package edge, the Port surface, a read model) · improve
+   performance (a batched query, a state that rides on the read).
    Its reasons, and only these: performance · the ease of the code (it
-   reads easier, it changes easier) · the intention (every file is
-   oriented to the intention it owns — a boundary out of step with the
-   intention is redrawn). The rules of the structure change: each draw,
-   break, and move names the intention it serves, and every break point —
-   call sites, tests, the map — is repaired in the same green sequence
-   (principle 6). The goal is the improvement, not the move: a break left
-   unfixed is not green, it is debt. A change that is *not* about structure
-   adds no package, no folder layer, no naming convention.
+   reads easier, it changes easier) · the intention (a boundary out of
+   step with the intention is redrawn).
+   A change that is *not* about structure adds no package, no folder
+   layer, no naming convention.
 
 ## What this forbids
 
@@ -246,7 +251,7 @@ grep; in a behavior layout, it is a name.
 | The markdown rule (writing the pages) | `AGENT.md` (the `writing-great-skills` skill applied to the edit) |
 | The routing index (task → where to start) | `index.md` (one row per page · the `covers` keywords) |
 | The green steps | `tasks/*.md` (one step = one commit = one green state) |
-| The last-step promotion | the last task of every set (facts into the folder pages · the map refreshes only when a frontier or a map row moved · the SVG goes through the `diagram-design` skill) |
+| The last-step promotion | the last task of every set (principle 5's refresh, as the set's last step) |
 | The clean-context actors | `agent-diagram.md` · `agent-write-task.md` · `agent-task.md` |
 | The uniform recipe (workflow) | `workflows/<name>/` + `go generate ./workflows` |
 | The load lines (complexity · nesting · cycles · import contract) | `scripts/structure-gate.sh` + `.goimportmaps.yaml` |
