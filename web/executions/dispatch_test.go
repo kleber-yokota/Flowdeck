@@ -3,7 +3,6 @@ package executions
 import (
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -13,37 +12,38 @@ import (
 	"flowdeck/web/internal/webtest"
 )
 
-// The dispatch (the POST half) against the booted core: the ACK row with
-// the badge (that starts the poll), the first execution date and the link
-// to the detail page — the run is a real run of the deterministic
-// fixtures.
+// The dispatch (the POST half) against the booted core: the ACK is the
+// execrow fragment — the badge (the id attribute, the poll target), the
+// workflow id (the detail link), the elapsed and the cancel button — the
+// run is a real run of the deterministic fixtures.
 
-// The dispatch ACK: badge queued + date + detail link — no form in the
-// ACK (the form lives on the workflow page).
-func TestDispatchACKShowsBadgeAndLink(t *testing.T) {
+// The dispatch ACK (the execrow fragment): the badge queued (the id
+// attribute), the workflow id (the detail link), the elapsed, the cancel
+// button and no resume — no form in the ACK (the form lives on the
+// workflow page).
+func TestDispatchACKShowsRunlineRow(t *testing.T) {
 	srv := bootedTestServer(t)
 
-	resp, err := webtest.PostForm(t, srv.URL+"/run/linear-test", url.Values{"msg": {"ping"}})
-	if err != nil {
-		t.Fatalf("POST: %v", err)
-	}
-	defer resp.Body.Close()
-	body := webtest.ReadAll(t, resp)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch: %d, %s", resp.StatusCode, body)
-	}
-	id := webtest.ExecutionID(t, body)
+	ack := webtest.Ack(t, srv.URL, "noinput-test", nil)
+	id := webtest.ExecutionID(t, ack)
 	for _, want := range []string{
-		`class="badge queued"`,
-		`class="exec-date">`,
+		`<div class="exec-row wf">`,
+		`id="badge-` + id + `"`,
+		`class="wf-id"`,
 		`href="/executions/` + id + `"`,
+		`<span class="elapsed">0s</span>`,
+		`hx-post="/cancel/` + id + `"`,
 	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("ACK does not contain %q: %s", want, body)
+		if !strings.Contains(ack, want) {
+			t.Errorf("ACK does not contain %q: %s", want, ack)
+			return
 		}
 	}
-	if strings.Contains(body, `<form`) {
-		t.Errorf("ACK contains a form: %s", body)
+	if strings.Contains(ack, `class="resume"`) {
+		t.Errorf("ACK has a resume button: %s", ack)
+	}
+	if strings.Contains(ack, `<form`) {
+		t.Errorf("ACK contains a form: %s", ack)
 	}
 }
 
@@ -54,11 +54,12 @@ func TestDispatchUnknownWorkflowIs404(t *testing.T) {
 
 	resp, err := webtest.Post(t, srv.URL+"/run/ghost")
 	if err != nil {
-		t.Fatalf("POST: %v", err)
+		t.Errorf("POST: %v", err)
+		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("dispatch: got %d want %d", resp.StatusCode, http.StatusNotFound)
+		t.Errorf("dispatch: got %d want %d", resp.StatusCode, http.StatusNotFound)
 	}
 }
 
@@ -68,11 +69,13 @@ func TestDispatchNoStore(t *testing.T) {
 
 	resp, err := webtest.PostForm(t, srv.URL+"/run/noinput-test", nil)
 	if err != nil {
-		t.Fatalf("POST: %v", err)
+		t.Errorf("POST: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-		t.Fatalf("read body: %v", err)
+		t.Errorf("read body: %v", err)
+		return
 	}
 	if got := resp.Header.Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control: got %q want %q", got, "no-store")
@@ -86,16 +89,18 @@ func TestDispatchNoStore(t *testing.T) {
 // enqueue, not the lookup).
 func TestDispatchCoreDownIs503(t *testing.T) {
 	if err := boot.SetWorkflowsSource(os.DirFS("../../core/testworkflows")); err != nil {
-		t.Fatalf("set workflows source: %v", err)
+		t.Errorf("set workflows source: %v", err)
+		return
 	}
 	srv := testServer(t, core.NewPort())
 
 	resp, err := webtest.Post(t, srv.URL+"/run/noinput-test")
 	if err != nil {
-		t.Fatalf("POST: %v", err)
+		t.Errorf("POST: %v", err)
+		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("dispatch: got %d want %d", resp.StatusCode, http.StatusServiceUnavailable)
+		t.Errorf("dispatch: got %d want %d", resp.StatusCode, http.StatusServiceUnavailable)
 	}
 }

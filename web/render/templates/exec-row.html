@@ -1,0 +1,26 @@
+<!-- The execrow (the runline row): the badge (the poll fragment), the
+     workflow id (the detail link), the elapsed, the step and the exit
+     (the terminal row fields — empty on a live row) and the row actions
+     (cancel on a live run, resume on an error run — both target the
+     badge, whose fragment the handler swaps). -->
+<div class="exec-row wf">
+  {{template "badge.html" .}}
+  <a class="wf-id" href="/executions/{{ .WorkflowID }}">{{ .WorkflowID }}</a>
+  <span class="elapsed">{{ .Elapsed }}</span>
+  <span class="step">{{ .Step }}</span>
+  <span class="exit">{{ .Exit }}</span>
+  <div class="actions">
+    {{if .Cancelable}}
+    <button type="button" class="cancel"
+            hx-post="/cancel/{{ .WorkflowID }}"
+            hx-target="#badge-{{ .WorkflowID | urlquery }}"
+            hx-swap="outerHTML">cancel</button>
+    {{end}}
+    {{if .Resumeable}}
+    <button type="button" class="resume"
+            hx-post="/resume/{{ .WorkflowID }}"
+            hx-target="#badge-{{ .WorkflowID | urlquery }}"
+            hx-swap="outerHTML">resume</button>
+    {{end}}
+  </div>
+</div>

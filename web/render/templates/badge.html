@@ -1,7 +1,7 @@
 {{- if .Terminal -}}
-<span class="badge {{ .Class }} terminal">{{ .Label }}</span>
+<span id="badge-{{ .WorkflowID | urlquery }}" class="badge {{ .Class }} terminal">{{ .Label }}</span>
 {{- else -}}
-<span class="badge {{ .Class }}"
+<span id="badge-{{ .WorkflowID | urlquery }}" class="badge {{ .Class }}"
       data-workflow-id="{{ .WorkflowID }}"
       hx-get="/status/{{ .WorkflowID }}"
       hx-trigger="every 2s"
