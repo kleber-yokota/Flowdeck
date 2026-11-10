@@ -76,7 +76,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
 <div class="frame">
 <header>
   <h1>FlowDeck <span>package map · boundary</span></h1>
-  <p class="desc">The boundary map: the 7 packages that cross a group border (<code>main</code> · <code>workflows</code> · <code>core</code> · <code>web</code> · <code>dbos</code> · the two <code>cmd</code> tools) · 9 frontiers · zero cycles. Fan-in is counted at the group level (a node = a group of packages); <code>workflows</code> fans out to 12 subpackages. The <code>core</code> and <code>web</code> nodes link to their folder pages; facts and rules live in the folder pages (<a href="../index.md"><code>index.md</code></a>).</p>
+  <p class="desc">The boundary map: the 7 packages that cross a group border (<code>main</code> · <code>workflows</code> · <code>core</code> · <code>web</code> · <code>dbos</code> · the two <code>cmd</code> tools) · 9 frontiers · zero cycles. Fan-in is counted at the group level (a node = a group of packages); <code>workflows</code> fans out to 13 subpackages. The <code>core</code> and <code>web</code> nodes link to their folder pages; facts and rules live in the folder pages (<a href="../index.md"><code>index.md</code></a>).</p>
   <nav>
     <span>PAGES</span>
     <a href="../index.md">index.md</a>
@@ -100,7 +100,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
   <h2>boundary graph <span class="badge">7 PACKAGES · 9 FRONTIERS · 0 CYCLES</span></h2>
   <svg viewBox="0 0 960 560" role="img" aria-labelledby="boundary-title boundary-desc" aria-describedby="boundary-desc" id="boundary">
     <title id="boundary-title">FlowDeck · boundary map</title>
-    <desc id="boundary-desc">Boundary view at the group level (a node = a group of packages). Rank 0 (entry): cmd/workflowgen, main, cmd/svgdump. Rank 1: workflows (12 subpackages: 11 registered + the steps helpers), web. Rank 2: core. Rank 3: dbos (third-party). Fan-in per node (incoming edges on this view): main 0, workflowgen 0, svgdump 0, workflows 2, web 2, core 3, dbos 2. Edges: main→core (launch · port), main→web (router), main→workflows (RegisterAll · embed), cmd/svgdump→web (block svg), cmd/workflowgen→workflows (codegen, build-time), workflows→dbos (register), web→core (the port), core→dbos (sdk surface), cmd/svgdump→core (parse · dump).</desc>
+    <desc id="boundary-desc">Boundary view at the group level (a node = a group of packages). Rank 0 (entry): cmd/workflowgen, main, cmd/svgdump. Rank 1: workflows (13 subpackages: 12 registered + the steps helpers), web. Rank 2: core. Rank 3: dbos (third-party). Fan-in per node (incoming edges on this view): main 0, workflowgen 0, svgdump 0, workflows 2, web 2, core 3, dbos 2. Edges: main→core (launch · port), main→web (router), main→workflows (RegisterAll · embed), cmd/svgdump→web (block svg), cmd/workflowgen→workflows (codegen, build-time), workflows→dbos (register), web→core (the port), core→dbos (sdk surface), cmd/svgdump→core (parse · dump).</desc>
     <defs>
       <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 z" class="arrow"/>
@@ -151,7 +151,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
     <g>
       <rect class="node" x="240" y="160" width="160" height="56" rx="6"/>
       <text class="name" x="320" y="184">workflows</text>
-      <text class="node-sub" x="320" y="201">12 subpackages · Register</text>
+      <text class="node-sub" x="320" y="201">13 subpackages · Register</text>
       <rect class="badge" x="418" y="154" width="24" height="12" rx="2"/>
       <text class="badge-t" x="430" y="163">2 IN</text>
     </g>
@@ -188,7 +188,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
       <tr><td><code>main → core</code></td><td><code>core</code> · <code>core/boot</code></td><td>the Port · launch · health · shutdown</td><td class="kind">rt</td></tr>
       <tr><td><code>main → web</code></td><td><code>web</code></td><td>the router + the ready guard</td><td class="kind">rt</td></tr>
       <tr><td><code>main → workflows</code></td><td><code>workflows</code></td><td>RegisterAll (the generated call list) · the embedded source tree</td><td class="kind">rt</td></tr>
-      <tr><td><code>workflows → dbos</code></td><td><code>dbos</code></td><td><code>RegisterWorkflow</code> (11 registered + the steps helpers)</td><td class="kind">rt</td></tr>
+      <tr><td><code>workflows → dbos</code></td><td><code>dbos</code></td><td><code>RegisterWorkflow</code> (12 registered + the steps helpers)</td><td class="kind">rt</td></tr>
       <tr><td><code>web → core</code></td><td><code>web</code> · the 4 subpackages</td><td>the Port + the read models</td><td class="kind">rt</td></tr>
       <tr><td><code>core → dbos</code></td><td><code>core/boot</code> · <code>actions</code> · <code>reads</code> · <code>registry</code> · <code>testcore</code> · <code>testworkflows</code></td><td>launch · the mutations · the queries · the registrations · the test registrations</td><td class="kind">rt</td></tr>
       <tr><td><code>cmd/workflowgen → workflows</code></td><td><code>workflows</code></td><td>codegen — writes <code>zz_generated.go</code> (build-time, not imported)</td><td class="kind">build</td></tr>
@@ -231,7 +231,7 @@ td a:hover,td a:focus{color:var(--acc);border-color:var(--acc)}
     <tbody>
       <tr><td>forbidden import</td><td><code>grep -rn "dbos\|database/sql" web/ &amp;&amp; exit 1 || echo ok</code></td><td>web touching DBOS or Postgres (the Port is the contract)</td></tr>
       <tr><td>graph build</td><td><code>go test -count=1 ./core/graph/ -run TestGraphBuild</code></td><td>a workflow change broke the AST parse (spec · steps · child · loop · wait)</td></tr>
-      <tr><td>source tree</td><td><code>cd cmd/workflowgen &amp;&amp; go run . &amp;&amp; git diff --exit-code workflows/zz_generated.go</code></td><td>workflows/zz_generated.go is stale (the subpackage registration)</td></tr>
+      <tr><td>source tree</td><td><code>go generate ./workflows &amp;&amp; git diff --exit-code workflows/zz_generated.go</code></td><td>workflows/zz_generated.go is stale (the subpackage registration)</td></tr>
       <tr><td>pages</td><td><code>for d in core core/* core/*/* web web/* web/*/*; do [ -d "$d" ] &amp;&amp; ls "$d"/*.go &gt;/dev/null 2&gt;&amp;1 &amp;&amp; [ ! -f "$d/README.md" ] &amp;&amp; echo "no page: $d"; done; echo checked</code></td><td>a folder has code but no page (something to say, nowhere to put it)</td></tr>
     </tbody>
   </table>
