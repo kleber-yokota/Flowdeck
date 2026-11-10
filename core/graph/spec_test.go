@@ -28,20 +28,23 @@ func Schedule(ctx dbos.Context, args ScheduleArgs) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	spec, ok := specs["schedule"]
 	if !ok {
-		t.Fatal("spec: workflow schedule not found")
+		t.Error("spec: workflow schedule not found")
+		return
 	}
 	if len(spec.Inputs) != 2 {
-		t.Fatalf("inputs: got %v, want 2", spec.Inputs)
+		t.Errorf("inputs: got %v, want 2", spec.Inputs)
+		return
 	}
 	if in := spec.Inputs[0]; in.Name != "Name" || in.Type != "string" || in.Default != "FlowDeck" {
-		t.Fatalf("input 0: got %+v, want {Name string FlowDeck}", in)
+		t.Errorf("input 0: got %+v, want {Name string FlowDeck}", in)
 	}
 	if in := spec.Inputs[1]; in.Name != "StartDate" || in.Type != "string" || in.Default != "2026-01-01" {
-		t.Fatalf("input 1: got %+v, want {StartDate string 2026-01-01}", in)
+		t.Errorf("input 1: got %+v, want {StartDate string 2026-01-01}", in)
 	}
 }
 
@@ -62,14 +65,16 @@ func Pause(ctx dbos.Context, _ string) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	spec, ok := specs["pause"]
 	if !ok {
-		t.Fatal("spec: workflow pause not found")
+		t.Error("spec: workflow pause not found")
+		return
 	}
 	if len(spec.Inputs) != 0 {
-		t.Fatalf("inputs: got %v, want none", spec.Inputs)
+		t.Errorf("inputs: got %v, want none", spec.Inputs)
 	}
 }
 
@@ -89,14 +94,16 @@ func Ping(ctx dbos.Context) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	spec, ok := specs["ping"]
 	if !ok {
-		t.Fatal("spec: workflow ping not found")
+		t.Error("spec: workflow ping not found")
+		return
 	}
 	if len(spec.Inputs) != 0 {
-		t.Fatalf("inputs: got %v, want none", spec.Inputs)
+		t.Errorf("inputs: got %v, want none", spec.Inputs)
 	}
 }
 
@@ -127,28 +134,32 @@ func Greet(ctx dbos.Context, msg string) error {
 	return nil
 }
 `
-	_, specs, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
+	_, specs, _, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
 	if err != nil {
-		t.Fatalf("pathsFromSources: %v", err)
+		t.Errorf("pathsFromSources: %v", err)
+		return
 	}
 	spec, ok := specs["greet"]
 	if !ok {
-		t.Fatalf("specs: missing workflow greet: %v", specs)
+		t.Errorf("specs: missing workflow greet: %v", specs)
+		return
 	}
 	if len(spec.Inputs) != 1 {
-		t.Fatalf("spec inputs: got %v, want 1", spec.Inputs)
+		t.Errorf("spec inputs: got %v, want 1", spec.Inputs)
+		return
 	}
 	if in := spec.Inputs[0]; in.Name != "msg" || in.Type != "string" {
-		t.Fatalf("spec input: got %+v, want {msg string}", in)
+		t.Errorf("spec input: got %+v, want {msg string}", in)
 	}
 	if len(spec.Steps) != 2 {
-		t.Fatalf("spec steps: got %v, want 2", spec.Steps)
+		t.Errorf("spec steps: got %v, want 2", spec.Steps)
+		return
 	}
 	if spec.Steps[0].Name != "greet" || spec.Steps[0].Default != "" {
-		t.Fatalf("step greet: got %+v — a step that takes the workflow input has no default", spec.Steps[0])
+		t.Errorf("step greet: got %+v — a step that takes the workflow input has no default", spec.Steps[0])
 	}
 	if spec.Steps[1].Name != "fetch" || spec.Steps[1].Default != "fetch" {
-		t.Fatalf("step fetch: got %+v", spec.Steps[1])
+		t.Errorf("step fetch: got %+v", spec.Steps[1])
 	}
 }
 
@@ -176,18 +187,21 @@ func Count(ctx dbos.Context, n int) error {
 	return nil
 }
 `
-	_, specs, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
+	_, specs, _, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
 	if err != nil {
-		t.Fatalf("pathsFromSources: %v", err)
+		t.Errorf("pathsFromSources: %v", err)
+		return
 	}
 	spec, ok := specs["count"]
 	if !ok {
-		t.Fatalf("specs: missing workflow count: %v", specs)
+		t.Errorf("specs: missing workflow count: %v", specs)
+		return
 	}
 	if len(spec.Inputs) != 1 {
-		t.Fatalf("spec inputs: got %v, want 1", spec.Inputs)
+		t.Errorf("spec inputs: got %v, want 1", spec.Inputs)
+		return
 	}
 	if in := spec.Inputs[0]; in.Name != "n" || in.Type != "int" {
-		t.Fatalf("spec input: got %+v, want {n int}", in)
+		t.Errorf("spec input: got %+v, want {n int}", in)
 	}
 }

@@ -5,57 +5,60 @@
 </head>
 <body>
   <main class="frame wide">
-    <p class="eyebrow"><a class="back" href="/">Workflows</a></p>
-    <h1>{{ .Name }}</h1>
-    {{if .Spec.Inputs}}
-    <!-- Phase 5, DISPLAY: the parameter form on top — one item per input
-         (the fields of the struct input, or the single simple parameter),
-         each prefilled with the default value of the source (the const
-         default<NamePascal>), from the spec the core parsed at boot. -->
-    <form class="params"
-          hx-post="/run/{{ .Name | urlquery }}"
-          hx-target="#executions"
-          hx-swap="afterbegin">
-      {{range .Spec.Inputs}}
-      <!-- key: value — the input name is the key, the default value of
-           the source is the prefilled value -->
-      <label>
-        {{ .Name }}:
-        <input type="text" name="{{ .Name }}" value="{{ .Default }}" />
-      </label>
-      {{end}}
-      <button type="submit" class="run">Run</button>
-    </form>
-    {{else}}
-    <button type="button"
-            class="run"
-            hx-post="/run/{{ .Name | urlquery }}"
-            hx-target="#executions"
-            hx-swap="afterbegin">
-      Run
-    </button>
-    {{end}}
-    <div class="columns">
-      <!-- Left: what was executed — the runs of this workflow, newest first
-           (phase 3, LIST). Each row links to the execution detail; the badge
-           polls GET /status every 2s until the run reaches a terminal state.
-           Each dispatch enqueues a run in the core (DBOS queue) and prepends
-           a row (the ACK). -->
-      <section class="col">
-        <p class="col-label">Executions</p>
-        <ul id="executions" class="executions">
-{{range .Executions}}
-{{template "execution.html" .}}
+    <!-- The console (the v6.3 workflow page): the cmd line with the
+         source breadcrumb, the split — the runline dispatch + the paged
+         runlines on the left, the possible-paths graph on the right. -->
+    <div class="cmd"><a class="back" href="/">← workflows</a></div>
+    <div class="cmd">$ flowdeck workflows {{ .Name | urlquery }}</div>
+    <!-- The source breadcrumb: the workflow's source file from the boot
+         map (the file that declared the workflow func — dir + /file). A
+         flat file renders without the dir span. -->
+    <div class="filepath">
+      {{if .FileDir}}<span class="dir">{{ .FileDir }}</span>{{end}}<span class="file">/{{ .FileBase }}</span>
+    </div>
+    <div class="split">
+      <!-- Left: the dispatch (the runline — the form as a command line,
+           one input per spec item, the defaults prefilled) and the
+           runlines (six per page, newest first; the badge polls
+           GET /status every 2s until the run reaches a terminal state;
+           each dispatch enqueues a run in the core and prepends a row —
+           the ACK). -->
+      <div class="split-left">
+        <form class="runline"
+              hx-post="/run/{{ .Name | urlquery }}"
+              hx-target="#executions"
+              hx-swap="afterbegin">
+          <span class="prompt">➜</span>
+          {{range .Spec.Inputs}}
+          <span class="param">{{ .Name }}</span>
+          <input type="text" name="{{ .Name }}" value="{{ .Default }}" />
+          {{end}}
+          <button type="submit" class="run">run</button>
+        </form>
+        {{if .Count}}
+        <div class="table-head">executions · {{ .Start }}–{{ .End }}</div>
+        {{end}}
+        <div id="executions" class="executions">
+{{range .Rows}}
+{{template "exec-row.html" .}}
 {{end}}
-        </ul>
-      </section>
+          {{if not .Count}}<p class="empty">no runs</p>{{end}}
+        </div>
+        <div class="pager">
+          {{if .Next}}<a class="pager-link" href="?page={{ .Next }}">older</a>{{end}}
+          {{if .Count}}<span class="pager-info info">{{ .Start }}–{{ .End }}</span>{{end}}
+          {{if .Prev}}<a class="pager-link" href="?page={{ .Prev }}">newer</a>{{end}}
+        </div>
+      </div>
       <!-- Right: the generated graph (phase 4, STEP 2, overview) — every
-           possible path of the workflow, from the boot map (map lookup, no
-           re-parse, no DB): steps are nodes and the if forks the branches. -->
-      <section class="col">
-        <p class="col-label">Paths</p>
+           possible path of the workflow, from the boot map (map lookup,
+           no re-parse, no DB): steps are boxes and the if forks the
+           branches. -->
+      <aside class="graph-side">
+        <div class="cmd">$ flowdeck graph · possible paths</div>
         <div class="graph">{{.Graph}}</div>
-      </section>
+        <div class="legend">steps are boxes · if forks the branches</div>
+      </aside>
     </div>
   </main>
 </body>

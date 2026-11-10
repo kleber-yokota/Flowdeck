@@ -24,58 +24,67 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 
 	// The core is up (the /healthz contact).
 	if code, _ := webtest.Get(t, srv.URL+"/healthz"); code != http.StatusOK {
-		t.Fatalf("healthz: %d, want 200", code)
+		t.Errorf("healthz: %d, want 200", code)
+		return
 	}
 
 	// The listing has every registered workflow — from the registry, no
 	// hardcoding in the web.
 	code, body := webtest.Get(t, srv.URL+"/workflows")
 	if code != http.StatusOK || !webtest.ContainsAll(body, ">fork-test<", ">live-test<", ">linear-test<", ">struct-test<", ">noinput-test<") {
-		t.Fatalf("listing: %d, body: %s", code, body)
+		t.Errorf("listing: %d, body: %s", code, body)
+		return
 	}
 
 	// The paths graph of each workflow (parsed source, map lookup). The
 	// branched workflow draws the common prefix once and forks.
 	code, fork := webtest.Get(t, srv.URL+"/workflows/fork-test")
 	if code != http.StatusOK {
-		t.Fatalf("fork-test page: %d", code)
+		t.Errorf("fork-test page: %d", code)
+		return
 	}
 	if !strings.Contains(fork, `<svg`) {
-		t.Fatalf("fork-test page without the generated graph")
+		t.Errorf("fork-test page without the generated graph")
+		return
 	}
 	// The graph column only (the executions list above is out of scope).
 	graphStart := strings.Index(fork, `<div class="graph">`)
 	if graphStart < 0 {
-		t.Fatalf("fork-test page without the graph column")
+		t.Errorf("fork-test page without the graph column")
+		return
 	}
 	graph := fork[graphStart:]
 	if n := strings.Count(graph, ">base<"); n != 1 {
-		t.Fatalf("prefix drawn %d times, want 1", n)
+		t.Errorf("prefix drawn %d times, want 1", n)
+		return
 	}
 	for _, want := range []string{">left<", ">right<"} {
 		if !strings.Contains(graph, want) {
-			t.Fatalf("fork-test graph missing %q", want)
+			t.Errorf("fork-test graph missing %q", want)
+			return
 		}
 	}
 	code, linear := webtest.Get(t, srv.URL+"/workflows/linear-test")
 	if code != http.StatusOK || !webtest.ContainsAll(linear, ">fetch<", ">store<") {
-		t.Fatalf("linear-test graph: %d", code)
+		t.Errorf("linear-test graph: %d", code)
+		return
 	}
 
-	// The struct-test workflow: the form has one item per input — the
-	// fields of the struct input (parsed at boot), each prefilled with the
-	// default value of the source.
+	// The struct-test workflow: the runline form has one item per input —
+	// the fields of the struct input (parsed at boot), each prefilled
+	// with the default value of the source.
 	code, structPage := webtest.Get(t, srv.URL+"/workflows/struct-test")
 	if code != http.StatusOK {
-		t.Fatalf("struct-test page: %d", code)
+		t.Errorf("struct-test page: %d", code)
+		return
 	}
 	for _, want := range []string{
 		`name="Name"`, `name="StartDate"`,
-		`Name:`, `StartDate:`,
+		`class="param">Name<`, `class="param">StartDate<`,
 		`value="FlowDeck"`, `value="2026-01-01"`,
 	} {
 		if !strings.Contains(structPage, want) {
-			t.Fatalf("struct-test page does not contain %q", want)
+			t.Errorf("struct-test page does not contain %q", want)
 		}
 	}
 	// Dispatch: the struct input reaches the run (the detail shows the
@@ -85,26 +94,31 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 		"StartDate": {"2026-02-01"},
 	})
 	if err != nil {
-		t.Fatalf("dispatch struct-test: %v", err)
+		t.Errorf("dispatch struct-test: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("dispatch struct-test: %d", resp.StatusCode)
+		t.Errorf("dispatch struct-test: %d", resp.StatusCode)
+		return
 	}
 
 	// An unknown workflow is a clean 404 (the registry is the source).
 	if code, _ := webtest.Get(t, srv.URL+"/workflows/ghost"); code != http.StatusNotFound {
-		t.Fatalf("ghost: %d, want 404", code)
+		t.Errorf("ghost: %d, want 404", code)
+		return
 	}
 
 	// Dispatch: the ACK row is queued.
 	resp, err = webtest.Post(t, srv.URL+"/run/linear-test")
 	if err != nil {
-		t.Fatalf("dispatch: %v", err)
+		t.Errorf("dispatch: %v", err)
+		return
 	}
 	ack := webtest.ReadAll(t, resp)
 	if !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("ACK: %s", ack)
+		t.Errorf("ACK: %s", ack)
+		return
 	}
 	id := webtest.ExecutionID(t, ack)
 
@@ -117,37 +131,44 @@ func TestWorkflowPageWithBootedCore(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("no success badge: %d, %s", code, row)
+			t.Errorf("no success badge: %d, %s", code, row)
+			return
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
 }
 
-// The no-input workflow (noinput-test — the blank parameter of the Go SDK)
-// has no form: the page has the plain Run button, and the dispatch (an
-// empty POST) enqueues with the zero payload.
-func TestNoinputPageHasNoFormAndDispatches(t *testing.T) {
+// The no-input workflow (noinput-test — the blank parameter of the Go
+// SDK) renders the bare runline: the runline form without inputs (the
+// zero payload), and the dispatch (an empty POST) enqueues with the
+// zero payload.
+func TestNoinputPageHasBareRunlineAndDispatches(t *testing.T) {
 	srv := bootedTestServer(t)
 	defer srv.Close()
 
 	code, body := webtest.Get(t, srv.URL+"/workflows/noinput-test")
 	if code != http.StatusOK {
-		t.Fatalf("noinput-test page: %d", code)
+		t.Errorf("noinput-test page: %d", code)
+		return
 	}
-	if strings.Contains(body, `<form`) {
-		t.Fatalf("noinput-test page has a form (it has no input)")
+	if !strings.Contains(body, `class="runline"`) {
+		t.Errorf("noinput-test page without the bare runline: %s", body)
+	}
+	if strings.Contains(body, `<input`) {
+		t.Errorf("noinput-test bare runline has inputs: %s", body)
 	}
 	if !strings.Contains(body, `hx-post="/run/noinput-test"`) {
-		t.Fatalf("noinput-test page without the Run button")
+		t.Errorf("noinput-test page without the run button")
 	}
 
 	resp, err := webtest.Post(t, srv.URL+"/run/noinput-test")
 	if err != nil {
-		t.Fatalf("dispatch noinput-test: %v", err)
+		t.Errorf("dispatch noinput-test: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	ack := webtest.ReadAll(t, resp)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(ack, `class="badge queued"`) {
-		t.Fatalf("dispatch noinput-test: %d, %s", resp.StatusCode, ack)
+		t.Errorf("dispatch noinput-test: %d, %s", resp.StatusCode, ack)
 	}
 }

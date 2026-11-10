@@ -40,18 +40,25 @@ func Branchy(ctx dbos.Context) error {
 	return nil
 }
 `
-	byName, _, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
+	byName, _, _, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
 	if err != nil {
-		t.Fatalf("pathsFromSources: %v", err)
+		t.Errorf("pathsFromSources: %v", err)
+		return
 	}
 	if len(byName) != 1 {
-		t.Fatalf("pathsFromSources: found %d workflows, want 1: %v", len(byName), byName)
+		t.Errorf("pathsFromSources: found %d workflows, want 1: %v", len(byName), byName)
+		return
 	}
-	if !equalPaths(byName["branchy"].Paths, [][]string{
+	w := byName["branchy"]
+	if w == nil {
+		t.Errorf("ByName: missing the branchy graph: %v", byName)
+		return
+	}
+	if !equalPaths(w.Paths, [][]string{
 		{"one", "two", "three", "five"},
 		{"one", "two", "four", "five"},
 	}) {
-		t.Fatalf("Paths(branchy): got %v", byName["branchy"].Paths)
+		t.Errorf("Paths(branchy): got %v", w.Paths)
 	}
 }
 
@@ -84,18 +91,25 @@ func Aliased(ctx dbostx.Context) error {
 	return nil
 }
 `
-	byName, _, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
+	byName, _, _, err := pathsFromSources(map[string][]byte{"workflows.go": []byte(src)})
 	if err != nil {
-		t.Fatalf("pathsFromSources: %v", err)
+		t.Errorf("pathsFromSources: %v", err)
+		return
 	}
 	if len(byName) != 1 {
-		t.Fatalf("pathsFromSources: found %d workflows, want 1: %v", len(byName), byName)
+		t.Errorf("pathsFromSources: found %d workflows, want 1: %v", len(byName), byName)
+		return
 	}
-	if !equalPaths(byName["aliased"].Paths, [][]string{
+	w := byName["aliased"]
+	if w == nil {
+		t.Errorf("ByName: missing the alias graph: %v", byName)
+		return
+	}
+	if !equalPaths(w.Paths, [][]string{
 		{"one", "two", "three"},
 		{"one", "three"},
 	}) {
-		t.Fatalf("Paths(aliased): got %v", byName["aliased"].Paths)
+		t.Errorf("Paths(aliased): got %v", w.Paths)
 	}
 }
 
@@ -125,4 +139,51 @@ func equalPaths(a, b [][]string) bool {
 		}
 	}
 	return true
+}
+
+// The Files map: each registered workflow name → the file that declared
+// its workflow func — the subpackage key keeps its dir/file form, the
+// flat key stays bare (the boot map's breadcrumb source).
+func TestPathsFromSourcesFiles(t *testing.T) {
+	const sub = `package pipeline
+
+import dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Pipeline, dbos.WithWorkflowName("pipeline"))
+}
+
+func Pipeline(ctx dbos.Context) error {
+	_ = dbos.RunAsStep(ctx, oneStep(), dbos.WithStepName("one"))
+	return nil
+}
+`
+	const flat = `package workflows
+
+import dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
+
+func Register(c dbos.Context) {
+	dbos.RegisterWorkflow(c, Flat, dbos.WithWorkflowName("flat"))
+}
+
+func Flat(ctx dbos.Context) error {
+	_ = dbos.RunAsStep(ctx, oneStep(), dbos.WithStepName("one"))
+	return nil
+}
+`
+	files := map[string][]byte{
+		"pipeline/pipeline.go": []byte(sub),
+		"workflows.go":         []byte(flat),
+	}
+	_, _, fs, err := pathsFromSources(files)
+	if err != nil {
+		t.Errorf("pathsFromSources: %v", err)
+		return
+	}
+	if fs["pipeline"] != "pipeline/pipeline.go" {
+		t.Errorf("Files[pipeline]: got %q, want pipeline/pipeline.go", fs["pipeline"])
+	}
+	if fs["flat"] != "workflows.go" {
+		t.Errorf("Files[flat]: got %q, want workflows.go", fs["flat"])
+	}
 }

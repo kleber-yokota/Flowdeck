@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"flowdeck/core"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/render"
 )
 
@@ -16,5 +17,5 @@ func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
 		render.Fail(w, "resume", err)
 		return
 	}
-	render.Partial(w, "badge.html", BadgeFor(ex.ID, ex.State))
+	render.Partial(w, "badge.html", badge.BadgeFor(ex.ID, ex.State))
 }

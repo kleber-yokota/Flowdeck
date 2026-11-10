@@ -7,6 +7,7 @@ import (
 
 	"flowdeck/core"
 	"flowdeck/core/reads"
+	"flowdeck/web/executions/badge"
 	"flowdeck/web/render"
 )
 
@@ -64,17 +65,8 @@ func runningRows(runs []reads.LiveRun, now time.Time) ([]runningRow, error) {
 			Name:    run.Name,
 			ID:      run.ID,
 			Started: created.Format("15:04"),
-			Elapsed: elapsedLabel(now.Sub(created)),
+			Elapsed: badge.ElapsedLabel(now.Sub(created)),
 		})
 	}
 	return rows, nil
-}
-
-// elapsedLabel renders the elapsed time: <60s "42s" · ≥60s "%dm %02ds".
-func elapsedLabel(d time.Duration) string {
-	seconds := int(d / time.Second)
-	if seconds < 60 {
-		return fmt.Sprintf("%ds", seconds)
-	}
-	return fmt.Sprintf("%dm %02ds", seconds/60, seconds%60)
 }

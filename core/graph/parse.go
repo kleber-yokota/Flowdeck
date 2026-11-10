@@ -15,35 +15,44 @@ import (
 // function name, so any import alias of the dbos package is found. A
 // RunAsStep call adds a step to every open path; an if forks the paths
 // (taken branch vs not-taken branch).
-func pathsFromSources(files map[string][]byte) (map[string]*WorkflowGraph, map[string]Spec, error) {
+func pathsFromSources(files map[string][]byte) (map[string]*WorkflowGraph, map[string]Spec, map[string]string, error) {
 	fset := token.NewFileSet()
 	funcs := map[string]*ast.FuncDecl{}
 	regs := map[string]string{} // registered name → workflow func name
 	funcPkg := map[string]string{}
+	funcFile := map[string]string{} // workflow func name → the file that declared it
 	pkgConstants := map[string]map[string]string{}
 	pkgTypes := map[string]map[string][]Param{}
 	for name, data := range files {
 		file, err := parser.ParseFile(fset, name, data, 0)
 		if err != nil {
-			return nil, nil, fmt.Errorf("parse %s: %w", name, err)
+			return nil, nil, nil, fmt.Errorf("parse %s: %w", name, err)
 		}
-		collectFuncs(file, funcs, funcPkg)
+		collectFuncs(file, name, funcs, funcPkg, funcFile)
 		collectRegistrations(file, regs)
 		collectConstants(file, pkgConstants)
 		collectTypes(file, pkgTypes)
 	}
+	filesByFunc := make(map[string]string, len(regs))
+	for name, fnName := range regs {
+		if f := funcFile[fnName]; f != "" {
+			filesByFunc[name] = f
+		}
+	}
 	return pathsFromRegistrations(regs, funcs),
-		specsFromRegistrations(regs, funcs, funcPkg, pkgConstants, pkgTypes), nil
+		specsFromRegistrations(regs, funcs, funcPkg, pkgConstants, pkgTypes), filesByFunc, nil
 }
 
 // collectFuncs records the file's function declarations (the workflow
-// func bodies are walked later, by possiblePaths) and the package each
-// func is declared in.
-func collectFuncs(file *ast.File, funcs map[string]*ast.FuncDecl, funcPkg map[string]string) {
+// func bodies are walked later, by possiblePaths), the package each
+// func is declared in, and the file path that declared it (the key of
+// the files map the parse walked).
+func collectFuncs(file *ast.File, fileKey string, funcs map[string]*ast.FuncDecl, funcPkg map[string]string, funcFile map[string]string) {
 	for _, decl := range file.Decls {
 		if fd, ok := decl.(*ast.FuncDecl); ok {
 			funcs[fd.Name.Name] = fd
 			funcPkg[fd.Name.Name] = file.Name.Name
+			funcFile[fd.Name.Name] = fileKey
 		}
 	}
 }
