@@ -23,6 +23,9 @@ func Register(mux *http.ServeMux, p core.Port) {
 	mux.HandleFunc("GET /executions/{id}/steps", func(w http.ResponseWriter, r *http.Request) {
 		handleExecutionSteps(w, r, p)
 	})
+	mux.HandleFunc("GET /executions/{id}/steps/{step}", func(w http.ResponseWriter, r *http.Request) {
+		handleStepDetail(w, r, p)
+	})
 	mux.HandleFunc("POST /resume/{id}", func(w http.ResponseWriter, r *http.Request) {
 		handleResume(w, r, p)
 	})
