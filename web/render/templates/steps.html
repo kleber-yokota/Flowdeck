@@ -1,9 +1,81 @@
-{{- if .Terminal }}
-<div class="executed-path">{{ .Graph }}</div>
-{{- else }}
-<div class="executed-path"
-    hx-get="/executions/{{ .WorkflowID }}/steps"
+<!-- The v6.3 split fragment: the step log (left) and the sticky executed
+     path (right). While live it renews itself every 2s (the same
+     self-renew pattern the page's poll uses); a terminal run is static. -->
+<div class="split exec-split"
+    {{if not .Terminal}}hx-get="/executions/{{ .WorkflowID }}/steps"
     hx-trigger="every 2s"
     hx-swap="outerHTML"
-    hx-target="this">{{ .Graph }}</div>
-{{- end }}
+    hx-target="this"
+    {{end}}>
+  <div class="split-left">
+    <div class="meta">
+      <span class="created">created {{ .CreatedAt.Format "02/01/2006 15:04" }}</span>
+      <span class="elapsed">elapsed {{ .Elapsed }}</span>
+      {{if .Inputs}}<span class="input">input: {{range .Inputs}}{{ .Name }}={{ .Value }} {{end}}</span>{{end}}
+      <span class="retries">retries: {{ .Retries }}</span>
+    </div>
+    <div class="actions">
+      {{if not .Terminal}}
+      <button type="button"
+              class="run"
+              hx-post="/cancel/{{ .WorkflowID }}"
+              hx-target="#badge"
+              hx-swap="innerHTML">
+        Cancel
+      </button>
+      {{end}}
+      {{if or (eq .State "error") (eq .State "cancelled")}}
+      <button type="button"
+              class="run"
+              hx-post="/resume/{{ .WorkflowID }}"
+              hx-target="#badge"
+              hx-swap="innerHTML">
+        Resume
+      </button>
+      {{end}}
+    </div>
+    <section class="steps">
+      {{range .Rows}}
+      {{if .Name}}
+      <div class="step">
+        <div class="logline"
+          {{if not .Child}}hx-get="/executions/{{ $.WorkflowID }}/steps/{{ .Name }}"
+          hx-target="#{{ .DetailID }}"
+          hx-swap="innerHTML"{{end}}>
+          <span class="t">{{ .T }}</span>
+          {{if .Mark}}<span class="mark">{{ .Mark }}</span>{{end}}
+          <span class="name">{{ .Name }}</span>
+          <span class="state {{ .StateClass }}">{{ .State }}</span>
+        </div>
+        <div class="detail" id="{{ .DetailID }}"></div>
+        {{if .Child}}
+        <div class="child-run">
+          <div class="child-head">
+            <span class="t">{{ .T }}</span>
+            <a class="wf-id" href="/executions/{{ .Child.ID }}">{{ .Child.ID }}</a>
+            {{template "badge.html" .Child.Badge}}
+          </div>
+          {{range .Child.Lines}}
+          <div class="child-line">
+            <span class="name">{{ .Name }}</span>
+            <span class="state done">{{ .Duration }}</span>
+          </div>
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <div class="tail-line">
+        <span class="t">{{ .T }}</span>
+        <span class="state {{ .StateClass }}">{{ .State }}</span>
+        <span class="cursor">▌</span>
+      </div>
+      {{end}}
+      {{end}}
+    </section>
+  </div>
+  <aside class="graph-side">
+    <p class="cmd">executed path</p>
+    {{ .Graph }}
+  </aside>
+</div>

@@ -2,6 +2,8 @@ package executions
 
 import (
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -9,14 +11,104 @@ import (
 	"flowdeck/web/internal/webtest"
 )
 
-// The executed-path partial (the steps of the run) against real runs
-// (the booted core, no stubs): the live fragment keeps the 2s poll, the
-// terminal fragment stops it and keeps the steps in execution order.
-// (The SVG coloring/ordering of the graph itself is unit-covered in
-// web/graph — here the HTTP fragment is what the page swaps.)
+// The steps partial (the v6.3 split fragment) against real runs (the
+// booted core, no stubs): the fragment root is the whole split (the meta
+// row, the actions, the step log with the child blocks and the tail, and
+// the sticky executed path); the live fragment keeps the 2s poll on the
+// split root, the terminal fragment stops it.
 
-// A live run (the block-test run): the fragment carries the hx attributes
-// that keep the 2s poll running.
+// The fragment root is the split itself: while live it carries the 2s
+// poll attributes; a terminal run has the same root without them.
+func TestStepsFragmentIsTheSplit(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	// Live run: the split root carries the poll attributes.
+	id := blockRun(t, srv)
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Errorf("steps: %d", code)
+	}
+	for _, want := range []string{
+		`class="split exec-split"`,
+		`hx-get="/executions/` + id + `/steps`,
+		`hx-trigger="every 2s"`,
+		`hx-swap="outerHTML"`,
+		`hx-target="this"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("fragment does not contain %q: %s", want, body)
+		}
+	}
+
+	// Terminal run: the same root, no poll attributes.
+	tid := webtest.ExecutionID(t, webtest.Ack(t, srv.URL, "live-test", nil))
+	webtest.Detail(t, srv.URL, tid, `class="badge success terminal"`)
+	code, body = webtest.Get(t, srv.URL+"/executions/"+tid+"/steps")
+	if code != http.StatusOK {
+		t.Errorf("steps: %d", code)
+	}
+	if !strings.Contains(body, `class="split exec-split"`) {
+		t.Errorf("fragment missing the split root: %s", body)
+	}
+	for _, no := range []string{
+		`hx-get="/executions/" + tid + "/steps"`,
+		`hx-trigger="every 2s"`,
+		`hx-swap="outerHTML"`,
+		`hx-target="this"`,
+	} {
+		if strings.Contains(body, no) {
+			t.Errorf("terminal fragment must not poll, but contains %q: %s", no, body)
+		}
+	}
+}
+
+// The fragment carries the meta row (created · elapsed · input ·
+// retries: 0) and the step log: one row per completed step, each with a
+// t+ start (one decimal) and the done duration; a terminal run has no
+// tail row.
+func TestStepsFragmentMetaAndLog(t *testing.T) {
+	srv := bootedTestServer(t)
+
+	id := webtest.ExecutionID(t, webtest.Dispatch(t, srv.URL, "linear-test", url.Values{"msg": {"FlowDeck"}}))
+	webtest.Detail(t, srv.URL, id, `class="badge success terminal"`)
+
+	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
+	if code != http.StatusOK {
+		t.Errorf("steps: %d", code)
+	}
+	for _, want := range []string{
+		`class="meta"`,
+		"created",
+		"elapsed",
+		"input: msg=FlowDeck",
+		"retries: 0",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("fragment does not contain %q: %s", want, body)
+		}
+	}
+	for _, step := range []string{"fetch", "parse", "transform", "store"} {
+		if !strings.Contains(body, ">"+step+"<") {
+			t.Errorf("fragment missing the log row %q: %s", step, body)
+		}
+	}
+	for _, re := range []*regexp.Regexp{
+		// html/template escapes the t+ value's plus sign in the text node
+		// (the rendered browser text stays the verbatim t+ value).
+		regexp.MustCompile(`t&#43;\d+\.\d+s`),
+		regexp.MustCompile(`done in \d+\.\d+s`),
+	} {
+		if !re.MatchString(body) {
+			t.Errorf("fragment missing a %q value: %s", re, body)
+		}
+	}
+	if strings.Contains(body, `class="tail-line"`) {
+		t.Errorf("terminal fragment must not have the tail row: %s", body)
+	}
+}
+
+// A live run (the block-test run): the split root carries the hx
+// attributes that keep the 2s poll running.
 func TestStepsPartialPollsWhenLive(t *testing.T) {
 	srv := bootedTestServer(t)
 
@@ -24,9 +116,10 @@ func TestStepsPartialPollsWhenLive(t *testing.T) {
 
 	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 	if code != http.StatusOK {
-		t.Fatalf("steps: %d", code)
+		t.Errorf("steps: %d", code)
 	}
 	for _, want := range []string{
+		`class="split exec-split"`,
 		`hx-get="/executions/` + id + `/steps`,
 		`hx-trigger="every 2s"`,
 		`hx-swap="outerHTML"`,
@@ -37,7 +130,7 @@ func TestStepsPartialPollsWhenLive(t *testing.T) {
 	}
 }
 
-// A terminal run (the live-test success run): the fragment has no hx
+// A terminal run (the live-test success run): the split root has no hx
 // attributes (the poll stops) and shows the step that ran.
 func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 	srv := bootedTestServer(t)
@@ -47,12 +140,15 @@ func TestStepsPartialTerminalStopsPolling(t *testing.T) {
 
 	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 	if code != http.StatusOK {
-		t.Fatalf("steps: %d", code)
+		t.Errorf("steps: %d", code)
+	}
+	if !strings.Contains(body, `class="split exec-split"`) {
+		t.Errorf("fragment missing the split root: %s", body)
 	}
 	if !strings.Contains(body, ">live<") {
 		t.Errorf("fragment must show the executed step: %s", body)
 	}
-	for _, no := range []string{`hx-trigger="every 2s"`, `hx-swap="outerHTML"`, `hx-target="this"`} {
+	for _, no := range []string{`hx-get="/executions/" + id + "/steps"`, `hx-trigger="every 2s"`, `hx-swap="outerHTML"`, `hx-target="this"`} {
 		if strings.Contains(body, no) {
 			t.Errorf("terminal fragment must not poll, but contains %q: %s", no, body)
 		}
@@ -69,14 +165,14 @@ func TestStepsPartialKeepsExecutionOrder(t *testing.T) {
 
 	code, body := webtest.Get(t, srv.URL+"/executions/"+id+"/steps")
 	if code != http.StatusOK {
-		t.Fatalf("steps: %d", code)
+		t.Errorf("steps: %d", code)
 	}
 	fetch := strings.Index(body, ">fetch<")
 	parse := strings.Index(body, ">parse<")
 	transform := strings.Index(body, ">transform<")
 	store := strings.Index(body, ">store<")
 	if fetch < 0 || parse < 0 || transform < 0 || store < 0 {
-		t.Fatalf("fragment missing steps (fetch=%d parse=%d transform=%d store=%d): %s", fetch, parse, transform, store, body)
+		t.Errorf("fragment missing steps (fetch=%d parse=%d transform=%d store=%d): %s", fetch, parse, transform, store, body)
 	}
 	if !(fetch < parse && parse < transform && transform < store) {
 		t.Errorf("steps out of execution order (fetch=%d parse=%d transform=%d store=%d)", fetch, parse, transform, store)
@@ -89,7 +185,7 @@ func TestStepsPartialUnknownExecutionIs404(t *testing.T) {
 	srv := bootedTestServer(t)
 
 	if code, _ := webtest.Get(t, srv.URL+"/executions/00000000-0000-0000-0000-000000000000/steps"); code != http.StatusNotFound {
-		t.Fatalf("steps: got %d want %d", code, http.StatusNotFound)
+		t.Errorf("steps: got %d want %d", code, http.StatusNotFound)
 	}
 }
 
@@ -98,6 +194,6 @@ func TestStepsPartialCoreDownIs503(t *testing.T) {
 	srv := testServer(t, core.NewPort())
 
 	if code, _ := webtest.Get(t, srv.URL+"/executions/abc/steps"); code != http.StatusServiceUnavailable {
-		t.Fatalf("steps: got %d want %d", code, http.StatusServiceUnavailable)
+		t.Errorf("steps: got %d want %d", code, http.StatusServiceUnavailable)
 	}
 }
