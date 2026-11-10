@@ -10,7 +10,7 @@ import (
 // start_date → defaultStartDate).
 
 func parseSpecs(files map[string][]byte) (map[string]Spec, error) {
-	_, specs, err := pathsFromSources(files)
+	_, specs, _, err := pathsFromSources(files)
 	return specs, err
 }
 
@@ -33,18 +33,21 @@ func Hello(ctx dbos.Context, msg string) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	spec, ok := specs["hello"]
 	if !ok {
-		t.Fatal("spec: workflow hello not found")
+		t.Error("spec: workflow hello not found")
+		return
 	}
 	if len(spec.Inputs) != 1 {
-		t.Fatalf("inputs: got %v, want 1", spec.Inputs)
+		t.Errorf("inputs: got %v, want 1", spec.Inputs)
+		return
 	}
 	in := spec.Inputs[0]
 	if in.Name != "msg" || in.Type != "string" || in.Default != "FlowDeck" {
-		t.Fatalf("input: got %+v, want {msg string FlowDeck}", in)
+		t.Errorf("input: got %+v, want {msg string FlowDeck}", in)
 	}
 }
 
@@ -66,17 +69,20 @@ func Schedule(ctx dbos.Context, start_date string) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	spec, ok := specs["schedule"]
 	if !ok {
-		t.Fatal("spec: workflow schedule not found")
+		t.Error("spec: workflow schedule not found")
+		return
 	}
 	if len(spec.Inputs) != 1 {
-		t.Fatalf("inputs: got %v, want 1", spec.Inputs)
+		t.Errorf("inputs: got %v, want 1", spec.Inputs)
+		return
 	}
 	if in := spec.Inputs[0]; in.Name != "start_date" || in.Type != "string" || in.Default != "2026-01-01" {
-		t.Fatalf("input: got %+v, want {start_date string 2026-01-01}", in)
+		t.Errorf("input: got %+v, want {start_date string 2026-01-01}", in)
 	}
 }
 
@@ -95,17 +101,20 @@ func Hello(ctx dbos.Context, msg string) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	spec, ok := specs["hello"]
 	if !ok {
-		t.Fatal("spec: workflow hello not found")
+		t.Error("spec: workflow hello not found")
+		return
 	}
 	if len(spec.Inputs) != 1 {
-		t.Fatalf("inputs: got %v, want 1", spec.Inputs)
+		t.Errorf("inputs: got %v, want 1", spec.Inputs)
+		return
 	}
 	if in := spec.Inputs[0]; in.Name != "msg" || in.Default != "" {
-		t.Fatalf("input: got %+v, want {msg string }", in)
+		t.Errorf("input: got %+v, want {msg string }", in)
 	}
 }
 
@@ -138,7 +147,8 @@ func Hello(ctx dbos.Context, msg string) error {
 `),
 	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Errorf("parse: %v", err)
+		return
 	}
 	// The two registrations (one per package) map to the two specs.
 	gotA, gotB := "A", "B"
@@ -151,6 +161,6 @@ func Hello(ctx dbos.Context, msg string) error {
 		}
 	}
 	if gotA != "A" || gotB != "B" {
-		t.Fatalf("per-package defaults: got %q %q", gotA, gotB)
+		t.Errorf("per-package defaults: got %q %q", gotA, gotB)
 	}
 }

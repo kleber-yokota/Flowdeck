@@ -22,6 +22,11 @@ type PathGraph struct {
 	// Specs is the built spec map: workflow name → parameter spec
 	// (input + step defaults). Read-only after the build.
 	Specs map[string]Spec
+	// Files is the built file map: workflow name → the source file that
+	// declared its workflow func (the walked key, subpackage paths kept
+	// as dir/file). Read-only after the build — the web renders the
+	// source breadcrumb from it.
+	Files map[string]string
 }
 
 // New builds the graph from the embedded source of the workflow packages —
@@ -47,11 +52,11 @@ func New(fsys fs.FS) (*PathGraph, error) {
 	if walkErr != nil {
 		return nil, walkErr
 	}
-	byName, specs, err := pathsFromSources(files)
+	byName, specs, filesByFunc, err := pathsFromSources(files)
 	if err != nil {
 		return nil, err
 	}
-	return &PathGraph{ByName: byName, Specs: specs}, nil
+	return &PathGraph{ByName: byName, Specs: specs, Files: filesByFunc}, nil
 }
 
 // Of returns the possible paths of the named workflow (the stored block
