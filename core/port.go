@@ -55,6 +55,8 @@ type Port struct {
 	// error + the failed step) and the executed path (the state + the steps
 	// that ran — the poll control rides on it).
 	Detail func(workflowID string) (reads.DetailPath, error)
+	// StepDetail reads the output or error of one step row of a run (the expand fragment's read).
+	StepDetail func(workflowID, step string) (reads.StepDetail, error)
 
 	// Resume re-enqueues a failed run by id (phase 5, RESUME — the same
 	// stored input, restarting from the last completed step) and returns
@@ -106,6 +108,7 @@ func NewPort() Port {
 		Status:     reads.Status,
 		Steps:      reads.Steps,
 		Detail:     reads.Detail,
+		StepDetail: reads.StepDetailOf,
 		Resume:     actions.Resume,
 		Cancel:     actions.Cancel,
 		Live:       reads.LiveCounts,
