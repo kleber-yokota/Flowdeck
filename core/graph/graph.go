@@ -1,7 +1,7 @@
 // Package graph is the possible-paths graph of the registered workflows:
 // workflow name → every sequence of steps that can run. It is computed
-// once at boot from the workflows package's embedded source (phase 4,
-// STEP 1) and served by plain map lookup — no re-parse, no DB. It is
+// once at boot from the workflows package's embedded source
+// and served by plain map lookup — no re-parse, no DB. It is
 // independent of the DBOS core: no Postgres, no executor state.
 package graph
 
@@ -13,7 +13,7 @@ import (
 
 // PathGraph is the possible-paths graph: workflow name → the stored block
 // model (the blocks, the read-back paths, the steps), plus the parameter
-// spec of each workflow (phase 5, BOOT).
+// spec of each workflow.
 type PathGraph struct {
 	// ByName is the built graph: workflow name → the stored block model. Read-only
 	// after the build — the web holds the graph through the Port and only reads

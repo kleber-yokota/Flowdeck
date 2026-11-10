@@ -107,7 +107,7 @@ func Ping(ctx dbos.Context) error {
 	}
 }
 
-// Phase 5, BOOT: the parser extracts each workflow's input (the name and
+// the parser extracts each workflow's input (the name and
 // type of the workflow function's first non-context parameter) and the
 // steps' default values (the literals the source passes to the step calls —
 // a step that takes the workflow's input has no default).

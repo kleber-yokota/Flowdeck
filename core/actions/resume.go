@@ -16,7 +16,7 @@ import (
 // it to a 400.
 var ErrNotResumable = errors.New("core: run cannot be resumed")
 
-// Resume re-enqueues a failed or cancelled run by id (phase 5, RESUME):
+// Resume re-enqueues a failed or cancelled run by id:
 // the cancelled run is re-enqueued by the SDK resume (it resumes after
 // the last completed step); the failed run is rewound — the SDK deletes
 // the step rows from the first failed row onward (the cut), keeps the

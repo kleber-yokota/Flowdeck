@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// Phase 4, STEP 1: given a source with a RegisterWorkflow registration,
+// given a source with a RegisterWorkflow registration,
 // the parser finds the workflow and generates its full graph — the steps
 // in order, forked by the if/else.
 func TestPathsFromSourcesFindsRegistrationAndGraph(t *testing.T) {

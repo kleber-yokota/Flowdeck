@@ -112,7 +112,7 @@ func run() error {
 	// live context.
 	workflows.RegisterAll(boot.Ctx())
 
-	// The possible-paths graph (phase 4, STEP 1): parse the embedded
+	// The possible-paths graph: parse the embedded
 	// workflows source (each file's RegisterWorkflow + the workflow funcs),
 	// once, before the web serves it.
 	if err := boot.SetWorkflowsSource(workflowsSource); err != nil {

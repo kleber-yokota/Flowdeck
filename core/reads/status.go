@@ -31,7 +31,7 @@ func ListByID(c dbos.Context, workflowID string) ([]dbos.WorkflowStatus, error) 
 //	SUCCESS -> success, ERROR/MAX_RECOVERY_ATTEMPTS_EXCEEDED -> error,
 //	CANCELLED -> cancelled
 //
-// It is the read half of the dispatch (phase 2): the web polls it every 2s
+// It is the read half of the dispatch: the web polls it every 2s
 // and swaps the badge. Nothing is executed here — the DBOS executor owns
 // the run, this only observes its durable state in the system database.
 func Status(workflowID string) (status.State, error) {
@@ -49,7 +49,7 @@ func Status(workflowID string) (status.State, error) {
 	return MapState(statuses[0].Status)
 }
 
-// MapState maps a DBOS workflow state onto the UI states (the phase 2
+// MapState maps a DBOS workflow state onto the UI states (the
 // contract: every DBOS state lands on one of the five, unknown states are
 // rejected, not guessed).
 func MapState(s dbos.WorkflowStatusType) (status.State, error) {

@@ -74,7 +74,7 @@ func Boot(ctx context.Context, appName, databaseURL string) error {
 	return nil
 }
 
-// SetWorkflowsSource builds the possible-paths graph (phase 4, STEP 1):
+// SetWorkflowsSource builds the possible-paths graph:
 // the parser (go/parser + go/ast) reads the source of the workflow packages
 // (the whole workflows tree, subpackages included — main.go embeds it with
 // //go:embed), finds each file's RegisterWorkflow registration and the

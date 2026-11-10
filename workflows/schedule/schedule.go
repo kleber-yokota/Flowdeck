@@ -18,14 +18,14 @@ func Register(c dbos.Context) {
 	)
 }
 
-// ScheduleArgs is the schedule workflow's input (phase 5: one form item
+// ScheduleArgs is the schedule workflow's input (one form item
 // per field, from the spec the core parses at boot).
 type ScheduleArgs struct {
 	Name      string
 	StartDate string
 }
 
-// The default values of the schedule's inputs (phase 5, BOOT: the parser
+// The default values of the schedule's inputs (the parser
 // extracts the const default<NamePascal> of the package).
 const (
 	defaultName      = "FlowDeck"

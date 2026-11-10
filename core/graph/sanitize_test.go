@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Phase 5, EXECUTE: the sanitization maps the raw form values onto the
+// the sanitization maps the raw form values onto the
 // workflow's clean input — the web posts the form values, sanitizes them
 // against the spec and forwards the clean input to the core. A nil values
 // map is the zero payload (a dispatch without a form).

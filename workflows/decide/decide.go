@@ -24,7 +24,7 @@ func Register(c dbos.Context) {
 
 // Decide is a workflow with a branch: after the first step, the second step
 // depends on the payload — two possible paths (base → left and base →
-// right). The if/else is what the boot parser (phase 4, STEP 1) forks on.
+// right). The if/else is what the boot parser forks on.
 func Decide(ctx dbos.Context, msg string) (string, error) {
 	base, err := dbos.RunAsStep(ctx, steps.EchoStep("base"), dbos.WithStepName("base"))
 	if err != nil {
