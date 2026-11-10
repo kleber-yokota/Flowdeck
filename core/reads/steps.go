@@ -214,25 +214,38 @@ func StepDetailOf(workflowID, step string) (StepDetail, error) {
 	if err != nil {
 		return StepDetail{}, fmt.Errorf("core: step %s in %s: %w", step, workflowID, err)
 	}
+	found, ok := stepRowBy(rows, step)
+	if !ok {
+		return StepDetail{}, fmt.Errorf("core: step %q not found in run %s", step, workflowID)
+	}
+	return stepDetailFrom(found), nil
+}
+
+// stepRowBy resolves the run's step rows by name (a repeated name — a loop
+// iteration — is the last row).
+func stepRowBy(rows []dbos.StepInfo, name string) (*dbos.StepInfo, bool) {
 	var found *dbos.StepInfo
 	for i := range rows {
-		if rows[i].StepName == step {
+		if rows[i].StepName == name {
 			found = &rows[i]
 		}
 	}
-	if found == nil {
-		return StepDetail{}, fmt.Errorf("core: step %q not found in run %s", step, workflowID)
-	}
+	return found, found != nil
+}
+
+// stepDetailFrom maps one step row to the read model: a failed step
+// exposes its error, not its output (the SDK stores the JSON text "" for a
+// step that did not return — fact 14, an artifact, not displayable
+// output); otherwise the stored output (the JSON text — a string result
+// arrives quoted).
+func stepDetailFrom(row *dbos.StepInfo) StepDetail {
 	d := StepDetail{}
-	if found.Error != nil {
-		d.Error = found.Error.Error()
-		// A failed step exposes its error, not its output: the SDK stores
-		// the JSON text "" (an empty string) for a step that did not
-		// return (fact 14) — it is an artifact, not displayable output.
-	} else if found.Output != nil {
-		if s, ok := jsonText(found.Output); ok {
-			d.Output = s
-		}
+	if row.Error != nil {
+		d.Error = row.Error.Error()
+		return d
 	}
-	return d, nil
+	if s, ok := jsonText(row.Output); ok {
+		d.Output = s
+	}
+	return d
 }
