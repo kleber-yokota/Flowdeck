@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -223,7 +224,7 @@ func TestRunningListNoStore(t *testing.T) {
 // malformed CreatedAt is an error (not a guess).
 func TestRunningRows(t *testing.T) {
 	now := time.Date(2026, 11, 4, 12, 4, 39, 0, time.UTC)
-	got, err := runningRows([]reads.LiveRun{{Name: "live-test", ID: "wf_1", State: "running", CreatedAt: "2026-11-04T12:04:05Z"}}, now)
+	got, err := runningRows([]board.LiveRun{{Name: "live-test", ID: "wf_1", State: "running", CreatedAt: "2026-11-04T12:04:05Z"}}, now)
 	if err != nil {
 		t.Errorf("runningRows: %v", err)
 		return
@@ -233,7 +234,7 @@ func TestRunningRows(t *testing.T) {
 		t.Errorf("rows: got %v, want %v", got, want)
 	}
 	// The malformed CreatedAt is an error (not a guess).
-	if _, err := runningRows([]reads.LiveRun{{Name: "live-test", ID: "wf_2", State: "running", CreatedAt: "not-a-time"}}, now); err == nil {
+	if _, err := runningRows([]board.LiveRun{{Name: "live-test", ID: "wf_2", State: "running", CreatedAt: "not-a-time"}}, now); err == nil {
 		t.Errorf("malformed created_at: no error")
 	}
 	// The elapsed format: <60s "42s" · ≥60s "%dm %02ds" (the helper now

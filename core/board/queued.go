@@ -1,4 +1,4 @@
-package reads
+package board
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -36,7 +37,7 @@ func Queued() ([]LiveRun, error) {
 	}
 	var runs []LiveRun
 	for _, s := range statuses {
-		st, err := MapState(s.Status)
+		st, err := reads.MapState(s.Status)
 		if err != nil {
 			return nil, err
 		}

@@ -4,6 +4,7 @@ package core
 
 import (
 	"flowdeck/core/actions"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
 	"flowdeck/core/graph"
 	"flowdeck/core/reads"
@@ -80,21 +81,21 @@ type LiveBoard interface {
 	// (firing the same workflow several times counts each run) · the
 	// workflows whose latest run is failed (error or cancelled) — a
 	// latest success with no live run is in no box.
-	Counts() (reads.Live, error)
+	Counts() (board.Live, error)
 	// Living — the runnings list: one row per running run (no dedup by
 	// workflow name), the SDK's desc order, not up → boot.ErrNotLaunched
 	// (like every other read).
-	Living() ([]reads.LiveRun, error)
+	Living() ([]board.LiveRun, error)
 	// Queued — the queued list: one row per queued run (no dedup by
 	// workflow name), the SDK's desc order, not up → boot.ErrNotLaunched
 	// (like every other read). The mirror of Living (the ENQUEUED ∪ DELAYED
 	// bucket).
-	Queued() ([]reads.LiveRun, error)
+	Queued() ([]board.LiveRun, error)
 	// Failed — one row per failed workflow (the latest run error ∪
 	// cancelled), with the error message (the batched error payload) —
-	// core/reads/failed.go. Not up → boot.ErrNotLaunched (like every other
+	// core/board/failed.go. Not up → boot.ErrNotLaunched (like every other
 	// read).
-	Failed() ([]reads.FailedRun, error)
+	Failed() ([]board.FailedRun, error)
 }
 
 type catalogAdapter struct{}
@@ -152,20 +153,20 @@ func (dispatchAdapter) Cancel(id string) (reads.Execution, error) {
 
 type liveBoardAdapter struct{}
 
-func (liveBoardAdapter) Counts() (reads.Live, error) {
-	return reads.LiveCounts()
+func (liveBoardAdapter) Counts() (board.Live, error) {
+	return board.LiveCounts()
 }
 
-func (liveBoardAdapter) Living() ([]reads.LiveRun, error) {
-	return reads.Living()
+func (liveBoardAdapter) Living() ([]board.LiveRun, error) {
+	return board.Living()
 }
 
-func (liveBoardAdapter) Queued() ([]reads.LiveRun, error) {
-	return reads.Queued()
+func (liveBoardAdapter) Queued() ([]board.LiveRun, error) {
+	return board.Queued()
 }
 
-func (liveBoardAdapter) Failed() ([]reads.FailedRun, error) {
-	return reads.Failed()
+func (liveBoardAdapter) Failed() ([]board.FailedRun, error) {
+	return board.Failed()
 }
 
 // NewPort returns the port wired to the live core instance. The graph

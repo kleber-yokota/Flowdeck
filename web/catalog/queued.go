@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"flowdeck/core"
-	"flowdeck/core/reads"
+	"flowdeck/core/board"
 	"flowdeck/web/executions/badge"
 	"flowdeck/web/render"
 )
@@ -54,7 +54,7 @@ func handleQueuedList(w http.ResponseWriter, p core.Port) {
 // since time (15:04) and the wait (<60s "42s" · ≥60s "1m 07s") computed
 // from the RFC3339 CreatedAt against now; a malformed CreatedAt is an
 // error (not a guess).
-func queuedRows(runs []reads.LiveRun, now time.Time) ([]queuedRow, error) {
+func queuedRows(runs []board.LiveRun, now time.Time) ([]queuedRow, error) {
 	rows := make([]queuedRow, 0, len(runs))
 	for _, run := range runs {
 		created, err := time.Parse(time.RFC3339, run.CreatedAt)
