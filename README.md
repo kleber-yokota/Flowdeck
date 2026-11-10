@@ -72,7 +72,6 @@ possible-paths graph](docs/screenshots/console.png)
 
 ![The execution detail — input, the steps, cancel and resume](docs/screenshots/detail.png)
 
-![The workflow wall — every registered workflow](docs/screenshots/workflows.png)
 
 ![The running page — the live runs, refreshed by the 5s poll](docs/screenshots/runnings.png)
 
