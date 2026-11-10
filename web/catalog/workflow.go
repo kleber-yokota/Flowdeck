@@ -8,6 +8,7 @@ import (
 
 	"flowdeck/core"
 	corengraph "flowdeck/core/graph"
+	"flowdeck/core/reads"
 	"flowdeck/core/registry"
 	"flowdeck/core/status"
 	"flowdeck/web/executions/badge"
@@ -93,12 +94,9 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	}
 	fileBase := path.Base(file)
 
-	// The paged runlines: parse ?page (clamp to 1), the offset is
+	// The paged runlines: parse ?page (clamped to 1), the offset is
 	// (page-1) times the page size.
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
+	page := pageFrom(r)
 	exs, err := p.Executions(name, execPageSize, (page-1)*execPageSize)
 	if err != nil {
 		render.Fail(w, "executions", err)
@@ -107,22 +105,8 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	rows := make([]badge.Runline, 0, len(exs.Rows))
 	for _, e := range exs.Rows {
 		row := badge.Row(e)
-		// The terminal rows only: the elapsed from the status update time
-		// (the completion), the last step of the executed path (a failed
-		// steps read leaves the row unenriched) and the exit — the
-		// decoded output on success, the error message on error (facts
-		// F2 · F3 · F4).
 		if row.Terminal {
-			row.Elapsed = badge.ElapsedLabel(e.UpdatedAt.Sub(e.CreatedAt))
-			if rp, err := p.Steps(e.ID); err == nil && len(rp.Steps) > 0 {
-				row.Step = rp.Steps[len(rp.Steps)-1].Name
-			}
-			switch e.State {
-			case status.Success:
-				row.Exit = e.Output
-			case status.Error:
-				row.Exit = e.Error
-			}
+			terminalRowFields(p, e, &row)
 		}
 		rows = append(rows, row)
 	}
@@ -141,6 +125,32 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 		FileBase: fileBase,
 		Title:    "Workflow " + name,
 	})
+}
+
+// pageFrom parses ?page (clamped to 1).
+func pageFrom(r *http.Request) int {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		return 1
+	}
+	return page
+}
+
+// terminalRowFields enriches the terminal runline: the elapsed (the status
+// update time minus the created), the last step of the executed path (a
+// failed steps read leaves the row unenriched) and the exit — the decoded
+// output on success, the error message on error (facts F2 · F3 · F4).
+func terminalRowFields(p core.Port, e reads.Execution, row *badge.Runline) {
+	row.Elapsed = badge.ElapsedLabel(e.UpdatedAt.Sub(e.CreatedAt))
+	if rp, err := p.Steps(e.ID); err == nil && len(rp.Steps) > 0 {
+		row.Step = rp.Steps[len(rp.Steps)-1].Name
+	}
+	switch e.State {
+	case status.Success:
+		row.Exit = e.Output
+	case status.Error:
+		row.Exit = e.Error
+	}
 }
 
 // registered reports whether name is in the registered list (the core
