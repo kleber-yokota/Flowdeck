@@ -5,7 +5,7 @@
 // fresh per-test file starts empty: the rows are the test's own
 // contribution), and every fired run is driven to a terminal state by its
 // owning test (the error · the cancel · the ok re-fire).
-package reads_test
+package board_test
 
 import (
 	"errors"
@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"flowdeck/core/actions"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
-	"flowdeck/core/reads"
 	"flowdeck/core/status"
 	"flowdeck/core/testcore"
 )
@@ -25,7 +25,7 @@ func TestFailedNotLaunchedIsError(t *testing.T) {
 	if boot.Ctx() != nil {
 		t.Skip("the env context is up — the guard is exercised only on the mock suite")
 	}
-	if _, err := reads.Failed(); !errors.Is(err, boot.ErrNotLaunched) {
+	if _, err := board.Failed(); !errors.Is(err, boot.ErrNotLaunched) {
 		t.Fatalf("err: %v, want boot.ErrNotLaunched", err)
 	}
 }
@@ -34,7 +34,7 @@ func TestFailedNotLaunchedIsError(t *testing.T) {
 func TestFailedEmpty(t *testing.T) {
 	testcore.BootTest(t, "../testworkflows")
 	quiesce(t)
-	runs, err := reads.Failed()
+	runs, err := board.Failed()
 	if err != nil {
 		t.Fatalf("Failed: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestFailedErrorRow(t *testing.T) {
 	if _, err := testcore.PollState(t, ex.ID, status.Error); err != nil {
 		t.Fatalf("poll to error: %v", err)
 	}
-	runs, err := reads.Failed()
+	runs, err := board.Failed()
 	if err != nil {
 		t.Fatalf("Failed: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestFailedCancelledRow(t *testing.T) {
 	if _, err := testcore.PollState(t, ca, status.Cancelled); err != nil {
 		t.Fatalf("poll to cancelled: %v", err)
 	}
-	runs, err := reads.Failed()
+	runs, err := board.Failed()
 	if err != nil {
 		t.Fatalf("Failed: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestFailedLatestRunWins(t *testing.T) {
 	if _, err := testcore.PollState(t, ca, status.Cancelled); err != nil {
 		t.Fatalf("poll to cancelled: %v", err)
 	}
-	runs, err := reads.Failed()
+	runs, err := board.Failed()
 	if err != nil {
 		t.Fatalf("Failed: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestFailedLatestRunWins(t *testing.T) {
 	if _, err := testcore.PollState(t, ok.ID, status.Success); err != nil {
 		t.Fatalf("poll to success: %v", err)
 	}
-	runs, err = reads.Failed()
+	runs, err = board.Failed()
 	if err != nil {
 		t.Fatalf("Failed: %v", err)
 	}

@@ -17,7 +17,7 @@ func TestPathsGraphFromTestworkflowsSource(t *testing.T) {
 	if err := boot.SetWorkflowsSource(os.DirFS("testworkflows")); err != nil {
 		t.Fatalf("SetWorkflowsSource: %v", err)
 	}
-	g := core.NewPort().Graph
+	g := core.NewPort().Graph()
 
 	// The single-step workflow: one path, one step, a sequence root.
 	wg := g.Of("inner-test")

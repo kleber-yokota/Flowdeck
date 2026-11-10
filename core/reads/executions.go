@@ -17,7 +17,7 @@ import (
 )
 
 // Execution is one run of a workflow as listed on the per-workflow page
-// (phase 3, LIST): the workflow ID, the badge state, the first execution
+// : the workflow ID, the badge state, the first execution
 // date (created_at), the status update time (updated_at — the terminal
 // completion time) and the terminal row fields (the decoded output and
 // the error message). The list is newest first.
@@ -39,7 +39,7 @@ type ExecutionPage struct {
 }
 
 // Executions lists one page of the runs of the named workflow, newest
-// first (phase 3, LIST → the console: GET /workflows/{name}?page=N):
+// first (the console: GET /workflows/{name}?page=N):
 // limit rows from the offset (before) — the SDK pages by limit + offset
 // (fact F1), so the read fetches limit+1 and the surplus is the HasMore
 // flag, without a total.

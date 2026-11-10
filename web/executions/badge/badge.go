@@ -78,7 +78,7 @@ func ElapsedLabel(d time.Duration) string {
 	return fmt.Sprintf("%dm %02ds", seconds/60, seconds%60)
 }
 
-// handleBadge renders the badge partial for the 2s poll (phase 2): the
+// handleBadge renders the badge partial for the 2s poll: the
 // live states (queued/running) carry the hx attributes that keep the poll
 // running; the terminal badge is static and stops the poll.
 func HandleBadge(w http.ResponseWriter, r *http.Request, p core.Port) {

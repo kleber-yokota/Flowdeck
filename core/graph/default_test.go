@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// Phase 5, BOOT: the parser extracts each workflow's inputs (one per
+// the parser extracts each workflow's inputs (one per
 // parameter of the source) and their default values — the input default
 // is the package-level constant default<NamePascal> (msg → defaultMsg,
 // start_date → defaultStartDate).

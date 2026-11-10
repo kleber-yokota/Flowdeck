@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"flowdeck/core"
-	"flowdeck/core/reads"
+	"flowdeck/core/board"
 	"flowdeck/web/render"
 )
 
@@ -78,7 +78,7 @@ func handleFailedList(w http.ResponseWriter, r *http.Request, p core.Port) {
 // failedRows maps the Failed read onto the partial's rows: the ts
 // ("02/01 15:04") from the RFC3339 CreatedAt (a malformed CreatedAt is an
 // error — not a guess), the status and the message copied from the row.
-func failedRows(runs []reads.FailedRun, now time.Time) ([]failedRow, error) {
+func failedRows(runs []board.FailedRun, now time.Time) ([]failedRow, error) {
 	rows := make([]failedRow, 0, len(runs))
 	for _, run := range runs {
 		created, err := time.Parse(time.RFC3339, run.CreatedAt)

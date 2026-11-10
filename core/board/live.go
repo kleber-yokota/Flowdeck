@@ -1,4 +1,4 @@
-package reads
+package board
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/boot"
+	"flowdeck/core/reads"
 	"flowdeck/core/status"
 )
 
@@ -50,7 +51,7 @@ func bucketLive(statuses []dbos.WorkflowStatus) (Live, error) {
 	var live Live
 	seen := map[string]bool{}
 	for _, s := range statuses {
-		st, err := MapState(s.Status)
+		st, err := reads.MapState(s.Status)
 		if err != nil {
 			return Live{}, err
 		}

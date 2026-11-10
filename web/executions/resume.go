@@ -8,7 +8,7 @@ import (
 	"flowdeck/web/render"
 )
 
-// handleResume re-enqueues a failed run by id (phase 5, RESUME) — the same
+// handleResume re-enqueues a failed run by id — the same
 // stored input; the ACK badge replaces the badge (the 2s poll takes over).
 func handleResume(w http.ResponseWriter, r *http.Request, p core.Port) {
 	id := r.PathValue("id")

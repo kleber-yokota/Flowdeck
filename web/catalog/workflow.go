@@ -81,13 +81,13 @@ func handleWorkflowPage(w http.ResponseWriter, r *http.Request, p core.Port) {
 	// The possible paths: the block diagram of the graph (rendered in this
 	// process — map lookup, no re-parse, no DB).
 	var svg template.HTML
-	if block := p.Graph.Of(name); block != nil {
+	if block := p.Graph().Of(name); block != nil {
 		svg = blocksvg.BlockToSVG(block)
 	}
 	// The source breadcrumb: the workflow's source file from the boot map
 	// (the file that declared the workflow func — map lookup, no re-parse,
 	// no scan). A flat file (dir ".") renders without the dir span.
-	file := p.Graph.Files[name]
+	file := p.Graph().Files[name]
 	fileDir := path.Dir(file)
 	if fileDir == "." {
 		fileDir = ""

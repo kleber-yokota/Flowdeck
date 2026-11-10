@@ -7,7 +7,7 @@ import (
 )
 
 // Spec is the parameter spec of one workflow, parsed from its source
-// (phase 5, BOOT): the workflow's inputs (each with its default value,
+// : the workflow's inputs (each with its default value,
 // the package constant default<NamePascal>) and the steps' default values.
 type Spec struct {
 	// Inputs is the workflow's input, in source order: the fields of the

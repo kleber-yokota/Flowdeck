@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
-	"flowdeck/core/reads"
 	"flowdeck/core/status"
 	"flowdeck/core/testcore"
 	"flowdeck/web/internal/webtest"
@@ -205,7 +205,7 @@ func TestFailedListNoStore(t *testing.T) {
 // (not a guess).
 func TestFailedRows(t *testing.T) {
 	now := time.Date(2026, 11, 4, 12, 4, 39, 0, time.UTC)
-	got, err := failedRows([]reads.FailedRun{{
+	got, err := failedRows([]board.FailedRun{{
 		Name: "failing-test", ID: "wf_1", State: "error",
 		CreatedAt: "2026-11-04T12:04:05Z", Message: "boom: step failed",
 	}}, now)
@@ -217,7 +217,7 @@ func TestFailedRows(t *testing.T) {
 		t.Fatalf("rows: got %v, want %v", got, want)
 	}
 	// The malformed CreatedAt is an error (not a guess).
-	if _, err := failedRows([]reads.FailedRun{{
+	if _, err := failedRows([]board.FailedRun{{
 		Name: "failing-test", ID: "wf_2", State: "cancelled",
 		CreatedAt: "not-a-time", Message: "",
 	}}, now); err == nil {

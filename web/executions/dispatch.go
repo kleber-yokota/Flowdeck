@@ -8,7 +8,7 @@ import (
 	"flowdeck/web/render"
 )
 
-// handleRunDispatch is the dispatch (phase 2): it reads the form (the web
+// handleRunDispatch is the dispatch: it reads the form (the web
 // sanitizes the values against the spec), enqueues in the core and returns
 // the execution row fragment (the ACK) — the browser prepends it to the
 // executions list and the badge starts the 2s poll.

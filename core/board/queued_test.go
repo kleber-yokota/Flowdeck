@@ -1,12 +1,12 @@
-package reads_test
+package board_test
 
 import (
 	"errors"
 	"testing"
 
 	"flowdeck/core/actions"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
-	"flowdeck/core/reads"
 	"flowdeck/core/status"
 	"flowdeck/core/testcore"
 )
@@ -41,7 +41,7 @@ func TestQueuedNoDedupByWorkflow(t *testing.T) {
 			t.Fatalf("poll to queued: %v", err)
 		}
 	}
-	runs, err := reads.Queued()
+	runs, err := board.Queued()
 	if err != nil {
 		t.Fatalf("Queued: %v", err)
 	}
@@ -50,10 +50,10 @@ func TestQueuedNoDedupByWorkflow(t *testing.T) {
 	}
 	for _, r := range runs {
 		if r.Name != "live-test" {
-			t.Fatalf("row name: got %q, want live-test", r.Name)
+			t.Errorf("row name: got %q, want live-test", r.Name)
 		}
 		if r.State != "queued" {
-			t.Fatalf("row state: got %q, want queued", r.State)
+			t.Errorf("row state: got %q, want queued", r.State)
 		}
 	}
 	have := map[string]bool{runs[0].ID: true, runs[1].ID: true}
@@ -124,7 +124,7 @@ func TestQueuedNotLaunchedIsError(t *testing.T) {
 	if boot.Ctx() != nil {
 		t.Skip("the env context is up — the guard is exercised only on the mock suite")
 	}
-	if _, err := reads.Queued(); !errors.Is(err, boot.ErrNotLaunched) {
+	if _, err := board.Queued(); !errors.Is(err, boot.ErrNotLaunched) {
 		t.Fatalf("err: %v, want boot.ErrNotLaunched", err)
 	}
 }
@@ -132,13 +132,13 @@ func TestQueuedNotLaunchedIsError(t *testing.T) {
 // absentFromQueued fails if id is a row of the queued runs.
 func absentFromQueued(t *testing.T, id string) {
 	t.Helper()
-	runs, err := reads.Queued()
+	runs, err := board.Queued()
 	if err != nil {
 		t.Fatalf("Queued: %v", err)
 	}
 	for _, r := range runs {
 		if r.ID == id {
-			t.Fatalf("the terminal run %s is a row of the queued runs", id)
+			t.Errorf("the terminal run %s is a row of the queued runs", id)
 		}
 	}
 }

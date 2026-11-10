@@ -1,4 +1,4 @@
-package reads_test
+package board_test
 
 import (
 	"testing"
@@ -7,6 +7,7 @@ import (
 	dbos "github.com/dbos-inc/dbos-transact-golang/dbos"
 
 	"flowdeck/core/actions"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
 	"flowdeck/core/reads"
 	"flowdeck/core/status"
@@ -61,13 +62,13 @@ func quiesce(t *testing.T) {
 // live-test's own contribution; no baseline).
 func liveAssert(t *testing.T, running, queued, failed int) {
 	t.Helper()
-	got, err := reads.LiveCounts()
+	got, err := board.LiveCounts()
 	if err != nil {
 		t.Fatalf("LiveCounts: %v", err)
 	}
-	want := reads.Live{Running: running, Queued: queued, Failed: failed}
+	want := board.Live{Running: running, Queued: queued, Failed: failed}
 	if got != want {
-		t.Fatalf("live counts: got %+v, want %+v", got, want)
+		t.Errorf("live counts: got %+v, want %+v", got, want)
 	}
 }
 
@@ -262,7 +263,7 @@ func TestLiveQueuedRunCountedUntilCancelled(t *testing.T) {
 		t.Fatalf("Status: %v", err)
 	}
 	if st != status.Queued {
-		t.Fatalf("state: got %s, want queued", st)
+		t.Errorf("state: got %s, want queued", st)
 	}
 	liveAssert(t, 0, 1, 0)
 	if _, err := actions.Cancel(id); err != nil {

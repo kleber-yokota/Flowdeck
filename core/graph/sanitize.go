@@ -12,8 +12,8 @@ import (
 // convert to the input's type). The web raises it as a 400.
 var ErrInvalidInput = errors.New("graph: invalid input")
 
-// Sanitize maps the raw form values onto the spec's clean input (phase 5,
-// EXECUTE): no extra fields, each value is trimmed and converts to the
+// Sanitize maps the raw form values onto the spec's clean input
+// : no extra fields, each value is trimmed and converts to the
 // input's type, the missing values fall back to the inputs' zero values.
 // The payload is the bare value (a single simple input) or the map of
 // field → value (a struct input). A nil values map is the zero payload

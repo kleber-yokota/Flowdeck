@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"flowdeck/core"
+	"flowdeck/core/board"
 	"flowdeck/core/boot"
-	"flowdeck/core/reads"
 	"flowdeck/core/status"
 	"flowdeck/core/testcore"
 	"flowdeck/web/internal/webtest"
@@ -186,7 +186,7 @@ func TestQueuedListNoStore(t *testing.T) {
 // malformed CreatedAt is an error (not a guess).
 func TestQueuedRows(t *testing.T) {
 	now := time.Date(2026, 11, 4, 12, 4, 39, 0, time.UTC)
-	got, err := queuedRows([]reads.LiveRun{{Name: "live-test", ID: "wf_1", State: "queued", CreatedAt: "2026-11-04T12:04:05Z"}}, now)
+	got, err := queuedRows([]board.LiveRun{{Name: "live-test", ID: "wf_1", State: "queued", CreatedAt: "2026-11-04T12:04:05Z"}}, now)
 	if err != nil {
 		t.Fatalf("queuedRows: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestQueuedRows(t *testing.T) {
 		t.Fatalf("rows: got %v, want %v", got, want)
 	}
 	// The malformed CreatedAt is an error (not a guess).
-	if _, err := queuedRows([]reads.LiveRun{{Name: "live-test", ID: "wf_2", State: "queued", CreatedAt: "not-a-time"}}, now); err == nil {
+	if _, err := queuedRows([]board.LiveRun{{Name: "live-test", ID: "wf_2", State: "queued", CreatedAt: "not-a-time"}}, now); err == nil {
 		t.Fatal("malformed created_at: no error")
 	}
 }

@@ -10,7 +10,8 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 | `core/actions/README.md` | Enqueue · Resume · Cancel · the guards · the queue selection (main · serial) · the ACK · recovery attempts (`WithMaxRecoveryAttempts` · `recovery_attempts`) · rewind cut |
 | `core/boot/README.md` | Launch · Shutdown · Ready · `ErrNotLaunched` · the explicit Boot · `SetWorkflowsSource` · `warnUnregistered` · the paths |
 | `core/registry/README.md` | List (the registered workflows) · Spec · `SpecOf` · `ErrUnknownWorkflow` · the empty state |
-| `core/reads/README.md` | Executions · the pagination (`limit` · `before` · `HasMore`) · Status (MapState) · Steps (the wait-row names · the child rows) · Detail (the attempts mapping) · Live · `ErrUnknownExecution` |
+| `core/reads/README.md` | Executions · the pagination (`limit` · `before` · `HasMore`) · Status (MapState) · Steps (the wait-row names · the child rows) · Detail (the attempts mapping) · `ErrUnknownExecution` |
+| `core/board/README.md` | Live (the three live boxes · the counts) · Living · Queued · Failed (the failed workflows read) · the state mapping edge (`MapState`) |
 | `core/status/README.md` | the states · the terminal rule · the badge colors |
 | `core/graph/README.md` | the possible-paths graph · the block model · the spec from source · the default constants · Sanitize · `ErrInvalidInput` · the source files (`Files`) · `TestGraphBuild` |
 | `core/testcore/README.md` | the test setup · `BootTest` · `TestMain` · `PollState` · `MustStepNames` · the per-test boot |

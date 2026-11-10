@@ -18,7 +18,7 @@ const (
 	KindWait  = "wait"
 )
 
-// Step is one row of the run's executed path (phase 4, STEP 3): the row
+// Step is one row of the run's executed path: the row
 // name, its badge state (a row's error is a failed row, the rest are
 // success rows) and its kind; for a child row — the child id and the
 // child workflow's name and badge state (fetched from the child rows).
@@ -121,8 +121,8 @@ func stepRow(row dbos.StepInfo, children map[string]childInfo) Step {
 	return s
 }
 
-// RunPath is the read model of the executed path of a run (phase 4,
-// STEP 3): the run's state (the poll control — a terminal state stops the
+// RunPath is the read model of the executed path of a run
+// : the run's state (the poll control — a terminal state stops the
 // 2s polling of the fragment) and the steps that ran, in execution order.
 type RunPath struct {
 	State status.State
@@ -131,7 +131,7 @@ type RunPath struct {
 
 // Steps returns the executed path of a run: the state and the steps that
 // ran, in execution order (step_id asc — the branch of the if the run
-// took), read from the step rows in Postgres (phase 4, STEP 3:
+// took), read from the step rows in Postgres (
 // GET /executions/{id}/steps → STEPS(id) → SELECT status · steps · id). It
 // is separate from the boot map of possible paths: the map is code, the
 // path is what ran. The row mapping (stepRows, the batched child query) is

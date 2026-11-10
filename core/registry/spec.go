@@ -7,10 +7,10 @@ import (
 	"flowdeck/core/graph"
 )
 
-// Spec returns the parameter spec of the named workflow (phase 5, BOOT):
+// Spec returns the parameter spec of the named workflow:
 // the input and the steps' default values — the web renders them on top
 // of the workflow page and sanitizes the dispatch's form values against
-// them before the enqueue (phase 5, EXECUTE).
+// them before the enqueue.
 func Spec(name string) (graph.Spec, error) {
 	spec, ok := SpecOf(name)
 	if !ok {

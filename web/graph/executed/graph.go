@@ -13,7 +13,7 @@ import (
 // Children — one child per distinct next step, so the if forks the
 // children. Terminal marks a step where some path ends. State is the
 // step's state on the executed path (success/error) — empty on the
-// possible-paths map (phase 4, STEP 2), where no step has run.
+// possible-paths map, where no step has run.
 //
 // The grouping pass (task 02) annotates the nodes: Kind is the glyph
 // (step · child · wait), Count is the ×N of the loop/collapse group, Loop
@@ -238,7 +238,7 @@ func stepNode(s reads.Step) pathNode {
 	return n
 }
 
-// ExecutedPathToSVG renders the executed path of a run (phase 4, STEP 3)
+// ExecutedPathToSVG renders the executed path of a run
 // as the same graph as the possible paths, with the steps that ran, in
 // execution order — grouped (task 02): the parallel members fork the fork
 // point (the ∥ mark between the member boxes), the loop body is one box

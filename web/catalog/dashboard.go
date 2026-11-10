@@ -82,10 +82,10 @@ func handleWorkflowsList(w http.ResponseWriter, r *http.Request, p core.Port) {
 	})
 }
 
-// handleLive renders the live partial (the three boxes: the Port.Live
+// handleLive renders the live partial (the three boxes: the Port.Counts
 // counts) with no-store (the 5s poll).
 func handleLive(w http.ResponseWriter, p core.Port) {
-	live, err := p.Live()
+	live, err := p.Counts()
 	if err != nil {
 		render.Fail(w, "live", err)
 		return
