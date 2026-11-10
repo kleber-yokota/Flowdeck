@@ -211,6 +211,208 @@ body {
 
 .run:hover { border-color: var(--accent); color: var(--accent); }
 
+/* The execution page (the re-implanted detail: the badge, the split fragment —
+   the meta row, the actions, the step log with the child blocks and the
+   dashed tail, and the sticky executed path) */
+
+/* The badge state (the span: inline-block, mono, small, rounded; the state
+   color from the pinned palette, a subtle matching background; terminal =
+   the stopped state, no poll) */
+.badge {
+  display: inline-block;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.badge.queued {
+  color: var(--queued);
+  background: color-mix(in srgb, var(--queued) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--queued) 30%, var(--line));
+}
+.badge.running {
+  color: var(--running);
+  background: color-mix(in srgb, var(--running) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--running) 30%, var(--line));
+}
+.badge.success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--success) 30%, var(--line));
+}
+.badge.error {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--error) 30%, var(--line));
+}
+.badge.cancelled {
+  color: var(--cancelled);
+  background: color-mix(in srgb, var(--cancelled) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--cancelled) 30%, var(--line));
+}
+.badge.terminal { opacity: 0.8; }
+
+/* The meta row (created · elapsed · input · retries): mono, small, soft;
+   the · separators between the cells */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--soft);
+  margin-bottom: 0.75rem;
+}
+.meta > * + *::before {
+  content: "·";
+  margin-right: 0.5rem;
+  color: var(--soft);
+}
+
+/* The actions (the cancel / resume buttons — the .run style already exists) */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* The step log (the left column of the split) */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.step {
+  padding: 0.15rem 0;
+}
+
+/* The logline (the clickable row: the expand target below) */
+.logline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.logline:hover { background: var(--panel); }
+.logline .t {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--soft);
+}
+.logline .name { color: var(--ink); }
+.logline .state {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  margin-left: auto;
+}
+.state.done { color: var(--steel); }
+.state.error { color: var(--error); }
+
+/* The child mark (the └─ child of the launching row) */
+.child-mark {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.75rem;
+  color: var(--soft);
+}
+
+/* The expand target (empty before the swap; holds the step-detail fragment) */
+.detail {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+}
+
+/* The expand contents (the step output / error, from the step-detail
+   fragment): mono, small, scrollable */
+.output {
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.error {
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--error);
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+/* The dashed tail row (the live run: the … t span, the running state,
+   the cursor) */
+.tail-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--soft);
+}
+.tail-line .state { margin-left: auto; color: var(--running); }
+
+/* The cursor (the ▌ — a css-only blink, no JS) */
+.cursor {
+  color: var(--accent);
+  animation: cursor-blink 1s step-end infinite;
+}
+@keyframes cursor-blink {
+  50% { opacity: 0; }
+}
+
+/* The child block (under its launching step: indented, a left rule) */
+.child-run {
+  margin: 0.25rem 0 0.25rem 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--line);
+}
+
+/* The child head (the t span · the child's id deep link · the child's badge) */
+.child-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.child-head .t {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--soft);
+}
+
+/* The child's step lines (nested, smaller) */
+.child-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+}
+.child-line .name { color: var(--steel); }
+.child-line .state {
+  font-family: ui-monospace, "Geist Mono", monospace;
+  font-size: 0.7rem;
+  margin-left: auto;
+  color: var(--soft);
+}
+
+/* The sticky executed path (scoped to the execution split — the workflow
+   console's .graph-side is untouched) */
+.exec-split .graph-side { position: sticky; top: 0; }
+
 /* The execrow (the runline row: badge · id · elapsed · step · exit · actions) */
 .exec-row.wf {
   grid-template-columns: 110px minmax(0, 1fr) 80px 80px minmax(0, 1fr) auto;

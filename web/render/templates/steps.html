@@ -43,7 +43,7 @@
           hx-target="#{{ .DetailID }}"
           hx-swap="innerHTML"{{end}}>
           <span class="t">{{ .T }}</span>
-          {{if .Mark}}<span class="mark">{{ .Mark }}</span>{{end}}
+          {{if .Mark}}<span class="child-mark">{{ .Mark }}</span>{{end}}
           <span class="name">{{ .Name }}</span>
           <span class="state {{ .StateClass }}">{{ .State }}</span>
         </div>
