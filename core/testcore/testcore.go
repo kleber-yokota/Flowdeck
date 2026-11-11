@@ -8,6 +8,7 @@ package testcore
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path"
@@ -33,8 +34,17 @@ import (
 // Tests read the live context from the return — no env, no shared DB.
 func BootTest(t *testing.T, dir string, register ...func(dbos.Context)) dbos.Context {
 	t.Helper()
-	if err := boot.Boot(context.Background(), "flowdeck_test",
-		"sqlite:"+path.Join(t.TempDir(), "test.db")); err != nil {
+	c, _ := BootTestDB(t, dir, register...)
+	return c
+}
+
+// BootTestDB is BootTest with the fresh sqlite file path returned: the
+// read-failure contract tests reach the file itself (a second connection
+// drops a schema table — DropTable).
+func BootTestDB(t *testing.T, dir string, register ...func(dbos.Context)) (dbos.Context, string) {
+	t.Helper()
+	dbfile := path.Join(t.TempDir(), "test.db")
+	if err := boot.Boot(context.Background(), "flowdeck_test", "sqlite:"+dbfile); err != nil {
 		t.Fatalf("boot: %v", err)
 	}
 	c := boot.Ctx()
@@ -53,7 +63,57 @@ func BootTest(t *testing.T, dir string, register ...func(dbos.Context)) dbos.Con
 		t.Fatalf("launch: %v", err)
 	}
 	t.Cleanup(func() { boot.Shutdown(5 * time.Second) })
-	return boot.Ctx()
+	return c, dbfile
+}
+
+// secondConnDSN is the DSN of the second sqlite connection: the busy
+// timeout lets the drop wait out the booted core's in-flight writes
+// (the live executor polls and claims while the schema is manipulated).
+const secondConnDSN = "?_pragma=busy_timeout(10000)"
+
+func openSecondConn(t *testing.T, dbfile string) *sql.DB {
+	t.Helper()
+	conn, err := sql.Open("sqlite", dbfile+secondConnDSN)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	return conn
+}
+
+// SetUnmappedState writes a state the SDK cannot produce into the run's
+// status row through a second sqlite connection: the read must reject the
+// unmapped state, not guess it.
+func SetUnmappedState(t *testing.T, dbfile, id string) {
+	t.Helper()
+	conn := openSecondConn(t, dbfile)
+	if _, err := conn.Exec("UPDATE workflow_status SET status = 'BOGUS' WHERE workflow_uuid = ?", id); err != nil {
+		t.Fatalf("set unmapped state: %v", err)
+	}
+}
+
+// DropTable drops one schema table through a second sqlite connection on
+// the booted file: the live connection's next read re-reads the schema
+// and fails (the real-DB read-failure state, no mock). The booted test's
+// fresh DB makes the drop harmless.
+func DropTable(t *testing.T, dbfile, table string) {
+	t.Helper()
+	conn := openSecondConn(t, dbfile)
+	if _, err := conn.Exec("DROP TABLE " + table); err != nil {
+		t.Fatalf("drop %s: %v", table, err)
+	}
+}
+
+// DeleteStatusRow deletes one run's status row through a second sqlite
+// connection on the booted file: the run is gone — its reads return the
+// unknown-execution error (the real-DB gone-row state, no mock). The run
+// must be terminal (no live executor writes while the row is gone).
+func DeleteStatusRow(t *testing.T, dbfile, id string) {
+	t.Helper()
+	conn := openSecondConn(t, dbfile)
+	if _, err := conn.Exec("DELETE FROM workflow_status WHERE workflow_uuid = ?", id); err != nil {
+		t.Fatalf("delete status row %s: %v", id, err)
+	}
 }
 
 // TestMain is the shared TestMain body: it sets the workflows source
