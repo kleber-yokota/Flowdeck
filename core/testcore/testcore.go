@@ -71,7 +71,11 @@ func BootTestDB(t *testing.T, dir string, register ...func(dbos.Context)) (dbos.
 // (the live executor polls and claims while the schema is manipulated).
 const secondConnDSN = "?_pragma=busy_timeout(10000)"
 
-func openSecondConn(t *testing.T, dbfile string) *sql.DB {
+// OpenSecondConn opens the second sqlite connection on the booted file:
+// the busy timeout lets the write wait out the booted core's in-flight
+// writes (the live executor polls and claims while the schema or rows are
+// manipulated). The cleanup closes it.
+func OpenSecondConn(t *testing.T, dbfile string) *sql.DB {
 	t.Helper()
 	conn, err := sql.Open("sqlite", dbfile+secondConnDSN)
 	if err != nil {
@@ -86,7 +90,7 @@ func openSecondConn(t *testing.T, dbfile string) *sql.DB {
 // unmapped state, not guess it.
 func SetUnmappedState(t *testing.T, dbfile, id string) {
 	t.Helper()
-	conn := openSecondConn(t, dbfile)
+	conn := OpenSecondConn(t, dbfile)
 	if _, err := conn.Exec("UPDATE workflow_status SET status = 'BOGUS' WHERE workflow_uuid = ?", id); err != nil {
 		t.Fatalf("set unmapped state: %v", err)
 	}
@@ -98,7 +102,7 @@ func SetUnmappedState(t *testing.T, dbfile, id string) {
 // fresh DB makes the drop harmless.
 func DropTable(t *testing.T, dbfile, table string) {
 	t.Helper()
-	conn := openSecondConn(t, dbfile)
+	conn := OpenSecondConn(t, dbfile)
 	if _, err := conn.Exec("DROP TABLE " + table); err != nil {
 		t.Fatalf("drop %s: %v", table, err)
 	}
@@ -110,7 +114,7 @@ func DropTable(t *testing.T, dbfile, table string) {
 // must be terminal (no live executor writes while the row is gone).
 func DeleteStatusRow(t *testing.T, dbfile, id string) {
 	t.Helper()
-	conn := openSecondConn(t, dbfile)
+	conn := OpenSecondConn(t, dbfile)
 	if _, err := conn.Exec("DELETE FROM workflow_status WHERE workflow_uuid = ?", id); err != nil {
 		t.Fatalf("delete status row %s: %v", id, err)
 	}

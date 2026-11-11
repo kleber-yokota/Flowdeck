@@ -2,7 +2,6 @@ package actions_test
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -126,28 +125,33 @@ func TestResumeRewindFailure(t *testing.T) {
 	}
 }
 
-
-
-
-
 // The SDK cancel retries its begin-immediate transaction with a backoff:
 // with a second connection holding the write lock (BEGIN IMMEDIATE), the
 // first attempt fails busy; a row deleted during the backoff makes the
 // retry's update match nothing, and the cancel returns the wrapped
 // not-exist error — the guard read had succeeded (the failure is inside
-// the SDK cancel).
+// the SDK cancel). The run is enqueued on a queue no runner listens to,
+// so the executor never dequeues it: the seam is the cancel's busy-retry
+// itself, not a race with the queue runner for the write lock.
 func TestCancelOfARunDeletedDuringTheRetryBackoff(t *testing.T) {
 	_, dbfile := testcore.BootTestDB(t, "../testworkflows")
-	db, err := sql.Open("sqlite", dbfile)
-	if err != nil {
-		t.Fatalf("open second conn: %v", err)
-	}
-	t.Cleanup(func() { db.Close() })
+	// The busy_timeout DSN (OpenSecondConn) lets the BEGIN IMMEDIATE wait
+	// out the queue runner's in-flight dequeue writes.
+	db := testcore.OpenSecondConn(t, dbfile)
+
 	for attempt := 0; attempt < 10; attempt++ {
-		ex, err := actions.Enqueue("block-test", 1)
+		// Enqueue directly on a queue with no runner: the run row is never
+		// dequeued, so the second conn's BEGIN IMMEDIATE always wins the
+		// write lock — no race with the queue runner.
+		c, err := boot.CtxOrErr()
+		if err != nil {
+			t.Fatalf("ctx: %v", err)
+		}
+		handle, err := c.Enqueue(c, "no-runner", "block-test", 1)
 		if err != nil {
 			t.Fatalf("Enqueue: %v", err)
 		}
+		id := handle.GetWorkflowID()
 		conn, err := db.Conn(context.Background())
 		if err != nil {
 			t.Fatalf("second conn: %v", err)
@@ -159,14 +163,14 @@ func TestCancelOfARunDeletedDuringTheRetryBackoff(t *testing.T) {
 		go func() {
 			defer close(done)
 			time.Sleep(20 * time.Millisecond)
-			if _, err := conn.ExecContext(context.Background(), "DELETE FROM workflow_status WHERE workflow_uuid = ?", ex.ID); err != nil {
+			if _, err := conn.ExecContext(context.Background(), "DELETE FROM workflow_status WHERE workflow_uuid = ?", id); err != nil {
 				t.Errorf("delete: %v", err)
 			}
 			if _, err := conn.ExecContext(context.Background(), "COMMIT"); err != nil {
 				t.Errorf("commit: %v", err)
 			}
 		}()
-		if _, err := actions.Cancel(ex.ID); err != nil && strings.Contains(err.Error(), "does not exist") {
+		if _, err := actions.Cancel(id); err != nil && strings.Contains(err.Error(), "does not exist") {
 			<-done
 			return
 		}
@@ -183,17 +187,23 @@ func TestCancelOfARunDeletedDuringTheRetryBackoff(t *testing.T) {
 // (the failure is inside the SDK resume).
 func TestResumeOfARunDeletedDuringTheRetryBackoff(t *testing.T) {
 	_, dbfile := testcore.BootTestDB(t, "../testworkflows")
-	db, err := sql.Open("sqlite", dbfile)
-	if err != nil {
-		t.Fatalf("open second conn: %v", err)
-	}
-	t.Cleanup(func() { db.Close() })
+	// The busy_timeout DSN (OpenSecondConn) lets the BEGIN IMMEDIATE wait
+	// out the queue runner's in-flight dequeue writes.
+	db := testcore.OpenSecondConn(t, dbfile)
 	for attempt := 0; attempt < 10; attempt++ {
-		ex, err := actions.Enqueue("block-test", 1)
+		// Enqueue directly on a queue with no runner: the run row is never
+		// dequeued, so the second conn's BEGIN IMMEDIATE always wins the
+		// write lock — no race with the queue runner.
+		c, err := boot.CtxOrErr()
+		if err != nil {
+			t.Fatalf("ctx: %v", err)
+		}
+		handle, err := c.Enqueue(c, "no-runner", "block-test", 1)
 		if err != nil {
 			t.Fatalf("Enqueue: %v", err)
 		}
-		if _, err := actions.Cancel(ex.ID); err != nil {
+		id := handle.GetWorkflowID()
+		if _, err := actions.Cancel(id); err != nil {
 			t.Fatalf("Cancel: %v", err)
 		}
 		conn, err := db.Conn(context.Background())
@@ -207,14 +217,14 @@ func TestResumeOfARunDeletedDuringTheRetryBackoff(t *testing.T) {
 		go func() {
 			defer close(done)
 			time.Sleep(20 * time.Millisecond)
-			if _, err := conn.ExecContext(context.Background(), "DELETE FROM workflow_status WHERE workflow_uuid = ?", ex.ID); err != nil {
+			if _, err := conn.ExecContext(context.Background(), "DELETE FROM workflow_status WHERE workflow_uuid = ?", id); err != nil {
 				t.Errorf("delete: %v", err)
 			}
 			if _, err := conn.ExecContext(context.Background(), "COMMIT"); err != nil {
 				t.Errorf("commit: %v", err)
 			}
 		}()
-		if _, err := actions.Resume(ex.ID); err != nil && strings.Contains(err.Error(), "does not exist") {
+		if _, err := actions.Resume(id); err != nil && strings.Contains(err.Error(), "does not exist") {
 			<-done
 			return
 		}
