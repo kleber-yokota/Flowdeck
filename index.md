@@ -30,6 +30,7 @@ Navigation, not knowledge: one row per page. The `covers` column is the keyword 
 
 - Boundaries and contacts (who imports whom, at the group level): `diagrams/package-map.html` (the boundary map)
 - The green baseline (the suites) and the structural gates: `diagrams/package-map.html#suites` · `#gates`
+- The coverage analysis (the per-package numbers and the documented unreachable branches): `docs/coverage.md`
 - The agent briefs: `agent-task.md` · `agent-write-task.md` · `agent-diagram.md` · `AGENT.md` (the markdown rule)
 
 ## scope
