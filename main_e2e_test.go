@@ -122,18 +122,20 @@ func TestRunOfAConflictingSerialQueueIsALaunchError(t *testing.T) {
 	}
 }
 
-// main() with a working config: the real serve (the real listen, the real
+// run() with a working config: the real serve (the real listen, the real
 // core), a ready /healthz, and the clean stop on SIGTERM (the docker
 // compose stop signal — run registered the handler, so the Go runtime
-// delivers it to the context, not the process exit).
-func TestMainOfAWorkingCoreServesAndStopsOnSIGTERM(t *testing.T) {
+// delivers it to the context, not the process exit). run, not main: the
+// healthcheck flag lives in main, and redefining it in the same process
+// (a -count=2 run) panics.
+func TestRunOfAWorkingCoreServesAndStopsOnSIGTERM(t *testing.T) {
 	dsn := "sqlite:" + filepath.Join(t.TempDir(), "serve.db")
 	addr := freePort(t)
 	setE2EEnv(t, dsn, addr)
 
 	done := make(chan struct{})
 	go func() {
-		main()
+		run()
 		close(done)
 	}()
 
@@ -143,7 +145,7 @@ func TestMainOfAWorkingCoreServesAndStopsOnSIGTERM(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(30 * time.Second):
-		t.Fatalf("main did not stop within 30s of the SIGTERM")
+		t.Fatalf("run did not stop within 30s of the SIGTERM")
 	}
 }
 
