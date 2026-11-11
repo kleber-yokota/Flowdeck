@@ -1,6 +1,6 @@
 module flowdeck
 
-go 1.27.3
+go 1.27.4
 
 require github.com/dbos-inc/dbos-transact-golang v1.7.0
 
