@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -22,11 +23,17 @@ func ensureUnbooted(t *testing.T) {
 }
 
 // The port of a not-launched core: the catalog reads are empty or
-// unknown (no registry; the TestMain source is set, so the graph is the
-// source graph and the unknown spec is an error), and every run, dispatch
-// and board read returns ErrNotLaunched (the web maps the 503).
+// unknown (no registry; the source is set, so the graph is the source
+// graph and the unknown spec is an error), and every run, dispatch and
+// board read returns ErrNotLaunched (the web maps the 503). The source is
+// set in the body (TestMain sets it too): a previous test's shutdown
+// resets the paths graph, so the assertion must not depend on test order
+// (the race run shuffles the suite).
 func TestPortOfAnUnbootedCore(t *testing.T) {
 	ensureUnbooted(t)
+	if err := boot.SetWorkflowsSource(os.DirFS("testworkflows")); err != nil {
+		t.Fatalf("set workflows source: %v", err)
+	}
 	p := NewPort()
 
 	if got := p.List(); got != nil {
@@ -160,8 +167,15 @@ func TestPortOfABootedCore(t *testing.T) {
 
 // After a shutdown the paths graph is reset: the port's Graph falls back
 // to the empty graph (Of returns nil — the web renders the empty catalog).
+// The test boots its own core and shuts it down in the body: the
+// assertion must not depend on test order (the race run shuffles the
+// suite — a test that ran first would see TestMain's source graph, not
+// a post-shutdown one).
 func TestPortGraphAfterShutdownIsEmpty(t *testing.T) {
 	ensureUnbooted(t)
+	_, _ = testcore.BootTestDB(t, "testworkflows")
+	// The explicit shutdown (the t.Cleanup shutdown becomes a no-op):
+	boot.Shutdown(5 * time.Second)
 	if g := NewPort().Graph(); g == nil || g.Of("linear-test") != nil {
 		t.Fatalf("Graph after shutdown: got %v, want the empty graph", g)
 	}
