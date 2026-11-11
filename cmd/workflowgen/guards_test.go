@@ -63,7 +63,7 @@ func TestMainOfAGoodModuleWritesAndReturns(t *testing.T) {
 // its own go.mod, the parent's module name is the answer.
 func TestModuleNameWalksUpToAParent(t *testing.T) {
 	inTempModule(t, map[string]string{
-		"go.mod": "module flowdeck\n",
+		"go.mod":        "module flowdeck\n",
 		"sub/README.md": "no go.mod here\n",
 	})
 	if err := os.Chdir(filepath.Join(".", "sub")); err != nil {
@@ -105,7 +105,7 @@ func TestSubpackagesOfAnUnwalkableTreeIsAnError(t *testing.T) {
 // propagates (the generator does not skip broken sources).
 func TestSubpackagesOfABrokenGoFileIsAnError(t *testing.T) {
 	inTempModule(t, map[string]string{
-		"go.mod":   "module flowdeck\n",
+		"go.mod":    "module flowdeck\n",
 		"broken.go": "package broken\n\nfunc ( {\n",
 	})
 	if _, err := subpackages("."); err == nil {

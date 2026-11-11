@@ -32,23 +32,23 @@ func (infoFile) Sys() any           { return nil }
 // entryFile is a fixed directory entry (one file).
 type entryFile struct{ name string }
 
-func (e entryFile) Name() string        { return e.name }
-func (entryFile) IsDir() bool           { return false }
-func (entryFile) Type() fs.FileMode     { return 0 }
-func (entryFile) Size() int64           { return 0 }
-func (entryFile) ModTime() time.Time    { return time.Time{} }
-func (entryFile) Mode() fs.FileMode     { return 0 }
-func (entryFile) Sys() any              { return nil }
+func (e entryFile) Name() string               { return e.name }
+func (entryFile) IsDir() bool                  { return false }
+func (entryFile) Type() fs.FileMode            { return 0 }
+func (entryFile) Size() int64                  { return 0 }
+func (entryFile) ModTime() time.Time           { return time.Time{} }
+func (entryFile) Mode() fs.FileMode            { return 0 }
+func (entryFile) Sys() any                     { return nil }
 func (e entryFile) Info() (fs.FileInfo, error) { return infoFile{name: e.name}, nil }
 
 // rootFile is the file of the fake root (the Stat of the "." Open).
 type rootFile struct{}
 
-func (rootFile) Stat() (fs.FileInfo, error) { return infoDir{}, nil }
-func (rootFile) Close() error               { return nil }
-func (rootFile) Read([]byte) (int, error)   { return 0, nil }
-func (rootFile) Write([]byte) (int, error)  { return 0, nil }
-func (rootFile) Seek(int64, int) (int64, error) { return 0, nil }
+func (rootFile) Stat() (fs.FileInfo, error)         { return infoDir{}, nil }
+func (rootFile) Close() error                       { return nil }
+func (rootFile) Read([]byte) (int, error)           { return 0, nil }
+func (rootFile) Write([]byte) (int, error)          { return 0, nil }
+func (rootFile) Seek(int64, int) (int64, error)     { return 0, nil }
 func (rootFile) Readdirnames(int) ([]string, error) { return nil, nil }
 
 // fakeFS is the failing FS: ReadDir lists the fixed entries or fails (the

@@ -53,15 +53,15 @@ func TestBlockToSVGForkOfAnElseIfChain(t *testing.T) {
 						Children: []graph.Child{{Node: &graph.Node{Name: "x", Kind: graph.NodeStep}}}},
 					},
 					{Block: &graph.Block{ID: "b2", Level: 2, Type: graph.BlockIf,
-					Children: []graph.Child{{Node: &graph.Node{Name: "t", Kind: graph.NodeStep}}},
-					Else: &graph.Block{ID: "b3", Level: 2, Type: graph.BlockSequence,
-						Children: []graph.Child{{Node: &graph.Node{Name: "f", Kind: graph.NodeStep}}},
-				}}}},
+						Children: []graph.Child{{Node: &graph.Node{Name: "t", Kind: graph.NodeStep}}},
+						Else: &graph.Block{ID: "b3", Level: 2, Type: graph.BlockSequence,
+							Children: []graph.Child{{Node: &graph.Node{Name: "f", Kind: graph.NodeStep}}},
+						}}}},
 				Else: &graph.Block{ID: "b4", Level: 1, Type: graph.BlockIf,
 					Children: []graph.Child{{Node: &graph.Node{Name: "u", Kind: graph.NodeStep}}},
 					Else: &graph.Block{ID: "b5", Level: 1, Type: graph.BlockSequence,
 						Children: []graph.Child{{Node: &graph.Node{Name: "v", Kind: graph.NodeStep}}},
-				}},
+					}},
 			}},
 		}},
 	}))
@@ -98,12 +98,12 @@ func TestBlockToSVGOfAnEmptyIf(t *testing.T) {
 // levelClass is the outline level ramp: L0, L1, L2, and L3+ reuses L2.
 func TestLevelClass(t *testing.T) {
 	for level, want := range map[int]string{
-		0: "l0",
+		0:  "l0",
 		-1: "l0", // defensive: a negative level is the root ramp
-		1: "l1",
-		2: "l2",
-		3: "l2", // L3+ reuses L2
-		9: "l2",
+		1:  "l1",
+		2:  "l2",
+		3:  "l2", // L3+ reuses L2
+		9:  "l2",
 	} {
 		if got := levelClass(level); got != want {
 			t.Errorf("levelClass(%d): got %q want %q", level, got, want)

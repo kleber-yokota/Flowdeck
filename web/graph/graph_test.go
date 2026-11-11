@@ -10,10 +10,10 @@ import (
 // inner padding on both sides.
 func TestBaseBoxW(t *testing.T) {
 	for name, want := range map[string]float64{
-		"":        2 * GraphPadX,
-		"a":       graphCharW + 2*GraphPadX,
-		"step":    4 * graphCharW + 2*GraphPadX,
-		"fetch":   5 * graphCharW + 2*GraphPadX,
+		"":      2 * GraphPadX,
+		"a":     graphCharW + 2*GraphPadX,
+		"step":  4*graphCharW + 2*GraphPadX,
+		"fetch": 5*graphCharW + 2*GraphPadX,
 	} {
 		if got := baseBoxW(name); got != want {
 			t.Errorf("baseBoxW(%q): got %v want %v", name, got, want)
@@ -42,13 +42,13 @@ func TestNodeBoxW(t *testing.T) {
 // to it (the svg keeps the content units — the viewer zooms).
 func TestNum(t *testing.T) {
 	for f, want := range map[float64]string{
-		0:      "0.0",
-		12:     "12.0",
-		12.34:  "12.3",
-		12.36:  "12.4",
-		48:     "48.0",
-		0.05:   "0.1",
-		-3.26:  "-3.3",
+		0:     "0.0",
+		12:    "12.0",
+		12.34: "12.3",
+		12.36: "12.4",
+		48:    "48.0",
+		0.05:  "0.1",
+		-3.26: "-3.3",
 	} {
 		if got := Num(f); got != want {
 			t.Errorf("Num(%v): got %q want %q", f, got, want)

@@ -44,11 +44,11 @@ func TestInputsOfNilForAParamlessFunc(t *testing.T) {
 // parts (double underscores, a leading underscore).
 func TestPascalDropsEmptyParts(t *testing.T) {
 	cases := map[string]string{
-		"msg":         "Msg",
-		"start_date":  "StartDate",
-		"a__b":        "AB",
-		"_x":          "X",
-		"":            "",
+		"msg":        "Msg",
+		"start_date": "StartDate",
+		"a__b":       "AB",
+		"_x":         "X",
+		"":           "",
 	}
 	for in, want := range cases {
 		if got := Pascal(in); got != want {
